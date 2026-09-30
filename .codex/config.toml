@@ -1,0 +1,28 @@
+[features]
+multi_agent = true
+
+[agents]
+enabled = true
+max_concurrent_threads_per_session = 2
+default_subagent_model = "gpt-6-luna"
+default_subagent_reasoning_effort = "medium"
+
+[agents.explorer]
+description = "Busca delimitada e extração de evidências; leitura apenas."
+config_file = "agents/explorer.toml"
+
+[agents.verifier]
+description = "Gates conhecidos e reprodução de fluxo; não muda regras de gameplay."
+config_file = "agents/verifier.toml"
+
+[agents.implementer]
+description = "Implementação técnica de escopo fechado com dono exclusivo dos arquivos."
+config_file = "agents/implementer.toml"
+
+[agents.reviewer]
+description = "Revisão independente de saves, transições e estatísticas; leitura apenas."
+config_file = "agents/reviewer.toml"
+
+[agents.specialist]
+description = "Escalada excepcional de causa ambígua ou arquitetura difícil, solicitada pelo principal."
+config_file = "agents/specialist.toml"

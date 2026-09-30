@@ -386,3 +386,58 @@ Treinador e atleta podem sugerir mudança depois da formação. Reconversão pre
 Pedido: cidade de nascimento e clube do coração devem ser escolhas iniciais; refazer UI/UX. Implementado campo livre de cidade com sugestões, UF obrigatória e seleção entre 156 clubes; propagação para origem/residência/escolinha. Nova interface responsiva com foco no evento, escolhas numeradas, resumo lateral ou expansível, navegação clara, recibo de escolha, tipografia maior e painéis de reação/contexto.
 
 Verificação: build TypeScript; browser-smoke (48 transições, save e offline); browser-career-story (convite, estreia, quadro, treinadores, posições/categorias); browser-ui-redesign (390×844 e 1440×960, validação de origem, cidade fora da lista, clube independente, ausência de overflow, navegação e save). CLI agent-browser indisponível; Playwright/Chromium utilizado. Githack confirmado 403; entrega do HTML independente, sem declarar o link online resolvido.
+
+## 2026-09-30 — H0001 — Continuidade no Codex local
+
+**Pedido do usuário:** trazer o desenvolvimento do chat “Continuar projeto do jogo” para a conversa local “Continue o desenvolvimento do 1903”.
+
+**Origem conferida:** PR #1, branch `codex/1903-seven-careers-20260930`, commit `aa17befbb31a3e10a6e93a283896cd67319555aa`. Importados fonte modular, HTML standalone, estudos, especificação, protocolo, log e testes. PR continua em rascunho; `main` permanece no hotfix 0.1.4.
+
+**Decisões vigentes:** D0021 e D0022 prevalecem sobre o ritmo em blocos e o sorteio de cidade/clube afetivo. Uma partida por turno, categorias separadas, acesso profissional por evidência sub-20, estreia gradual, OVR lento, treinadores persistentes, origem escolhida e interface revisada. As sete carreiras e suas fontes permanecem nos documentos do projeto.
+
+**Trabalho local anterior:** a tentativa incompleta de 0.1.5 foi preservada em stash e em patch externo ao repositório. Não foi aplicada sobre a 0.3.0: parte das proteções de escolhas já existe na versão importada, e memória detalhada de partidas deve ser reavaliada no motor modular antes de qualquer integração.
+
+**Verificação nesta transferência:** instalação de dependências a partir do cache; `npm run typecheck` e `npm test` PASS. 100 carreiras encerradas; 48 com aparições profissionais; 60 trajetórias pareadas de escola/futebol; cenários de save legado, reconversão, retorno, aposentadoria, treinador, calendário, promoção e estreia PASS. Nenhuma fórmula foi alterada nesta transferência. A prévia no navegador desta sessão não pôde ser validada por conexão local recusada; provas de navegador anteriores permanecem históricas.
+
+**Próxima etapa:** auditar a 0.3.0 real antes de desenvolver: persistência e migração, histórico por clube/adversário, ritmo após abandonar blocos, seleção sub-20 e variedade/efeitos das decisões. Resolver acesso jogável de forma verificável sem priorizar GitHub Pages. Safari/iPhone e duração humana continuam pendentes.
+
+
+## 2026-09-30 — D0023 / A0007 — Orquestração de subagentes
+
+**Pedido:** escolher modelos por atividade para ganhar tempo e economizar tokens. Autorização explícita do usuário; nenhuma conversa independente foi criada.
+
+**Hipótese:** separar investigação delimitada, correção especializada e integração evita leituras repetidas e conflitos. Paralelizar somente tarefas independentes reduz espera; delegar pequenas alterações pode aumentar custo.
+
+**Implementação:** AGENTS.md no workspace e no repositório; configuração de projeto e ponte local com cinco papéis. Explorador Luna low, verificador Luna medium, implementador Sol 6.1 medium, revisor Sol 6.1 high, especialista Astra high apenas após insuficiência concreta. Principal mantém modelo selecionado na conversa, integra/loga/gera build/publica. Máximo de dois trabalhadores simultâneos, briefing sem histórico integral, respostas até 400 palavras, um dono por arquivo, sem agentes recursivos. Política detalhada e diário em docs/ORCHESTRATION.md e docs/orchestration/runs.jsonl.
+
+**Piloto efetivamente executado:** Luna verificou configuração e depois criticou a UI em leitura; Sol 6.1 auditou persistência, reproduziu três riscos e foi reutilizado para correção exclusiva de persistence.ts e teste próprio. Implementação reutilizou esforço high da auditoria para conservar contexto; isso não altera o default medium para novos trabalhos. Principal editou UI, configuração, log e bundle. Sem conflito de arquivos; Astra desnecessário.
+
+**Validação:** parser TOML e checker aprovaram cinco papéis, arquivos relativos e limite de dois trabalhadores, incluindo a ponte do workspace. A aceitação das solicitações de modelo foi observada. Não há comprovação de que uma sessão já aberta releu os defaults do TOML: a ferramenta desta rodada recebeu overrides explícitos.
+
+**Resultado/aprendizado:** delegação encontrou corrupção estrutural, perda de bytes rejeitados e falhas de quota/armazenamento que eram invisíveis no fluxo normal. Valores de tokens, custo, identidade interna confirmada e duração completa não foram expostos; ficam null no diário. Nenhum percentual de economia foi inventado. Próxima rodada deve comparar entregas semelhantes antes de alterar roteamento ou aumentar concorrência.
+
+## 2026-09-30 — D0024 / A0008 — 0.3.1 experimental: UI e proteção do progresso
+
+**Pedido durante a rodada:** conferir como ficou UI/UX, aplicar habilidades disponíveis e baixar o necessário. Skills design:design-critique e frontend-design aplicadas; ambas já instaladas. Nenhum download adicional necessário para a solução entregue.
+
+**Base/causeamento:** motor 0.3.0 importado do commit aa17bef. A UI existente já tinha decisões numeradas, detalhes expansíveis e toque adequado. Crítica estática apontou orientações ocultadas no celular, títulos visuais sem semântica e intenção de mercado sem seleção anunciada. Inspeção real mostrou placar que identificava apenas o adversário e painel de atuação longo. Recarga durante o teste apresentou UI antiga pelo cache 0.3.0 do worker standalone, apesar do HTML modificado.
+
+**Direção/implementação da interface:** azul profundo/marfim/dourado; logo compacto, títulos editoriais e fontes locais, sem depender de rede. Ícones SVG embutidos na navegação, rótulos curtos com nomes acessíveis completos e estado atual. Placar central identifica ambos os times; métricas de goleiro ficam em quatro colunas. Espaçamento móvel compactado para antecipar decisões; detalhes de torcida/contexto permanecem expansíveis. Orientações da criação ficam visíveis no celular. Formulário nativo com campos obrigatórios, submit por teclado e fallback para nome composto só de espaços. Títulos de seção usam h3; intenção de mercado anuncia aria-pressed. Nenhuma fórmula, categoria, DNA, evento ou condição de promoção foi alterada.
+
+**Persistência: reprodução e correção:** auditoria Sol reproduziu quota/indisponibilidade interrompendo handlers, objeto só com version quebrando render e JSON truncado virando criação/sobrescrita. Agora leitura e escrita validam estrutura original e campos modernos quando presentes; opcionais ausentes continuam aceitos. Falhas de acesso/read/write/clear são capturadas. Dados inválidos/não finitos/cíclicos não substituem o original. Toda mutação revalida o registro atual; corrupção de outra aba também fica protegida. Os bytes rejeitados permanecem na chave original e ficam disponíveis para download. UI corrompida impede nova carreira automática e oferece download/retry; falha de quota mantém a carreira em memória com aviso, exportação e tentativa de salvar. Exclusão que falha não limpa o estado da tela. Não foi implementado reparo/importação automática de bytes inválidos; é uma pendência explícita.
+
+**Compatibilidade:** preservados chave 1903.save.playable2 e schema 0.1.0-playable.2. Auditoria prévia carregou cinco snapshots do motor 0.1.4 real (introdução, posição, ingresso, partida e adulto) e completou a primeira transição sem perder origem/clube afetivo. Isso não prova todos os saves legados. O teste novo cobre ausência de campos posteriores e payload moderno; os saves do usuário não foram acessados nem modificados pelos testes de persistência.
+
+**Cache/build:** standalone gera HTML, bundle e identificador do cache derivado de SHA256 do HTML. Worker instala novo cache e assume clientes após ativação; limpeza limitada ao prefixo correspondente. Build modular tem cache de versão atualizado. LocalStorage não é apagado. Não registrar uma recarga com cache velho como validação da build nova. Correção conferida por conteúdo real servido; fluxo final usa a build 0.3.1.
+
+**Verificação desta sessão:**
+- npm test: quatro roteiros comportamentais existentes + 18 grupos de persistência PASS. Lote de 100 carreiras encerradas, 48 profissionais, 60 trajetórias pareadas escola/futebol; cenários de retorno/reconversão/calendário/treinador/promoção/estreia preservados. Nenhuma recalibração opcional foi executada por se tratar de UI/persistência/configuração.
+- TypeScript e geração standalone PASS; checker de agentes/ponte PASS. Os testes Node usam armazenamento em memória.
+- Navegador do Codex: origem 127.0.0.1:8766 separada da carreira do usuário em 8765. Formulário obrigatório, criação, introdução, posição, escola e primeira atuação; 24 transições adicionais em 390×844, recarga de save, quatro abas, estado de mercado, perfil/estatísticas. Nenhum erro JavaScript, overflow ou aviso de save nesse fluxo.
+- Carreira e mercado em 320 px; carreira em 1440×960; sem overflow observado. Navegação de 60 px; escolhas observadas de 98–119 px. Resumo recolhido em render móvel e aberto em desktop. Goleiro com quatro métricas conferido.
+- Fixture tests/persistence-ui.html simula storage só em memória: corrupção mostrou painel com criação bloqueada; quota mostrou aviso e carreira jogável. A primeira prova detectou aviso duplicado no painel de recuperação; corrigido e revalidado, restando um único botão de download. A fixture é repetível após gerar o bundle.
+- Capturas mobile/desktop e HTML independente nos outputs locais. Não foi instalado pacote, fonte remota ou navegador adicional.
+
+**Resultado/limites/próximo passo:** 0.3.1 experimental jogável; docs/UI_REVIEW_0.3.1.md registra decisões e evidências. docs/TECHNICAL_AUDIT_0.3.1.md resume cinco riscos, incluindo duração 401–909 turnos, ledger por adversário/estádio ausente e dependência da política na profissionalização. A carreira de quatro horas, Safari/iPhone físico, offline no dispositivo e leitor de tela real continuam sem validação nesta sessão. Medir uma carreira humana e persistir memória compacta de partidas são as próximas melhorias do core. GitHub Pages não entrou no escopo.
+
+**Adendo de entrega local:** a build 0.3.1 foi aberta em 8765 no mesmo origin da carreira existente. A carga exibiu Luciano Basso, Grêmio, 23 anos, OVR83 e o mesmo balanço 2036 com proposta do Vasco. Apenas abertura/recarga; nenhuma escolha, avanço ou gravação foi executada nesse save. Captura móvel salva e viewport temporário restaurado.

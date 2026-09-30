@@ -1,0 +1,10 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>1903 — teste isolado da persistência</title><link rel="stylesheet" href="../styles.css"></head><body><div id="app"></div><script>
+// Disposable verification harness: in-memory storage only; never reads real saves.
+const scenario = new URLSearchParams(location.search).get('scenario');
+const memory = scenario === 'corrupt' ? '{"version":"0.1.0-playable.2"}' : null;
+Object.defineProperty(window, 'localStorage', {value: {
+  getItem: () => memory,
+  setItem: () => {throw new DOMException('Simulated quota', 'QuotaExceededError');},
+  removeItem: () => {throw new Error('Deletion is disabled in this fixture');}
+}});
+</script><script src="../standalone-bundle.js"></script></body></html>
