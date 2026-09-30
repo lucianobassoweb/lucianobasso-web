@@ -25,8 +25,8 @@ function blankKnowledge():Record<keyof VisibleAttributes,number>{
 }
 function initialProficiency():Record<PlayablePosition,number>{return {GK:20,CB:24,FB:25,DM:25,CM:26,AM:25,WG:25,ST:24};}
 
-export function createCareerWithSeed(name:string,seed:number,heartClubId?:string,hometown?:string):SaveGame{
-  const rng=new RNG(seed);const dna=generateDNA(rng);const life=generateLife(seed,hometown,heartClubId);
+export function createCareerWithSeed(name:string,seed:number,heartClubId?:string,hometown?:string,hometownState?:string):SaveGame{
+  const rng=new RNG(seed);const dna=generateDNA(rng);const life=generateLife(seed,hometown,heartClubId,hometownState);
   const startHeight=Number(clamp(dna.adultHeightCm-rng.float(24,39)-(dna.physicalMaturationAge-16)*1.8,132,166).toFixed(1));
   const p:PlayerState={
     id:`p-${seed.toString(16)}`,name,birthYear:2014,age:12,season:2026,seasonTurn:0,careerTurn:0,phase:'ESCOLINHA',professionalStatus:'YOUTH',hometown:life.residence,life,
@@ -41,7 +41,7 @@ export function createCareerWithSeed(name:string,seed:number,heartClubId?:string
   for(const [key,gain] of Object.entries(learned))p.attributes[key as keyof VisibleAttributes]+=gain;
   return {version:VERSION,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),player:p,pendingEvent:{id:'intro',kind:'MILESTONE',title:'12 anos. Tudo começa agora.',body:`Você começa na ${life.localSchool}. Sua família: ${life.family.parents.join(" e ")}. Sua infância teve ${life.childhood.toLowerCase()}. As oportunidades serão descobertas a partir daqui.`,tags:['ESCOLINHA','DNA OCULTO']}};
 }
-export function createCareer(name:string,heartClubId?:string,hometown?:string):SaveGame{return createCareerWithSeed(name,hashSeed(`${name}|${Date.now()}|1903`),heartClubId,hometown);}
+export function createCareer(name:string,heartClubId?:string,hometown?:string,hometownState?:string):SaveGame{return createCareerWithSeed(name,hashSeed(`${name}|${Date.now()}|1903`),heartClubId,hometown,hometownState);}
 
 function log(p:PlayerState,type:string,headline:string,detail:string):void{p.history.unshift({turn:p.careerTurn,season:p.season,age:p.age,type,headline,detail});p.history=p.history.slice(0,220);}
 function ensureFan(p:PlayerState,clubId:string):FanRelation{return p.fanRelations[clubId]??(p.fanRelations[clubId]={clubId,passion:0,hate:0,fear:0,respect:0,expectation:0,memories:[]});}

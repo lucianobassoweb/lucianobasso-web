@@ -380,3 +380,9 @@ Treinador e atleta podem sugerir mudança depois da formação. Reconversão pre
 **Resultados:** `behavior-results-0.3.0.json`, `new-case-results-0.3.0.json`, `coach-results-0.3.0.json`, `single-match-results-0.3.0.json`, `calibration-careers-0.3.0.json`, `calibration-positions-0.3.0.json`, `browser-results-0.3.0.json`, `browser-story-results-0.3.0.json`.
 
 **Interpretação e decisão:** manter experimental para teste pelo usuário. A política neutra apresenta muitas carreiras sem acesso sênior; preservar a rota de futebol menor sem usar a seleção como punição genética. Campanhas C/D e base têm formatos experimentais, não regulamentos oficiais. Personalidades numéricas ainda exigem curadoria de cada treinador. Elencos, internacionalização, empréstimos, contratos de comissão e envelhecimento dos treinadores permanecem pendentes. O ritmo agora varia de 401 a 909 turnos de calendário no lote; o alvo de quatro horas precisa de validação humana. Os saves antigos são preservados, sem reescrever fatos passados em blocos.
+
+### D0022 / A0006 — Origem escolhida e revisão da interface
+
+Pedido: cidade de nascimento e clube do coração devem ser escolhas iniciais; refazer UI/UX. Implementado campo livre de cidade com sugestões, UF obrigatória e seleção entre 156 clubes; propagação para origem/residência/escolinha. Nova interface responsiva com foco no evento, escolhas numeradas, resumo lateral ou expansível, navegação clara, recibo de escolha, tipografia maior e painéis de reação/contexto.
+
+Verificação: build TypeScript; browser-smoke (48 transições, save e offline); browser-career-story (convite, estreia, quadro, treinadores, posições/categorias); browser-ui-redesign (390×844 e 1440×960, validação de origem, cidade fora da lista, clube independente, ausência de overflow, navegação e save). CLI agent-browser indisponível; Playwright/Chromium utilizado. Githack confirmado 403; entrega do HTML independente, sem declarar o link online resolvido.

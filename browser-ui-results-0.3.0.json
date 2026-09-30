@@ -1,0 +1,34 @@
+[
+  {
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "requiredRoots": "PASS",
+    "knownCity": "PASS",
+    "customCity": "PASS",
+    "independentHeartClub": "PASS",
+    "localSchool": "PASS",
+    "saveReload": "PASS",
+    "navigation": "PASS",
+    "horizontalOverflow": false,
+    "textEnlargement": "PASS",
+    "pageErrors": []
+  },
+  {
+    "viewport": {
+      "width": 1440,
+      "height": 960
+    },
+    "requiredRoots": "PASS",
+    "knownCity": "PASS",
+    "customCity": "PASS",
+    "independentHeartClub": "PASS",
+    "localSchool": "PASS",
+    "saveReload": "PASS",
+    "navigation": "PASS",
+    "horizontalOverflow": false,
+    "textEnlargement": "PASS",
+    "pageErrors": []
+  }
+]

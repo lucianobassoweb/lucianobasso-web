@@ -125,3 +125,9 @@ Esta seção prevalece sobre os blocos de 3–6 jogos, promoção por idade e pa
 - Desenvolvimento reduzido e normalizado pelo calendário. Escola agora acumula progresso ao longo do ano, impedindo concluir estudos por mudar prioridade apenas no último jogo.
 
 Limites: elenco, passes/posses, competições reais completas, substituições em minutos exatos, viagens, calendário semanal e idade/aposentadoria dos treinadores permanecem fora do modelo. A relação com estrangeiros usa integração e contexto país-jogador, mas clubes internacionais não estão habilitados. Resolver a duração real da experiência após ampliar para centenas de partidas; não garantir quatro horas nesta revisão.
+
+## Atualização aprovada — origem escolhida e interface (30/09/2026)
+
+Esta decisão substitui a regra anterior de sorteio de cidade e clube do coração: o usuário escolhe cidade de nascimento, UF e clube do coração na criação. Família, condições sociais, infância e características continuam sorteadas. A residência aos 12 anos e a escolinha local usam a cidade escolhida. Não há ingresso automático no clube do coração. O campo cidade admite municípios fora das sugestões; os metadados incompletos dos clubes continuam limitando a precisão geográfica dos convites.
+
+A UX prioriza evento e decisões: duas colunas no desktop, resumo e memória expansíveis no celular, navegação com nomes claros, textos legíveis, reações e contexto da partida expansíveis, confirmação visual da última escolha. Saves existentes mantêm suas origens.

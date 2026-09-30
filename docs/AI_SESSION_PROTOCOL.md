@@ -49,3 +49,9 @@ Verificar pelo menos:
 Publicado: hotfix 0.1.4. Revisão experimental: 0.3.0. Ler também `docs/CAREER_CASE_STUDIES.md` e `docs/COACH_SYSTEM.md`; consultar as últimas entradas do log.
 
 Rodar `npm ci` antes da primeira verificação num ambiente novo. `npm test` inclui a validação comportamental de escola, dispensa, reconversão, função, saves legados e encerramento. As frequências não são taxas reais da população de atletas.
+
+## Atualização aprovada — origem escolhida e interface (30/09/2026)
+
+Esta decisão substitui a regra anterior de sorteio de cidade e clube do coração: o usuário escolhe cidade de nascimento, UF e clube do coração na criação. Família, condições sociais, infância e características continuam sorteadas. A residência aos 12 anos e a escolinha local usam a cidade escolhida. Não há ingresso automático no clube do coração. O campo cidade admite municípios fora das sugestões; os metadados incompletos dos clubes continuam limitando a precisão geográfica dos convites.
+
+A UX prioriza evento e decisões: duas colunas no desktop, resumo e memória expansíveis no celular, navegação com nomes claros, textos legíveis, reações e contexto da partida expansíveis, confirmação visual da última escolha. Saves existentes mantêm suas origens.

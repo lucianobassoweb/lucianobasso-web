@@ -5,7 +5,7 @@ const server=require('child_process').spawn('python3',['-u','-m','http.server','
  await new Promise((resolve,reject)=>{server.stdout.once('data',resolve);server.once('error',reject);server.once('exit',()=>reject(Error('Server failed')));});
  const browser=await chromium.launch({...(process.env.CHROMIUM_EXECUTABLE?{executablePath:process.env.CHROMIUM_EXECUTABLE}:{}),headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu']});
  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto('http://127.0.0.1:8015');await page.locator('#new').click();
+ await page.goto('http://127.0.0.1:8015');await page.locator('#birth-city').fill('Caxias do Sul');await page.locator('#birth-state').selectOption('RS');await page.locator('#heart-club').selectOption('gremio');await page.locator('#new').click();
  await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('1903.save.playable2')),p=s.player;p.id='p-e2e-debut';p.rngState=888888;p.dna.injuryResistance=100;p.dna.consistency=70;p.dna.pressureResponse=70;p.heightCm=178;p.weightKg=75;p.age=17;p.phase='BASE';p.currentClubId='gremio';p.position='AM';p.positionSeasonChosenFor=p.season;p.life.education.chosenFor=p.season;p.professionalStatus='YOUTH';p.positionProficiency.AM=70;for(const k of Object.keys(p.attributes))p.attributes[k]=70;p.currentSeason.appearances=12;p.currentSeason.categories={U20:{appearances:12,starts:12,minutes:800,goals:8,assists:6,avgRating:7.7}};s.pendingEvent=null;localStorage.setItem('1903.save.playable2',JSON.stringify(s));});
  await page.reload();await page.locator('#advance').click();if(!(await page.locator('.event-card').innerText()).includes('convite'))throw Error('Missing invitation');await page.locator('[data-choice="transition:PROTECTED"]').click();
  let debuted=false;
@@ -14,7 +14,7 @@ const server=require('child_process').spawn('python3',['-u','-m','http.server','
    if(await page.locator('[data-choice]').count())await page.locator('[data-choice]').first().click();else await page.locator('#advance').click();
  }
  if(!debuted)throw Error('Missing debut');if(await page.locator('.performance-card').count()!==1)throw Error('Missing performance card');
- const feedback=await page.locator('.performance-card').innerText();for(const word of ['Profissional','MINUTOS','GOLS','ASSIST.','TORCIDA'])if(!feedback.includes(word))throw Error('Missing feedback '+word);
+ await page.locator('.reaction-details summary').click();const feedback=await page.locator('.performance-card').innerText();for(const word of ['Profissional','MINUTOS','GOLS','ASSIST.','TORCIDA'])if(!feedback.includes(word))throw Error('Missing feedback '+word);
  const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('1903.save.playable2')));if(saved.player.debut.minutes>18)throw Error('Debut not gradual');
  await page.screenshot({path:path.join(root,'ui-debut-0.3.0.png'),fullPage:true});
  await page.locator('[data-tab="world"]').click();if(await page.locator('.coach-card').count()!==1)throw Error('Missing coach');if(await page.locator('.league-row').count()!==20)throw Error('Missing league');await page.locator('.coach-database summary').click();await page.locator('#coach-search').fill('Guardiola');if(await page.locator('.coach-db-row').count()!==1)throw Error('Coach search failed');

@@ -5,14 +5,14 @@ import type { PlayerState, LifeContext, Club, EducationPriority } from './types.
 
 const occupations=['motorista','professor(a)','vendedor(a)','auxiliar de serviços','técnico(a)','autônomo(a)','enfermeiro(a)','engenheiro(a)','sem trabalho remunerado'];
 /** Separate stream: family resources never determine the athlete's DNA. */
-export function generateLife(seed:number,hometown?:string,heartClubId?:string):LifeContext{
+export function generateLife(seed:number,hometown?:string,heartClubId?:string,hometownState?:string):LifeContext{
   const rng=new RNG(hashSeed(`life:${seed}`));
   const known=BRAZIL_CLUBS_2026.filter(c=>c.city&&c.city!==c.name&&c.city!=='A DEFINIR');
   const origin=rng.pick(known.length?known:BRAZIL_CLUBS_2026);
   const city=hometown??origin.city;
   const local=BRAZIL_CLUBS_2026.find(c=>c.city===city)??origin;
   const family={resources:rng.int(10,90),availableTime:rng.int(15,95),relocationWillingness:rng.int(15,90),parents:[rng.pick(occupations),rng.pick(occupations)]};
-  return {originState:local.state,residence:city,heartClubId:heartClubId??rng.pick(BRAZIL_CLUBS_2026.filter(c=>c.state===local.state)).id,
+  return {originState:hometownState??local.state,residence:city,heartClubId:heartClubId??rng.pick(BRAZIL_CLUBS_2026.filter(c=>c.state===local.state)).id,
     localSchool:`Escolinha comunitária de ${city}`,family,childhood:rng.pick(['RUA','FUTSAL','ESCOLA','MULTIESPORTE']),
     education:{priority:'BALANCED',chosenFor:null,credits:0,completed:false},scouting:{observations:0,trialAttempts:0,lastAttemptSeason:0,rejections:[]}};
 }

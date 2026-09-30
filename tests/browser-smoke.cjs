@@ -5,7 +5,7 @@ const server=require('child_process').spawn('python3',['-u','-m','http.server','
  await new Promise((resolve,reject)=>{server.stdout.once('data',resolve);server.once('error',reject);server.once('exit',()=>reject(Error('Server failed')));});
  const browser=await chromium.launch({...(process.env.CHROMIUM_EXECUTABLE?{executablePath:process.env.CHROMIUM_EXECUTABLE}:{}),headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu']});
  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto('http://127.0.0.1:8014');await page.locator('#new').click();await page.locator('#advance').click();
+ await page.goto('http://127.0.0.1:8014');await page.locator('#birth-city').fill('Caxias do Sul');await page.locator('#birth-state').selectOption('RS');await page.locator('#heart-club').selectOption('gremio');await page.locator('#new').click();await page.locator('#advance').click();
  await page.locator('[data-choice="position:AM"]').click();await page.locator('[data-choice="education:BALANCED"]').click();
  let transitions=3;
  for(let i=0;i<45;i++){
