@@ -41,11 +41,11 @@ Verificar pelo menos:
 - caminho natural é muito melhor que pior posição deliberada;
 - exploração 12–14 não destrói a carreira;
 - mudanças aos 17–18 têm custo reconhecível;
-- temporadas profissionais contabilizam dezenas de partidas apesar de poucos turnos apresentados;
+- uma partida do protagonista por turno, com categoria e decisão; calendário do clube segue sem ele;
 - mercado não gera transferências em todas as temporadas;
 - saves não contêm `NaN`/`Infinity`.
 
 ## Referência atual
-Publicado: hotfix 0.1.4. Revisão experimental: 0.2.0. Ler também `docs/CAREER_CASE_STUDIES.md` e as entradas A0003/A0004/D0019/D0020 do log.
+Publicado: hotfix 0.1.4. Revisão experimental: 0.3.0. Ler também `docs/CAREER_CASE_STUDIES.md` e `docs/COACH_SYSTEM.md`; consultar as últimas entradas do log.
 
 Rodar `npm ci` antes da primeira verificação num ambiente novo. `npm test` inclui a validação comportamental de escola, dispensa, reconversão, função, saves legados e encerramento. As frequências não são taxas reais da população de atletas.

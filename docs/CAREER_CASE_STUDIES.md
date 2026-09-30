@@ -123,3 +123,12 @@ Aos 38, depois de participar do acesso estadual pelo America-RJ, Somália buscav
 - Segunda profissão: experiência futebolística pode abrir interesse em formação para treinador, com requisitos de percurso. Licenças, matrícula, conclusão e emprego ainda não são simulados.
 
 Ainda falta diferenciar infraestrutura, calendário e capacidade financeira entre ligas internacionais; modelar empréstimos e retorno de contrato; criar mentores e crise coletiva a partir de elenco/resultados; e incorporar distância da família ao motivo da aposentadoria. São consequências propostas a partir dos casos, não sistemas já finalizados.
+
+
+## Revisão 0.3.0 — Ritmo e estreia profissional
+
+As descrições de blocos e transição automática nos estágios anteriores não representam mais a revisão atual. Os casos apontam percursos distintos: Ronaldinho estreou aos 18; a estreia de Kaká em 2001 veio após formação longa; Romário chegou ao profissional em 1985; Rivaldo alternou juniores e profissionais; Lulinha teve grande projeção juvenil antes da adaptação sênior. Esses fatos justificam separar destaque, convite, entrada e consolidação, sem transformar uma idade ou uma média estatística em lei real de seleção.
+
+O motor apresenta uma partida por turno, identifica categoria, mantém produção juvenil separada e exige desempenho observado no sub-20 para oferecer a transição. A estreia tem marco e primeiros minutos curtos; mais responsabilidade continua sendo negociada e não entrega titularidade imediata. Crescimento é lento e normalizado pela fração de temporada, evitando transformar maior resolução de jogos em evolução acelerada. Notas de convocação são hipóteses editoriais por função, sem pretender inferir a taxa de profissionalização a partir dos sete casos.
+
+A relação Ronaldinho–treinador sobre improvisação, Rivaldo–Van Gaal sobre função e Diego Souza–treinadores sobre reconversão orienta relações pessoais persistentes e confiança profissional separada. Somália orienta o calendário do clube durante ausência; os números do atleta não param o mundo. O banco de treinadores e suas fontes está documentado em `COACH_SYSTEM.md`.

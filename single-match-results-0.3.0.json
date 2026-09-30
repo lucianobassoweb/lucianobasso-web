@@ -1,0 +1,11 @@
+{
+  "automaticAgePromotion": false,
+  "observedYouthGate": "PASS",
+  "separateCategories": "PASS",
+  "invitationBeforeDebut": "PASS",
+  "debutMilestone": "PASS",
+  "firstMinutes": 9,
+  "oneMatchPerTurn": "PASS",
+  "canDelayPromotion": "PASS",
+  "singleMatchOVRDelta": 0.1
+}

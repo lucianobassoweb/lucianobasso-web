@@ -32,7 +32,7 @@ const goalShare:Record<PlayablePosition,number>={GK:.001,CB:.045,FB:.035,DM:.045
 const assistShare:Record<PlayablePosition,number>={GK:.004,CB:.025,FB:.09,DM:.075,CM:.145,AM:.205,WG:.19,ST:.085};
 const cardBase:Record<PlayablePosition,number>={GK:.025,CB:.105,FB:.085,DM:.11,CM:.055,AM:.035,WG:.03,ST:.035};
 
-export function simulatePlayerMatch(player:PlayerState,own:Club,opponent:Club,rng:RNG,started=true,importance=1):MatchResult{
+export function simulatePlayerMatch(player:PlayerState,own:Club,opponent:Club,rng:RNG,started=true,importance=1,fixture?:{home:boolean;teamGoals:number;oppGoals:number;minutes?:number}):MatchResult{
   const pos=(player.position==='IND'?'CM':player.position) as PlayablePosition;
   const compFactor=own.division==='A'?1:own.division==='B'?.92:own.division==='C'?.84:.78;
   const rawOv=roleRating(player,pos);
@@ -42,16 +42,16 @@ export function simulatePlayerMatch(player:PlayerState,own:Club,opponent:Club,rn
   const playerLevel=rawOv*eff*emotional;
   const ownStrength=own.prestige*.68+own.finance*.12+own.youth*.20;
   const oppStrength=opponent.prestige*.68+opponent.finance*.12+opponent.youth*.20;
-  const home=rng.chance(.5);
+  const home=fixture?.home??rng.chance(.5);
   const homeEdge=home ? .12 : -.07;
   const qualityEdge=clamp((ownStrength-oppStrength)/75,-.48,.48);
   const playerEdge=clamp((playerLevel-(ownStrength*.78))/100,-.12,.16);
   const supply=player.tactical?.support??.5;
   const teamLambda=clamp(1.28+qualityEdge+homeEdge+playerEdge,.28,3.2);
   const oppLambda=clamp(1.18-qualityEdge*.83-homeEdge*.55-(pos==='GK'||pos==='CB'||pos==='DM'?playerEdge*.35:0),.25,3.0);
-  const teamGoals=poisson(rng,teamLambda);
-  const oppGoals=poisson(rng,oppLambda);
-  const minutes=started?rng.int(70,90):rng.int(12,38);
+  const teamGoals=fixture?.teamGoals??poisson(rng,teamLambda);
+  const oppGoals=fixture?.oppGoals??poisson(rng,oppLambda);
+  const minutes=fixture?.minutes??(started?rng.int(70,90):rng.int(12,38));
   const minFactor=minutes/90;
   const starFactor=clamp(.72+(playerLevel-ownStrength*.72)/85,.55,1.42);
   let goals=0,assists=0;
@@ -60,7 +60,7 @@ export function simulatePlayerMatch(player:PlayerState,own:Club,opponent:Club,rn
     else if(rng.chance(assistShare[pos]*starFactor*minFactor))assists++;
   }
   // Rare individual events can occur even in low-scoring games; keeps careers from feeling mechanically tied to score allocation.
-  if(pos!=='GK'&&teamGoals>0&&goals===0&&rng.chance(goalShare[pos]*.12*starFactor*minFactor))goals=1;
+  if(pos!=='GK'&&teamGoals>0&&goals===0&&assists<teamGoals&&rng.chance(goalShare[pos]*.12*starFactor*minFactor))goals=1;
   const finishing=(player.attributes.finishing+player.attributes.positioning)/200;
   const creation=(player.attributes.vision+player.attributes.passing+player.attributes.crossing)/300;
   const xg=Number(clamp((goals*.55+rng.float(.02,.36)*goalShare[pos]*5)*minFactor*(.72+finishing*.5),0,2.7).toFixed(2));

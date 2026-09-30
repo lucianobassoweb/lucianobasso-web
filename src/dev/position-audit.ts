@@ -20,7 +20,7 @@ function choosePosition(save:SaveGame,policy:Policy,rng:RNG):PlayablePosition{
 }
 function run(i:number,policy:Policy):Result{
  const save=createCareerWithSeed(`P${i}`,hashSeed(`paired-${i}`),'gremio','Caxias do Sul');const rng=new RNG(hashSeed(`policy-${i}`));let o18=0,o24=0,o30=0,guard=0;
- while(save.player.phase!=='APOSENTADO'&&guard++<1000){
+ while(save.player.phase!=='APOSENTADO'&&guard++<6000){
    const e=save.pendingEvent;
    if(e?.choices?.length){
      let id=e.choices[0]!.id;
@@ -31,7 +31,7 @@ function run(i:number,policy:Policy):Result{
      else if(e.id.startsWith('education-'))id='education:BALANCED';
      else if(e.id.startsWith('role-'))id='role:stay';
      else if(e.id.startsWith('trial-')) id=e.choices.find(x=>x.id==='join:gremio')?.id??e.choices[0]!.id;
-     else if(e.kind==='SEASON_END') id='market:stay';
+     else if(e.kind==='SEASON_END'&&e.choices.some(c=>c.id==='market:stay')) id='market:stay';
      resolveChoice(save,id);
    }else if(e){save.pendingEvent=null;}
    else advanceCareer(save);

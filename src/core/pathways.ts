@@ -27,8 +27,9 @@ export function finishEducationYear(p:PlayerState):void{
   if(p.age>18)return;
   const e=ensureLife(p).education;
   const credits:Record<EducationPriority,number>={SCHOOL:1,BALANCED:.8,FOOTBALL:.35};
-  e.credits=Number((e.credits+credits[e.priority]).toFixed(2));
+  e.credits=Number((e.credits+(e.yearProgress??credits[e.priority])).toFixed(2));
   if(p.age===18)e.completed=e.credits>=5;
+  e.yearProgress=0;
 }
 export function observeLocally(p:PlayerState):void{
   const life=ensureLife(p);life.scouting.observations++;
@@ -54,4 +55,10 @@ export function trialProbability(p:PlayerState,club:Club,transportSupport:boolea
   const assessment=ability*.75+physicalNow*.25;
   const logistics=transportSupport?0:Math.max(0,45-life.family.resources)/200;
   return clamp(.53+(assessment-(34+club.youth*.22))/60-logistics,.12,.86);
+}
+
+export function accrueEducation(p:PlayerState,calendarFraction:number):void{
+ if(p.age>18)return;const e=ensureLife(p).education;
+ const rate=e.priority==='SCHOOL'?1:e.priority==='BALANCED'?.8:.35;
+ e.yearProgress=Math.min(1,(e.yearProgress??0)+Math.max(0,calendarFraction)*rate);
 }

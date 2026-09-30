@@ -18,10 +18,10 @@ const server=require('child_process').spawn('python3',['-u','-m','http.server','
  }
  for(const tab of ['player','stats','world','career']){await page.locator(`[data-tab="${tab}"]`).click();if((await page.locator('#app').innerText()).trim().length<50)throw Error('Blank tab');}
  const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth);if(overflow)throw Error('Horizontal overflow');
- await page.screenshot({path:require('path').join(root,'ui-mobile-0.2.0.png'),fullPage:true});
+ await page.screenshot({path:require('path').join(root,'ui-mobile-0.3.0.png'),fullPage:true});
  await page.reload();if(await page.locator('.player-head').count()!==1)throw Error('Save not restored');
  await page.evaluate(async()=>{await navigator.serviceWorker.ready;});await page.reload();
- await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('1903.save.playable2'));s.player.age=35;s.player.phase='VETERANO';s.player.currentClubId='gremio';s.player.tactical=undefined;s.pendingEvent=null;localStorage.setItem('1903.save.playable2',JSON.stringify(s));});
+ await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('1903.save.playable2'));s.player.age=35;s.player.professionalStatus='SENIOR';s.player.phase='VETERANO';s.player.currentClubId='gremio';s.player.tactical=undefined;s.pendingEvent=null;localStorage.setItem('1903.save.playable2',JSON.stringify(s));});
  await page.reload();await page.locator('#advance').click();await page.locator('[data-choice="role:HOLD"]').click();
  await context.setOffline(true);await page.reload();if(await page.locator('.player-head').count()!==1)throw Error('Offline not restored');
  if(errors.length)throw Error(errors.join('\n'));

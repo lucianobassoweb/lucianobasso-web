@@ -25,8 +25,8 @@ for(let i=1;i<=100;i++){
  assert.notEqual(s.player.hometown,'A DEFINIR');
  advanceCareer(s);assert.ok(s.pendingEvent?.choices?.length,'Introduction must lead to a choice');
  const event=copy(s.pendingEvent);advanceCareer(s);assert.deepEqual(s.pendingEvent,event,'Continuar cannot skip a decision');
- let guard=0;while(s.player.phase!=='APOSENTADO'&&guard++<1000){choose(s);if(!s.pendingEvent)advanceCareer(s);}
- assert.equal(s.player.phase,'APOSENTADO');assert.equal(s.player.careerTurn,234);
+ let guard=0;while(s.player.phase!=='APOSENTADO'&&guard++<6000){choose(s);if(!s.pendingEvent)advanceCareer(s);}
+ assert.equal(s.player.phase,'APOSENTADO');assert.ok(s.player.careerTurn>=360&&s.player.careerTurn<=1100);
  const walk=x=>{if(typeof x==='number')assert.ok(Number.isFinite(x));else if(x&&typeof x==='object')Object.values(x).forEach(walk);};walk(s);
  const scouting=s.player.life.scouting;rejects+=scouting.rejections.length;
  if(scouting.rejections.length&&scouting.trialAttempts>1)retries++;
@@ -55,5 +55,5 @@ p.tactical={coachId:'test',role:'HOLD',support:.5,trust:55,discussedFor:null};co
 const slow=copy(p);slow.dna.physicalMaturationAge=20;slow.dna.technicalAptitude=25;assert.equal(trialProbability(slow,CLUB_BY_ID.caxias,true),trialProbability(p,CLUB_BY_ID.caxias,true));assert.equal(coachPositionFeedback(slow),coachPositionFeedback(p));
 const technique=p.attributes.technique,pace=p.attributes.pace;for(let i=0;i<9;i++)growthStep(p,rng);assert.ok(p.attributes.pace<pace-.5);assert.ok(p.attributes.technique>technique-.5);
 // Old saves missing added state remain playable and preserve their existing club/position.
-const legacy=createCareerWithSeed('Legado',55);delete legacy.player.life;delete legacy.player.tactical;legacy.player.currentClubId='gremio';legacy.player.age=25;legacy.player.position='CM';legacy.pendingEvent=null;advanceCareer(legacy);assert.equal(legacy.player.currentClubId,'gremio');assert.ok(legacy.player.life&&legacy.player.tactical);
+const legacy=createCareerWithSeed('Legado',55);delete legacy.player.life;delete legacy.player.tactical;delete legacy.player.professionalStatus;delete legacy.player.coaching;legacy.player.currentClubId='gremio';legacy.player.age=25;legacy.player.position='CM';legacy.pendingEvent=null;advanceCareer(legacy);assert.equal(legacy.player.currentClubId,'gremio');assert.ok(legacy.player.life&&legacy.player.tactical);
 console.log(JSON.stringify({retired,professional,origins:names.size,rejections:rejects,retriedAfterRejection:retries,pairedEducationCareers:60,schoolOVR19:schoolOVR/30,footballOVR19:footballOVR/30,reconversionAndRole:'PASS',legacySave:'PASS'},null,2));

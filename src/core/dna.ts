@@ -1,3 +1,5 @@
+import { calendarScale } from './calendar.js';
+import { coachProfile } from './coaches.js';
 import { footballTime } from './pathways.js';
 import { RNG, clamp } from './random.js';
 import { POSITIONS, developmentEfficiency, effectivePositionRating, positionTrainingMultiplier, roleRating } from './positions.js';
@@ -60,6 +62,7 @@ function aptitudeForAttribute(p:PlayerState,key:keyof VisibleAttributes):number{
 }
 
 export function growthStep(p:PlayerState,rng:RNG,focus:keyof VisibleAttributes|null=null):void{
+  const coaching=p.tactical&&p.age<=21?.92+coachProfile(p.tactical.coachId).youth/600:1;
   const age=p.age;const time=footballTime(p);const plasticity=p.dna.learningPlasticity/100;const lateBoost=p.dna.lateBloomer>62&&age>=18&&age<=23?1.18:1;
   const ageFactor=age<=14?1.08:age<=17?1.13:age<=21?.93:age<=25?.64:age<=29?.31:age<=32?.07:-.16;
   const pos=p.position==='IND'?null:p.position;const devEff=pos?developmentEfficiency(p,pos):1;
@@ -67,11 +70,11 @@ export function growthStep(p:PlayerState,rng:RNG,focus:keyof VisibleAttributes|n
   for(const key of keys){
     const current=p.attributes[key],apt=aptitudeForAttribute(p,key);const roleFactor=pos?positionTrainingMultiplier(pos,key):.90;const focusFactor=focus===key?1.55:1;
     const maturation=['pace','stamina','strength','heading','aerial'].includes(key)&&age<=21?clamp(.72+(age-p.dna.physicalMaturationAge+2)*.08,.56,1.12):1;
-    const ceilingResistance=Math.max(.095,(103-current)/72);let delta=.52*ageFactor*plasticity*lateBoost*roleFactor*focusFactor*ceilingResistance*devEff*time*maturation*(p.injury?(['pace','stamina','strength'].includes(key)?.25:.55):1)*(.78+apt/170);
+    const ceilingResistance=Math.max(.095,(103-current)/72);let delta=(age<=21?.30:.40)*ageFactor*plasticity*lateBoost*roleFactor*focusFactor*ceilingResistance*devEff*time*coaching*maturation*(p.injury?(['pace','stamina','strength'].includes(key)?.25:.55):1)*(.78+apt/170);
     if(age>=30&&['pace','stamina','strength'].includes(key))delta-=.06+(age-30)*.045;
     // Reading the game and technique age differently from running capacity.
     if(age>=33&&['vision','decisions','positioning','technique','passing','finishing'].includes(key))delta=Math.max(delta,0);
-    delta+=rng.normal(0,.075);p.attributes[key]=Number(clamp(current+delta,20,99).toFixed(2));
+    delta+=rng.normal(0,.045);delta*=calendarScale(p);p.attributes[key]=Number(clamp(current+delta,20,99).toFixed(2));
   }
 }
 

@@ -8,6 +8,7 @@ export type TransferIntent = 'STAY' | 'OPEN' | 'LEAVE' | 'FORCE';
 export interface Club {
   id: string;
   name: string;
+  country?: string;
   shortName: string;
   state: string;
   city: string;
@@ -76,6 +77,10 @@ export interface PositionSeasonRecord {
   hiddenCompatibility: number; // development diagnostic only; never expose in normal UI
 }
 
+export type CompetitionCategory='U15'|'U17'|'U20'|'AMATEUR'|'SENIOR';
+export interface CategoryStats {
+  appearances:number; starts:number; minutes:number; goals:number; assists:number; avgRating:number; motm?:number;
+}
 export interface SeasonStats {
   season: number;
   age: number;
@@ -94,6 +99,10 @@ export interface SeasonStats {
   xa: number;
   avgRating: number;
   titles: string[];
+  categories?:Partial<Record<CompetitionCategory,CategoryStats>>;
+  primaryPosition?:Position;
+  positionsPlayed?:PlayablePosition[];
+  positionAppearances?:Partial<Record<PlayablePosition,number>>;
   marketValueStart: number;
   marketValueEnd: number;
 }
@@ -155,17 +164,57 @@ export interface LifeContext {
   originState:string; residence:string; heartClubId:string; localSchool:string;
   family:{resources:number; availableTime:number; relocationWillingness:number; parents:string[]};
   childhood:'RUA'|'FUTSAL'|'ESCOLA'|'MULTIESPORTE';
-  education:{priority:EducationPriority;chosenFor:number|null;credits:number;completed:boolean};
+  education:{priority:EducationPriority;chosenFor:number|null;credits:number;completed:boolean;yearProgress?:number};
   secondCareer?:{path:'WORK'|'TECHNICAL'|'DEGREE'|'COACH_COURSE';status:'SEEKING_WORK'|'IN_TRAINING'};
   scouting:{observations:number;trialAttempts:number;lastAttemptSeason:number;rejections:{season:number;clubId:string}[]};
 }
 export interface TacticalContext {
   coachId:string; role:TacticalRole; support:number; trust:number; discussedFor:number|null;
 }
+export interface CoachIdentity {
+  id:string; name:string; market:'BRAZIL'|'GLOBAL'|'REGIONAL'; sources:string[];
+  nationality?:string; historicalOnly?:boolean;
+}
+export interface CoachProfile {
+  youth:number; mature:number; integration:number; recovery:number; flexibility:number; organisation:number;
+  patience:number; dialogue:number; discipline:number; creativity:number;
+  preferredRole:TacticalRole; preferredPosition:PlayablePosition; style:'POSSESSION'|'DIRECT'|'DEFENSIVE';
+}
+export interface CoachBond {
+  affinity:number; trust:number; conflict:number; memories:string[]; promisedRole?:string;
+}
+export interface CoachJob {
+  coachId:string; sinceSeason:number; sinceTurn:number; games:number; points:number;
+  boardPatience:number; backing:number; expectedPPG:number; previousRank:number;
+}
+export interface Campaign {
+  clubId:string; group:string; games:number; points:number; wins:number; draws:number; losses:number;
+  goalsFor:number; goalsAgainst:number; form:number[]; expectedRank:number; expectedPPG:number;
+}
+export interface CoachChange {
+  clubId:string; oldCoachId:string; newCoachId:string; season:number; turn:number; reason:string;
+}
+export interface WorldFixture {
+  homeId:string; awayId:string; homeGoals:number; awayGoals:number;
+}
+export interface CoachingWorld {
+  season:number; completedBlocks:number; seed:number; progress?:number;
+  campaigns:Record<string,Campaign>; jobs:Record<string,CoachJob>; bonds:Record<string,CoachBond>;
+  changes:CoachChange[]; pendingChange:CoachChange|null;
+}
 export interface PlayerState {
   id: string;
   name: string;
   birthYear: number;
+  nationality?:string;
+  professionalStatus?:'YOUTH'|'INVITED'|'SENIOR';
+  promotionReviewedFor?:number;
+  seasonReviewDue?:boolean;
+  lastPromotionSeason?:number;
+  debut?:{season:number;age:number;clubId:string;opponentId:string;minutes:number};
+  careerApproach?:'STABILITY'|'RESPONSIBILITY';
+  coachTalkFor?:string;
+  coaching?:CoachingWorld;
   age: number;
   season: number;
   seasonTurn: number;
@@ -218,6 +267,14 @@ export interface CareerChoice {
   hint?: string;
 }
 
+export interface MatchFeedback {
+  category?:CompetitionCategory;
+  showScore?:boolean;
+  opponent:string; coachName:string; started:boolean; minutes:number; goals:number; assists:number; rating:number;
+  saves:number; cleanSheet:boolean; teamGoals:number; oppGoals:number;
+  fanReaction:string; coachReaction:string;
+  blockGames:number; blockStarts:number; blockGoals:number; blockAssists:number; blockMinutes:number;
+}
 export interface CareerEvent {
   id: string;
   kind: 'INFO' | 'CHOICE' | 'MATCH' | 'SEASON_END' | 'MARKET' | 'MILESTONE';
@@ -226,6 +283,7 @@ export interface CareerEvent {
   tags: string[];
   choices?: CareerChoice[];
   payload?: Record<string, unknown>;
+  matchFeedback?:MatchFeedback;
 }
 
 export interface CareerLogEntry {

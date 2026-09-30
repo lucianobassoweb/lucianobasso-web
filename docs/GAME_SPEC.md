@@ -107,3 +107,21 @@ Casos adicionais: Lulinha (Corinthians) e Somália, **Wanderson de Paula Sabino*
 - Formação para treinador é uma opção de percurso para quem reúne escola concluída e experiência profissional. Não concede licença ou emprego automaticamente; requisitos reais por entidade/país ainda precisarão de dados próprios.
 
 **Implementação parcial:** lesões são afastamentos abstratos em blocos, sem diagnóstico, tratamento ou calendário médico real. Crise coletiva, empréstimos, redes humanas e internacionalização permanecem pendentes. A segunda profissão possui escolha de caminho, sem simular sua formação completa. Números derivados de estudo de caso não constituem calibração de incidência.
+
+
+## 2026-09-30 — Revisão 0.3.0: treinador, categoria e uma partida por turno
+
+Esta seção prevalece sobre os blocos de 3–6 jogos, promoção por idade e parâmetros de progressão anteriores.
+
+- Banco inicial: 140 identidades reais, cinco referências de cadastro datadas e quatro tendências esportivas apoiadas em fontes institucionais. Ver `docs/COACH_SYSTEM.md`. Atribuições no save, competências numéricas e personalidade são dados de simulação; não representam cargos reais atuais ou avaliação psicológica das pessoas.
+- Afinidade, confiança profissional e conflito são dimensões separadas, ligadas à pessoa. Memórias persistem entre clubes. Pedidos de função, cobranças, atuações e expulsões afetam a relação.
+- Campanhas completas do clube seguem mesmo no banco/afastamento. Demissão é uma decisão determinística por rendimento contra expectativa, posição, forma recente e paciência fixa da direção; mínimo oito jogos no trabalho. Não há sorteio de demissão nem troca a cada três anos.
+- Propostas apresentam comando, estabilidade, contexto, apoio à fase do atleta e reencontros. Uma troca antes de aceitar exige reconsideração. Saída do mentor/algoz abre escolha de ficar, conversar ou buscar mercado, sem transferência automática.
+- Uma partida do protagonista por turno. Última partida fica visível antes do balanço anual. Calendário coletivo agregado: ida/volta A/B/C (38 rodadas), grupos experimentais D de oito (14); base/local 20 datas. Não alegar reprodução dos regulamentos oficiais de C/D ou categorias de base.
+- Categoria identificada em partida e arquivo: Sub-15, Sub-17, Sub-20, amador/local, profissional. Totais de carreira são somente profissionais. Temporadas possuem detalhamento por categoria e aparições por posição, preservando posições anteriores.
+- Uma nova carreira não sobe por idade. Dos 16 aos 20, no mínimo oito aparições e 420 minutos sub-20, com nota observada alta por função, abrem convite. Pode adiar a subida. A primeira aparição sênior é marco próprio, com registro permanente; início em entradas de 6–18 minutos e titularidade progressiva com experiência.
+- Toda rodada apresentada permite decisão contextual: estabilidade, responsabilidade, conversa profissional, mercado ou família/escola/observação. Consequências persistem; nenhum botão concede contratação garantida ou aptidão genética.
+- Quadro gráfico exibe categoria, placar, minutos, gols, assistências, nota, defesas para goleiro e reações da torcida/treinador. Banco preserva placar coletivo com zero minutos individuais.
+- Desenvolvimento reduzido e normalizado pelo calendário. Escola agora acumula progresso ao longo do ano, impedindo concluir estudos por mudar prioridade apenas no último jogo.
+
+Limites: elenco, passes/posses, competições reais completas, substituições em minutos exatos, viagens, calendário semanal e idade/aposentadoria dos treinadores permanecem fora do modelo. A relação com estrangeiros usa integração e contexto país-jogador, mas clubes internacionais não estão habilitados. Resolver a duração real da experiência após ampliar para centenas de partidas; não garantir quatro horas nesta revisão.

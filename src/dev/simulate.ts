@@ -66,7 +66,7 @@ function simulateOne(index:number):CareerResult {
   const snaps:AgeSnapshot[]=[];
   const seen=new Set<number>();
   let guard=0;
-  while (save.player.phase!=='APOSENTADO' && guard<2000) {
+  while (save.player.phase!=='APOSENTADO' && guard<6000) {
     autoResolve(save,policy);
     if (!save.pendingEvent) advanceCareer(save);
     const p=save.player;

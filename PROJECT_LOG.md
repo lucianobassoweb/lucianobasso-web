@@ -354,3 +354,29 @@ Treinador e atleta podem sugerir mudança depois da formação. Reconversão pre
 **Arquivos de evidência:** `behavior-results-seven-cases.json`, `new-case-results.json`, `calibration-careers-seven-cases.json`, `calibration-positions-seven-cases.json`, `browser-results-seven-cases.json`. Resultados anteriores preservados como estágio A0003, não apresentados como versão final após os dois casos novos.
 
 **Decisão:** manter experimental, revisar por PR e testar com usuário. Afastamentos não são modelo clínico; taxas não foram inferidas de Somália. Internacionalização, empréstimos, economia da família, crise coletiva, pessoas persistentes, licenças reais e segunda profissão completa continuam pendentes.
+
+
+## 2026-09-30 — D0021 — Treinadores e trajetória profissional
+**DECISÃO DO USUÁRIO:** treinadores com competências/preferências/personalidade; relação pode determinar vontade de permanecer; permanência no cargo decorre dos resultados; banco amplo de identidades reais. Durante a execução, acrescentou posição por temporada, decisão em cada turno, quadro gráfico de atuação, OVR lento, categorias separadas, profissionalização por destaque sub-20, estreia como marco e uma partida por turno.
+
+## 2026-09-30 — A0005 — Revisão experimental 0.3.0
+**Status:** IMPLEMENTADO / VALIDADO EM PROTÓTIPO. SUPERSEDE o ritmo em blocos, promoção automática por idade e coeficientes anteriores. Não altera a versão publicada até integração.
+
+**Hipótese:** campanha, comando e história pessoal tornam propostas e permanência decisões concretas. Mais partidas não devem acelerar evolução. Destaque juvenil abre oportunidade, sem entregar carreira sênior pronta.
+
+**Mudanças:** 140 identidades reais com fontes/datas; perfis editoriais e quatro tendências institucionais explicitamente separadas dos fatos. Relações por pessoa, confiança profissional distinta de afinidade, calendário integral, direção determinística, sucessão por projeto, propostas contextualizadas e reconsideração após troca. Quadro gráfico por partida, posição/categoria por temporada, contagem profissional separada. Convite por evidência sub-20, opção de adiar, estreia registrada e primeiros minutos curtos. Normalização de desenvolvimento por calendário e escola acumulada durante o ano. Última partida fica visível antes do balanço.
+
+**Antes/depois:** A0004 neutro OVR18=63,2 e OVR30=79,4; nova amostra neutra 200: OVR18=55.3, OVR24=66.5, OVR30=70.8. Frequência e políticas de eventos mudaram, portanto os lotes não são um ensaio causal pareado. A redução corresponde a progressão mais lenta, não prova precisão biográfica.
+
+**Amostras e evidências:**
+- TypeScript estrito e quatro roteiros comportamentais de `npm test`: PASS.
+- 100 carreiras completas: 48 com aparições profissionais; 127 rejeições/dispensas, 64 novas tentativas. Sem valores não finitos ou travamentos. Profissionalização depende da política de decisão; não é taxa real de atletas.
+- Escola/futebol: 30 pares; OVR19=62.90/65.38; efeito persistente. Crédito escolar acompanha o calendário, impedindo troca de última hora para ganhar conclusão.
+- 100 DNAs × quatro políticas pareadas: OVR30 natural=81.5, explorar=78.8, pior posição=63.9, troca tardia=61.8; oito posições presentes. Produção profissional possível em todas as funções; não usar gols como critério de promoção para goleiro.
+- Calendário: clube com 38 jogos mesmo durante ausência; equilíbrio global de gols/vitórias; repetição de avanço não duplica rodadas. Demissão determinística perante os mesmos dados; confiança profissional preservada em reencontro; cargos únicos; mudança em proposta exige reavaliação: PASS.
+- Convite/estreia: sem promoção apenas por aniversário; separação sub-20/sênior; aparições aumentam no máximo uma por turno; estreia inicial com 9 minutos no cenário de motor; crescimento de OVR de 0,10 num cenário de partida; última partida antes do balanço: PASS.
+- Chromium móvel 390×844: fluxo inicial 48 transições, quatro abas, save/offline/reconversão PASS. Cenário adicional: convite, estreia, primeiros 18 minutos, quadro de atuação, comando, tabela, busca e estatísticas por categoria/posição PASS; sem erro JS/overflow. Entradas montadas de teste não representam uma carreira natural.
+
+**Resultados:** `behavior-results-0.3.0.json`, `new-case-results-0.3.0.json`, `coach-results-0.3.0.json`, `single-match-results-0.3.0.json`, `calibration-careers-0.3.0.json`, `calibration-positions-0.3.0.json`, `browser-results-0.3.0.json`, `browser-story-results-0.3.0.json`.
+
+**Interpretação e decisão:** manter experimental para teste pelo usuário. A política neutra apresenta muitas carreiras sem acesso sênior; preservar a rota de futebol menor sem usar a seleção como punição genética. Campanhas C/D e base têm formatos experimentais, não regulamentos oficiais. Personalidades numéricas ainda exigem curadoria de cada treinador. Elencos, internacionalização, empréstimos, contratos de comissão e envelhecimento dos treinadores permanecem pendentes. O ritmo agora varia de 401 a 909 turnos de calendário no lote; o alvo de quatro horas precisa de validação humana. Os saves antigos são preservados, sem reescrever fatos passados em blocos.
