@@ -1,0 +1,117 @@
+{
+  "perPolicy": 100,
+  "natural": {
+    "ovr18": 73,
+    "ovr24": 86.9,
+    "ovr30": 91.7,
+    "careerApps": 844,
+    "goals": 160.4,
+    "assists": 144.7,
+    "avgRating": 7,
+    "compatibility": 91,
+    "positionChanges": 0,
+    "peakMarket": 38479637
+  },
+  "naturalByPosition": {
+    "GK": {
+      "n": 11,
+      "pct": 11,
+      "goals": 1.8,
+      "assists": 6.1,
+      "ovr30": 92.9,
+      "rating": 7
+    },
+    "CB": {
+      "n": 9,
+      "pct": 9,
+      "goals": 66,
+      "assists": 34,
+      "ovr30": 91.5,
+      "rating": 6.86
+    },
+    "FB": {
+      "n": 11,
+      "pct": 11,
+      "goals": 54.9,
+      "assists": 123.8,
+      "ovr30": 90.6,
+      "rating": 6.89
+    },
+    "DM": {
+      "n": 11,
+      "pct": 11,
+      "goals": 72.3,
+      "assists": 94.7,
+      "ovr30": 88.1,
+      "rating": 6.88
+    },
+    "CM": {
+      "n": 13,
+      "pct": 13,
+      "goals": 119.3,
+      "assists": 189.3,
+      "ovr30": 93.8,
+      "rating": 6.96
+    },
+    "AM": {
+      "n": 20,
+      "pct": 20,
+      "goals": 205.2,
+      "assists": 249.7,
+      "ovr30": 93.1,
+      "rating": 7.09
+    },
+    "WG": {
+      "n": 17,
+      "pct": 17,
+      "goals": 293.9,
+      "assists": 210.5,
+      "ovr30": 92.6,
+      "rating": 7.13
+    },
+    "ST": {
+      "n": 8,
+      "pct": 8,
+      "goals": 422,
+      "assists": 82.3,
+      "ovr30": 87.7,
+      "rating": 7.12
+    }
+  },
+  "explore": {
+    "ovr18": 69.9,
+    "ovr24": 84.1,
+    "ovr30": 89,
+    "careerApps": 838,
+    "goals": 170.1,
+    "assists": 154.4,
+    "avgRating": 6.95,
+    "compatibility": 85.7,
+    "positionChanges": 2,
+    "peakMarket": 31728537
+  },
+  "wrong": {
+    "ovr18": 58.1,
+    "ovr24": 68.7,
+    "ovr30": 72.8,
+    "careerApps": 800,
+    "goals": 83.8,
+    "assists": 52.2,
+    "avgRating": 6.46,
+    "compatibility": 60,
+    "positionChanges": 0,
+    "peakMarket": 9231995
+  },
+  "late-switch": {
+    "ovr18": 73,
+    "ovr24": 65.2,
+    "ovr30": 70,
+    "careerApps": 801,
+    "goals": 84.1,
+    "assists": 57,
+    "avgRating": 6.42,
+    "compatibility": 60,
+    "positionChanges": 1,
+    "peakMarket": 10396400
+  }
+}

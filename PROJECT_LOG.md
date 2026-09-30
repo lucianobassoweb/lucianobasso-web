@@ -285,3 +285,72 @@ Fluxo executado em Chromium headless mobile (390×844):
 5. avançar múltiplos blocos de formação.
 
 Resultado: 8 transições consecutivas, sem erros de JavaScript e com botão/evento presente em todos os estados.
+
+
+## 2026-09-30 — D0019 — Vida sorteada e decisões profissionais
+**Status:** LOCKED por instrução do usuário.
+Tudo que compõe a condição inicial é sorteado: cidade, família, profissões dos pais, características e trajetória prévia. Nome permanece personalizável. Talento não depende da condição econômica. O jogador começa numa escolinha próxima de onde vive, sem vaga automática em clube grande. Estudar ocupa tempo que poderia ser dedicado ao desenvolvimento futebolístico e abre caminhos depois da carreira. Sempre pode continuar no futebol menor.
+
+## 2026-09-30 — D0020 — Reconversão adulta e função
+**Status:** LOCKED por instrução do usuário; complementa D0013, não elimina a escolha anual 12–18.
+Treinador e atleta podem sugerir mudança depois da formação. Reconversão preserva atributos e experiência antiga, exige adaptação e pode depender da aceitação do treinador. Posição não determina sozinha o rendimento: papel, demanda e apoio do time importam. Estudos de Ronaldinho, Kaká, Romário, Diego Souza e Rivaldo registrados em `docs/CAREER_CASE_STUDIES.md`.
+
+## 2026-09-30 — A0003 — Motor experimental derivado de cinco carreiras
+**Build:** 0.2.0-experimental. Não substitui automaticamente a publicação 0.1.4.
+**Entregue:** fonte modular recuperada; hotfix 0.1.4 reconciliado; sorteio inicial local e familiar; infância adquirida separada do DNA; escola/futebol como decisão anual; observação, testes incertos, apoio familiar e permanência local; dispensas de base sem eliminação do save; discussão de posição e função após os 18; segunda trajetória oferecida no encerramento sem diploma automático.
+
+**Mudanças de fórmula / hipótese:**
+- estudar deve ter custo futebolístico reconhecível: multiplicadores 0,82/0,94/1,00 e progresso escolar 1/0,8/0,35;
+- avaliação não deve conhecer o futuro: atributos observáveis e físico atual determinam aprovação, com ruído; probabilidade 12–86%;
+- dispensa não é diagnóstico genético: base pode dispensar aos 14–16, com avaliação anual simplificada de 2,5–18%;
+- maturação deve mudar ritmo: multiplicador físico 0,56–1,12 até os 21, conforme idade de maturação;
+- crescimento corporal deve ser fracionado: dividir o crescimento esperado por 4,5, pois existem múltiplas atualizações anuais;
+- veterano perde capacidade física sem esquecer futebol: declínio de pace/stamina/strength começa aos 30; preservar crescimento-base técnico/cognitivo aos 33+, mantendo ruído;
+- função muda exigências: peso de 12% da diferença leitura/técnica versus mobilidade; apoio ofensivo contextual simplificado;
+- não permitir fabricar experiência alternando posições: transferência parcial incide somente sobre a diferença positiva entre proficiências.
+
+**Correções de integridade:** continuar não pula decisões; escolhas fora do evento não são aceitas; comentário do treinador não consulta compatibilidade oculta; saves antigos recebem contexto incremental sem trocar clube/posição; origem e deslocamento não usam cidade `A DEFINIR`; gerador standalone usa caminhos relativos ao projeto; caches separados para build modular e standalone.
+
+**Validação final:**
+- TypeScript estrito e build: PASS.
+- 100 carreiras comportamentais: todas chegam ao encerramento, 234 blocos; 14 cidades distintas; 106 registros de rejeição/dispensa; 58 saves tentam novamente após uma rejeição; nenhum NaN/Infinity. Todos se profissionalizam sob a política de aceitar testes e persistir; isto evidencia acesso ainda generoso, não taxa real de sucesso.
+- 30 pares com o mesmo DNA, política escola versus futebol: OVR aos 19 de 70,67 versus 74,20; escola concluída com prioridade escolar, incompleta com prioridade exclusiva de futebol. 60 trajetórias; parâmetros experimentais.
+- Reconversão aos 35: atributos preservados, posição anterior registrada, dívida recuperável; função fixa aproveita melhor um perfil técnico com mobilidade baixa; avalia-se mesmo resultado de teste/comentário ao alterar só DNA escondido.
+- Save legado sem `life`/`tactical`: PASS, preservando clube e posição.
+- 200 carreiras neutras: OVR médio 18=63,3; 24=76,3; 30=80,2; 36=77,8; média de 778 aparições. Frequência de partidas ainda alta e aposentadoria fixa continuam pendentes.
+- Auditoria posicional: 100 DNAs por política, agora realmente pareados; NATURAL/EXPLORE/WRONG/LATE-SWITCH aos 30 = 91,9/89,0/72,9/70,1. Todas as oito posições aparecem.
+
+**Antes/depois:** referência anterior neutra (750 saves, outra política) 30=83,1 e 36=82,0; experimental (200 saves) 30=80,2 e 36=77,8. Não é comparação causal pareada: mudaram escola, acesso, infância e política de reconversão. A auditoria pareada compara políticas dentro da versão nova. Conservar dados brutos e não apresentar diferenças entre builds como medidas isoladas de cada mecanismo.
+
+**Decisão:** manter como experimental para revisão e teste humano. As biografias demonstram mecanismos, não frequências. Profissão futura está no estágio de escolha de percurso; não há simulação de conclusão de curso/emprego. Rede humana, fornecimento de passes, táticas, lesões, aposentadoria variável e metadados completos permanecem backlog.
+
+**Interface móvel / offline:** Chromium 153, viewport 390×844: 48 transições, quatro abas, negociação de função adulta, recarga com save e recarga offline passaram; sem erros JavaScript e sem overflow horizontal. Screenshot inspecionado. O launcher agent-browser não iniciou neste ambiente; a execução usou Chromium diretamente por Playwright. Safari real/iPhone continua sem validação nesta sessão.
+
+## 2026-09-30 — A0004 — Extensão autorizada: Lulinha e Somália
+**Status:** IMPLEMENTADO / EXPERIMENTAL. O usuário pediu estudar e levar os dois casos ao motor. Homônimo confirmado: Somália atacante de Grêmio e Fluminense, Wanderson de Paula Sabino.
+
+**Pesquisa:** fontes contemporâneas e entrevistas em 2007/2020/2026 para Lulinha; formação Usipa/América, relatos de 2011/2015 e registro posterior para Somália. Evitar transferir ao atacante episódios do Somália do Botafogo. Relatos sobre negociações não provam o êxito de uma carreira alternativa. Multa milionária não é venda nem valor de mercado. Fontes e ressalvas em `docs/CAREER_CASE_STUDIES.md`.
+
+**Hipóteses e mudanças:**
+- expectativa da base separada da experiência sênior; negociação de entrada gradual/imediata, com carga que diminui nos primeiros 1.800 minutos;
+- pressão passa a interagir com resposta emocional e fadiga; não há fama convertida em aptidão;
+- afastamentos curtos 1–2 blocos e longos 4–6; zero partidas durante afastamento; crescimento reduzido, atributos e DNA preservados;
+- escolha de papel na retomada após liberação, com condição e exposição distintas;
+- mercado admite clubes menores ao abrir negociação ou para veterano com menos de 900 minutos; intenção de permanecer não obriga saída;
+- não punir contratação cara por “rendimento ruim” sem ao menos 450 minutos para avaliação;
+- legado reconhece carreira e vínculo local; não exige elite;
+- aposentadoria 36–39 por decisão, limite 40: SUPERSEDES o fim fixo aos 38 em A0002/A0003 para a experimental 0.2.0. Mantém duração de 216–252 blocos; benchmark deliberadamente para aos 38;
+- formação para treinador oferecida como percurso após carreira com escola concluída e 100 aparições, sem licença/emprego automáticos. Esses critérios são uma regra de jogo, não requisitos oficiais da CBF.
+
+**Validação final desta extensão:**
+- `npm test` e TypeScript estrito: PASS.
+- 100 carreiras completas comportamentais: 100 encerradas, 234 blocos na política que para aos 38, 107 registros de rejeição/dispensa, 59 novas tentativas após rejeição; sem valores não finitos. Profissionalização ainda generosa sob política de persistência/aceitar testes.
+- escola/futebol, 30 pares: OVR19 70,65/74,19. Escolhas escolares mantêm consequência persistente.
+- cenários adicionais: entrada gradual tem menos exposição que imediata; seis blocos de afastamento geram zero aparições; retorno exige decisão; DNA preservado; projeto menor oferecido em 33 propostas ao longo de 100 janelas construídas, com possibilidade de permanecer em 38 janelas; legado local reconhecido; parar aos 36 e seguir até limite40: PASS; percurso de treinador fica EM FORMAÇÃO.
+- lote neutro 200 carreiras: OVR18=63,2, 24=76,0, 30=79,4, 36=78,0, 38=75,6; média 745,7 aparições. Benchmark ainda tem excesso de partidas e curva a calibrar.
+- 100 DNAs × quatro políticas pareadas: OVR30 NATURAL=91,7 / EXPLORE=89,0 / WRONG=72,8 / LATE-SWITCH=70,0; oito posições viáveis.
+- navegador Chromium, 390×844: 48 transições, quatro abas, negociação adulta, recarga de save e offline PASS; zero erros JS ou overflow. Safari real não testado.
+
+**Arquivos de evidência:** `behavior-results-seven-cases.json`, `new-case-results.json`, `calibration-careers-seven-cases.json`, `calibration-positions-seven-cases.json`, `browser-results-seven-cases.json`. Resultados anteriores preservados como estágio A0003, não apresentados como versão final após os dois casos novos.
+
+**Decisão:** manter experimental, revisar por PR e testar com usuário. Afastamentos não são modelo clínico; taxas não foram inferidas de Somália. Internacionalização, empréstimos, economia da família, crise coletiva, pessoas persistentes, licenças reais e segunda profissão completa continuam pendentes.

@@ -1,0 +1,19 @@
+{
+  "name": "1903",
+  "version": "0.2.0-experimental",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && cp web/index.html dist/index.html && cp styles.css dist/styles.css && cp manifest.webmanifest dist/manifest.webmanifest && cp web/sw.js dist/sw.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "simulate": "node dist/dev/simulate.js",
+    "simulate:positions": "node dist/dev/simulate-positions.js",
+    "audit:positions": "node dist/dev/position-audit.js",
+    "simulate:distribution": "node dist/dev/position-distribution.js",
+    "test": "npm run build && node tests/career-behavior.mjs && node tests/new-case-behavior.mjs",
+    "standalone": "npm run build && python3 make_standalone.py"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}

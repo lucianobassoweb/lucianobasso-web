@@ -1,0 +1,57 @@
+import { RNG, clamp, hashSeed } from './random.js';
+import { BRAZIL_CLUBS_2026, CLUB_BY_ID } from '../data/clubs-br-2026.js';
+import { roleRating } from './positions.js';
+import type { PlayerState, LifeContext, Club, EducationPriority } from './types.js';
+
+const occupations=['motorista','professor(a)','vendedor(a)','auxiliar de serviços','técnico(a)','autônomo(a)','enfermeiro(a)','engenheiro(a)','sem trabalho remunerado'];
+/** Separate stream: family resources never determine the athlete's DNA. */
+export function generateLife(seed:number,hometown?:string,heartClubId?:string):LifeContext{
+  const rng=new RNG(hashSeed(`life:${seed}`));
+  const known=BRAZIL_CLUBS_2026.filter(c=>c.city&&c.city!==c.name&&c.city!=='A DEFINIR');
+  const origin=rng.pick(known.length?known:BRAZIL_CLUBS_2026);
+  const city=hometown??origin.city;
+  const local=BRAZIL_CLUBS_2026.find(c=>c.city===city)??origin;
+  const family={resources:rng.int(10,90),availableTime:rng.int(15,95),relocationWillingness:rng.int(15,90),parents:[rng.pick(occupations),rng.pick(occupations)]};
+  return {originState:local.state,residence:city,heartClubId:heartClubId??rng.pick(BRAZIL_CLUBS_2026.filter(c=>c.state===local.state)).id,
+    localSchool:`Escolinha comunitária de ${city}`,family,childhood:rng.pick(['RUA','FUTSAL','ESCOLA','MULTIESPORTE']),
+    education:{priority:'BALANCED',chosenFor:null,credits:0,completed:false},scouting:{observations:0,trialAttempts:0,lastAttemptSeason:0,rejections:[]}};
+}
+export function ensureLife(p:PlayerState):LifeContext{
+  return p.life??(p.life=generateLife(hashSeed(p.id),p.hometown,p.heartClubId));
+}
+export function footballTime(p:PlayerState):number{
+  if(p.age>18)return 1;
+  return ensureLife(p).education.priority==='SCHOOL'?.82:ensureLife(p).education.priority==='BALANCED'?.94:1;
+}
+export function finishEducationYear(p:PlayerState):void{
+  if(p.age>18)return;
+  const e=ensureLife(p).education;
+  const credits:Record<EducationPriority,number>={SCHOOL:1,BALANCED:.8,FOOTBALL:.35};
+  e.credits=Number((e.credits+credits[e.priority]).toFixed(2));
+  if(p.age===18)e.completed=e.credits>=5;
+}
+export function observeLocally(p:PlayerState):void{
+  const life=ensureLife(p);life.scouting.observations++;
+}
+/** Geographic buckets are provisional: city/state, not invented kilometre distances. */
+export function scoutingCandidates(p:PlayerState,rng:RNG):Club[]{
+  const life=ensureLife(p);
+  const local=BRAZIL_CLUBS_2026.filter(c=>c.state===life.originState&&c.id!==p.currentClubId&&c.city!=='A DEFINIR');
+  const modest=local.filter(c=>c.prestige<=60);
+  const pool=(modest.length?modest:local).length? (modest.length?modest:local):BRAZIL_CLUBS_2026.filter(c=>c.city!=='A DEFINIR'&&c.division!=='A');
+  const chosen=[rng.pick(pool)];
+  const observed=p.position==='IND'?45:roleRating(p,p.position);
+  if(life.scouting.observations>=6&&rng.chance(clamp((observed-35)/65,.12,.65))){
+    const wider=BRAZIL_CLUBS_2026.filter(c=>c.id!==chosen[0]!.id&&c.id!==p.currentClubId&&c.city!=='A DEFINIR'&&(c.state===life.originState||rng.chance(.12)));
+    if(wider.length)chosen.push(rng.pick(wider));
+  }
+  return chosen;
+}
+/** No compatibility/DNA lookup: evaluators see current performance and can make mistakes. */
+export function trialProbability(p:PlayerState,club:Club,transportSupport:boolean):number{
+  const life=ensureLife(p);const ability=p.position==='IND'?45:roleRating(p,p.position);
+  const physicalNow=(p.attributes.pace+p.attributes.stamina+p.attributes.strength)/3;
+  const assessment=ability*.75+physicalNow*.25;
+  const logistics=transportSupport?0:Math.max(0,45-life.family.resources)/200;
+  return clamp(.53+(assessment-(34+club.youth*.22))/60-logistics,.12,.86);
+}

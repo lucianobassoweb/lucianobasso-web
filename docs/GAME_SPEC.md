@@ -74,3 +74,36 @@ Vertical, uma mão, editorial esportivo premium. Sem estética de cassino/gacha.
 - Mudar não apaga atributos: cria dívida de adaptação e reduz eficiência temporária.
 - Distância funcional importa: mudanças adjacentes custam menos que reconversões extremas.
 - Toda geração possui ao menos uma rota de alta eficiência capaz de produzir nível lendário; escolhas ruins podem impedir que o usuário encontre essa rota.
+
+## 2026-09-30 — Decisões consolidadas após os cinco estudos
+
+Esta seção incorpora as decisões recentes do usuário e prevalece sobre defaults anteriores conflitantes.
+
+- O jogo acompanha decisões profissionais e de vida, sem gestão de sessões de treino.
+- Cidade, condição familiar, ocupações dos pais, infância, clube afetivo e DNA são sorteados. A família não determina a qualidade genética. O nome é personalização de identidade.
+- Aos 12, início numa escolinha local. Clube grande requer observação, convite, avaliação e condições familiares; convite não garante vaga.
+- Continuar em estrutura menor sempre é possível. Teste sem aprovação ou dispensa não força abandono do futebol.
+- Escola disputa tempo com formação futebolística. Escolaridade altera opções depois do futebol. Formação técnica ou superior exige novo percurso; concluir escola não equivale a receber uma profissão qualificada.
+- Após os 18, treinador e jogador podem propor reconversão. Há custo funcional e de experiência, com preservação de capacidades adquiridas.
+- Posição e função são conceitos distintos. Contexto do treinador, demanda física e abastecimento afetam o rendimento.
+- Maturação física tardia não equivale a baixo potencial; envelhecimento técnico e físico têm curvas distintas.
+- Referência histórica e detalhamento: `docs/CAREER_CASE_STUDIES.md`.
+
+### Primeira implementação experimental 0.2.0
+
+Escolha anual de escola dos 12 aos 18; observação local, convites e testes com resultados incertos; apoio e decisão familiar; dispensas de base e novas portas; reconversão negociada após os 18; funções mais fixa/móvel/equilibrada; infância adquirida e progressão física ligada à maturação; escolha de trabalho ou formação no encerramento.
+
+Não considerar finalizados: carreira da segunda profissão, lesões/reabilitação, mentores persistentes, plantéis, rede de olheiros completa, ligas locais próprias, empréstimos, mercado por projeto e aposentadoria flexível. Cobertura de cidades limitada aos registros enriquecidos; não inferir quilômetros de deslocamento a partir de estado.
+
+## 2026-09-30 — Extensão com Lulinha e Somália
+
+Casos adicionais: Lulinha (Corinthians) e Somália, **Wanderson de Paula Sabino**, atacante de Grêmio/Fluminense. O usuário confirmou o homônimo estudado.
+
+- Expectativa juvenil não é experiência profissional nem qualidade genética. Entrada gradual ou maior responsabilidade altera minutos e carga emocional no começo do profissional.
+- Afastamento reduz participação e oportunidades; habilidades adquiridas e DNA permanecem. Após liberação, o atleta negocia seu papel na retomada.
+- Abrir o mercado ou perder espaço na fase veterana permite também projetos menores. Continuar e reconstruir são rotas válidas.
+- O legado considera vínculos e carreira sustentada, sem exigir clube de elite nem tratar desvio da previsão juvenil como fracasso automático.
+- A aposentadoria deixa de ser obrigatória aos 38: decisão anual entre 36 e 39; limite técnico de 40 nesta revisão. Duração de 216–252 blocos, além dos eventos de decisão. A política de benchmark para aos 38, mantendo comparação de 234 blocos.
+- Formação para treinador é uma opção de percurso para quem reúne escola concluída e experiência profissional. Não concede licença ou emprego automaticamente; requisitos reais por entidade/país ainda precisarão de dados próprios.
+
+**Implementação parcial:** lesões são afastamentos abstratos em blocos, sem diagnóstico, tratamento ou calendário médico real. Crise coletiva, empréstimos, redes humanas e internacionalização permanecem pendentes. A segunda profissão possui escolha de caminho, sem simular sua formação completa. Números derivados de estudo de caso não constituem calibração de incidência.
