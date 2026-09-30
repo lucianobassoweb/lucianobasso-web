@@ -258,3 +258,30 @@
 ## Limitações conhecidas da playable.2
 **Não mascarar como resolvido:**
 1. plantéis reais de 2026 ainda não estão implementados no motor;
+
+---
+
+## 2026-09-30 — Hotfix 0.1.4 — travamento após iniciar carreira
+
+### Sintoma
+Após clicar em **COMEÇAR A CARREIRA**, a introdução aparecia normalmente. Ao clicar em **CONTINUAR**, a tela seguinte ficava sem evento e sem botão, aparentando travamento.
+
+### Causa
+`advanceCareer(save)` detectava `save.pendingEvent`, limpava o evento e executava `return save` imediatamente. Assim, o evento introdutório era removido, mas o próximo turno não era gerado.
+
+### Correção
+- remover o retorno antecipado de `advanceCareer`;
+- limpar o evento atual e continuar a geração do próximo beat da carreira;
+- adicionar fallback em `eventCard()` com botão **CONTINUAR** quando um save antigo estiver sem `pendingEvent`;
+- build visual atualizada para `PLAYABLE 0.1.4 SAFARI`;
+- preservar a mesma chave/versionamento do save para recuperar carreiras já criadas.
+
+### Validação
+Fluxo executado em Chromium headless mobile (390×844):
+1. criar carreira;
+2. continuar introdução;
+3. abrir escolha de posição;
+4. selecionar posição;
+5. avançar múltiplos blocos de formação.
+
+Resultado: 8 transições consecutivas, sem erros de JavaScript e com botão/evento presente em todos os estados.
