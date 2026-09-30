@@ -62,6 +62,24 @@ summary{min-height:44px;display:list-item;align-content:center}
  .has-match .match-context{margin:6px 0}.has-match .tags{margin:10px 0}
  .has-match .decision-panel{margin-top:16px;padding-top:16px}
 }
+
+/* 0.3.2: visible evidence, short chapters and persistent choice results. */
+.career-situation{outline:none;scroll-margin-top:78px}
+.choice-result{border-left:2px solid var(--accent);padding:12px 16px;margin-bottom:16px;background:#18242a}
+.choice-result>b{display:block;font-size:14px;margin-top:4px}.choice-result p{font-size:14px;color:#d5dfe5;line-height:1.55;margin:6px 0 0}
+.choice-result details{font-size:13px;color:var(--muted)}.choice-result summary{min-height:36px}.choice-result ul{padding-left:20px;margin:0 0 8px}
+.chapter-card,.chapter-payoff{border:1px solid #596354;background:#202920;padding:18px 20px;margin-bottom:16px;border-radius:4px}
+.chapter-heading{display:flex;justify-content:space-between;gap:10px;align-items:center}.chapter-heading>span:last-child{font-size:12px;color:var(--muted)}
+.chapter-card h3{font:400 24px/1.2 Georgia,serif;margin:8px 0}.chapter-card p,.chapter-payoff p{font-size:14px;line-height:1.55;margin:8px 0 12px;color:#d5dfe5}
+.chapter-card progress{display:block;width:100%;height:6px;border:0;border-radius:2px;overflow:hidden;appearance:none;background:var(--line)}
+.chapter-card progress::-webkit-progress-bar{background:var(--line)}.chapter-card progress::-webkit-progress-value{background:var(--accent)}.chapter-card progress::-moz-progress-bar{background:var(--accent)}
+.chapter-evidence{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--muted);margin-top:10px}.chapter-evidence b{color:var(--ink)}
+.chapter-payoff{border-color:var(--accent);background:#293024}.chapter-payoff>b{display:block;margin-top:6px}.chapter-payoff p{margin-bottom:0}
+.biography-card{margin:28px 0;padding:22px;border:1px solid var(--line);background:var(--panel);border-radius:4px}
+.biography-card>h3{font:400 28px/1.2 Georgia,serif;margin:10px 0}.biography-card>p{color:var(--muted);font-size:14px}
+.biography-list{max-height:540px;overflow:auto}.biography-list article{border-top:1px solid var(--line);padding:16px 0}.biography-list article>div{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.biography-list article h4{font-size:16px;margin:10px 0 6px}.biography-list article p{color:#d5dfe5;font-size:14px;line-height:1.6;margin:0}
+@media(max-width:600px){.career-situation{scroll-margin-top:14px}.choice-result{padding:10px 12px;margin-bottom:12px}.chapter-card,.chapter-payoff{padding:14px;margin-bottom:12px}.chapter-card h3{font-size:22px}.chapter-heading{flex-wrap:wrap;gap:4px}.chapter-evidence{gap:5px 12px}.biography-card{padding:18px}}
 </style></head><body><div id="app"></div><script>const __modules = Object.create(null);
 __modules['data/clubs-br-2026.js'] = (() => {
 
@@ -1995,6 +2013,108 @@ function leagueTitle(p) {
 
 return {coachName, coachProfile, ensureCoaching, ensureCoachJob, coachBond, syncCoachContext, standings, jobStability, objective, bondLabel, coachDossier, roleProspect, opportunityAdjustment, rememberCoach, performanceFeedback, evaluateCoachJob, simulateWorldBlock, reviewWorldCoaches, coachChangeEvent, coachDiscussionEvent, resolveCoachChoice, leagueTitle};
 })();
+__modules['core/stories.js'] = (() => {
+const {CLUB_BY_ID} = __modules['data/clubs-br-2026.js'];
+const {POSITION_LABEL} = __modules['core/positions.js'];
+const {coachName} = __modules['core/coaches.js'];
+const {competitionCategory} = __modules['core/calendar.js'];
+
+
+
+
+/** Observation only: no draws, bonuses, scouting promises or past reconstruction. */
+function ensureStories(p) {
+    p.story ??= { active: null, archive: [], lastObservedTurn: p.careerTurn, sequence: 0 };
+    if (!p.story.active && p.phase !== 'APOSENTADO')
+        openChapter(p);
+}
+function openChapter(p, comeback = false) {
+    const s = p.story, category = competitionCategory(p);
+    if (!comeback && s.archive.some(c => c.startedSeason === p.season && c.clubId === p.currentClubId && c.category === category && c.kind !== 'COMEBACK'))
+        return;
+    const kind = comeback ? 'COMEBACK' : category === 'SENIOR' ? 'REGULARITY' : 'FORMATION';
+    const targetAppearances = kind === 'COMEBACK' ? 2 : 3, targetMinutes = kind === 'COMEBACK' ? 45 : kind === 'REGULARITY' ? 150 : 120;
+    const targetGoodMatches = kind === 'REGULARITY' ? 2 : 0;
+    s.active = { id: `story-${++s.sequence}`, kind, category, clubId: p.currentClubId,
+        title: kind === 'COMEBACK' ? 'Reconstruir a participação' : kind === 'REGULARITY' ? 'Sustentar presença em campo' : p.currentClubId ? 'Construir repertório na base' : 'Ganhar experiência na escolinha',
+        objective: `Em até 8 rodadas desde a abertura: participar de ${targetAppearances} partidas e somar ${targetMinutes} minutos${targetGoodMatches ? ' com 2 notas de pelo menos 6,8' : ''}.`,
+        startedSeason: p.season, startedTurn: p.careerTurn, deadlineTurn: p.careerTurn + 8,
+        appearances: 0, minutes: 0, goodMatches: 0, targetAppearances, targetMinutes, targetGoodMatches };
+}
+function achieved(c) { return c.appearances >= c.targetAppearances && c.minutes >= c.targetMinutes && c.goodMatches >= c.targetGoodMatches; }
+function closeChapter(p, reason) {
+    const s = p.story, c = s.active;
+    if (!c)
+        return;
+    const outcome = achieved(c) ? 'ACHIEVED' : c.appearances > 0 ? 'PARTIAL' : 'UNMET';
+    s.archive.push({ ...c, endedSeason: p.season, endedTurn: p.careerTurn, outcome,
+        payoff: `${reason}: ${c.appearances} partidas, ${c.minutes} minutos${c.targetGoodMatches ? `, ${c.goodMatches} notas ≥ 6,8` : ''}. ${outcome === 'ACHIEVED' ? 'Objetivo alcançado.' : outcome === 'PARTIAL' ? 'Participação parcial registrada.' : 'Sem participação em campo neste capítulo.'} Essas atuações ficam no seu histórico.` });
+    s.archive = s.archive.slice(-60);
+    s.active = null;
+}
+/** Called after every accepted transition, including choices that open another event. */
+function updateStories(p, evidence, comeback = false) {
+    ensureStories(p);
+    const s = p.story;
+    if (comeback) {
+        closeChapter(p, 'Um novo retorno começa');
+        openChapter(p, true);
+    }
+    const c = s.active;
+    if (c && (c.startedSeason !== p.season || c.clubId !== p.currentClubId || c.category !== competitionCategory(p) || p.phase === 'APOSENTADO'))
+        closeChapter(p, 'Mudança de etapa');
+    if (p.careerTurn > s.lastObservedTurn) {
+        const active = s.active;
+        if (active && evidence && evidence.category === active.category && evidence.appearances > 0 && evidence.minutes > 0) {
+            active.appearances += evidence.appearances;
+            active.minutes += evidence.minutes;
+            if (evidence.rating >= 6.8)
+                active.goodMatches += evidence.appearances;
+        }
+        s.lastObservedTurn = p.careerTurn;
+    }
+    if (s.active && (achieved(s.active) || p.careerTurn >= s.active.deadlineTurn))
+        closeChapter(p, achieved(s.active) ? 'Presença comprovada' : 'Prazo encerrado');
+    if (!s.active && p.phase !== 'APOSENTADO')
+        openChapter(p);
+}
+/** Capture only observable choice state; a match simulated later cannot enter this receipt. */
+function choiceSnapshot(p) {
+    const values = { posição: p.position === 'IND' ? 'Indefinida' : POSITION_LABEL[p.position], clube: p.currentClubId ? CLUB_BY_ID[p.currentClubId]?.name ?? p.currentClubId : 'sem clube', fase: p.phase,
+        confiança: p.confidence, moral: p.morale, pressão: p.pressure, 'condição física': p.physicalCondition,
+        'intenção de mercado': p.transferIntent, 'abordagem de carreira': p.careerApproach ?? 'STABILITY',
+        'prioridade escolar': p.life?.education.priority ?? 'BALANCED', observações: p.life?.scouting.observations ?? 0,
+        'testes realizados': p.life?.scouting.trialAttempts ?? 0, função: p.tactical?.role ?? 'BALANCED',
+        'plano de retorno': p.comebackPlan ?? 'nenhum', 'situação profissional': p.professionalStatus ?? 'YOUTH',
+        'próximo percurso': p.life?.secondCareer?.path ?? 'nenhum', 'anos de contrato': p.contractYearsLeft,
+        'dívida de adaptação': p.adaptationDebt };
+    for (const [id, bond] of Object.entries(p.coaching?.bonds ?? {})) {
+        values[`confiança de ${coachName(id)}`] = bond.trust;
+        values[`afinidade com ${coachName(id)}`] = bond.affinity;
+        values[`conflito com ${coachName(id)}`] = bond.conflict;
+    }
+    const labels = { STAY: 'permanecer', OPEN: 'ouvir propostas', LEAVE: 'buscar saída', FORCE: 'forçar saída', STABILITY: 'estabilidade', RESPONSIBILITY: 'maior responsabilidade', SCHOOL: 'estudos protegidos', FOOTBALL: 'futebol prioritário', BALANCED: 'equilíbrio', HOLD: 'mais fixa', MOBILE: 'maior mobilidade', GRADUAL: 'gradual', COMPETE: 'disputar espaço', YOUTH: 'formação', INVITED: 'convite ao profissional', SENIOR: 'profissional', WORK: 'buscar trabalho', TECHNICAL: 'formação técnica', DEGREE: 'formação superior', COACH_COURSE: 'formação de treinador' };
+    for (const key of Object.keys(values))
+        if (typeof values[key] === 'string')
+            values[key] = labels[values[key]] ?? values[key];
+    return values;
+}
+function recordChoice(p, event, choiceId, before, next, previousLog) {
+    const after = choiceSnapshot(p), effects = [];
+    for (const [key, value] of Object.entries(after))
+        if (before[key] !== undefined && before[key] !== value) {
+            const previous = before[key];
+            effects.push(typeof value === 'number' && typeof previous === 'number' ? `${key}: ${previous.toFixed(1)} → ${value.toFixed(1)}` : `${key}: ${previous} → ${value}`);
+        }
+    if (next && next.id !== event.id)
+        effects.push(`Próxima decisão aberta: ${next.title}.`);
+    const recent = p.history[0];
+    const summary = next && next.id !== event.id ? `Você abriu a decisão: ${next.title}.` : recent && recent !== previousLog ? `${recent.headline}. ${recent.detail}` : effects[0] ?? 'Escolha registrada; situação atual mantida.';
+    p.lastChoiceResult = { eventId: event.id, choiceId, label: event.choices.find(c => c.id === choiceId).label, season: p.season, turn: p.careerTurn, summary, effects };
+}
+
+return {ensureStories, updateStories, choiceSnapshot, recordChoice};
+})();
 __modules['core/transitions.js'] = (() => {
 const {calendarScale} = __modules['core/calendar.js'];
 const {clamp} = __modules['core/random.js'];
@@ -2379,6 +2499,7 @@ function simulatePlayerMatch(player, own, opponent, rng, started = true, importa
 return {simulatePlayerMatch};
 })();
 __modules['core/engine.js'] = (() => {
+const {ensureStories, updateStories, choiceSnapshot, recordChoice} = __modules['core/stories.js'];
 const {ensureProfessionalStatus, competitionCategory, CATEGORY_LABEL, seasonGames, calendarScale, promotionEvidence} = __modules['core/calendar.js'];
 const {ensureCoaching, syncCoachContext, simulateWorldBlock, reviewWorldCoaches, coachChangeEvent, resolveCoachChoice, coachDossier, roleProspect, opportunityAdjustment, performanceFeedback, rememberCoach, coachProfile, leagueTitle, coachDiscussionEvent, coachName} = __modules['core/coaches.js'];
 const {ensureTransition, transitionEvent, transitionLoad, maybeInjury, injuryBlock, comebackEvent, legacyNarrative} = __modules['core/transitions.js'];
@@ -2388,6 +2509,7 @@ const {generateDNA, initialAttributes, growthStep, updateBody, overall} = __modu
 const {POSITIONS, POSITION_LABEL, changeCostPreview, changeCostLabel, selectPosition, trainPositionExperience, effectivePositionRating, observedPositionSuggestion, tacticalRating, roleRating} = __modules['core/positions.js'];
 const {BRAZIL_CLUBS_2026, CLUB_BY_ID} = __modules['data/clubs-br-2026.js'];
 const {simulatePlayerMatch} = __modules['core/match.js'];
+
 
 
 
@@ -2426,6 +2548,7 @@ function createCareerWithSeed(name, seed, heartClubId, hometown, hometownState) 
     const learned = childhood === 'FUTSAL' ? { technique: 1.5, decisions: 1 } : childhood === 'RUA' ? { dribbling: 1.5, technique: 1 } : childhood === 'MULTIESPORTE' ? { stamina: 1.5, strength: 1 } : { passing: 1.5, vision: 1 };
     for (const [key, gain] of Object.entries(learned))
         p.attributes[key] += gain;
+    ensureStories(p);
     return { version: VERSION, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), player: p, pendingEvent: { id: 'intro', kind: 'MILESTONE', title: '12 anos. Tudo começa agora.', body: `Você começa na ${life.localSchool}. Sua família: ${life.family.parents.join(" e ")}. Sua infância teve ${life.childhood.toLowerCase()}. As oportunidades serão descobertas a partir daqui.`, tags: ['ESCOLINHA', 'DNA OCULTO'] } };
 }
 function createCareer(name, heartClubId, hometown, hometownState) { return createCareerWithSeed(name, hashSeed(`${name}|${Date.now()}|1903`), heartClubId, hometown, hometownState); }
@@ -2849,13 +2972,13 @@ function contextualDecision(p, event) {
     else {
         event.body += ' Você e sua família avaliam a continuidade deste caminho.';
         event.choices = [{ id: 'career:local', label: 'Sustentar o caminho atual', hint: 'Preservar o vínculo e seguir competindo' },
-            { id: 'career:explore', label: 'Buscar outras oportunidades de avaliação', hint: 'Ampliar observação para convites futuros; não garante vaga' },
-            { id: 'career:education', label: 'Rever com a família o equilíbrio com a escola', hint: p.age <= 18 ? 'Reabrir a prioridade escolar deste ano' : 'Avaliar oportunidades de retomar a formação' }];
+            ...(ensureLife(p).scouting.observations < 30 ? [{ id: 'career:explore', label: 'Buscar outras oportunidades de avaliação', hint: 'Ampliar observação para convites futuros; não garante vaga' }] : []),
+            ...(p.age <= 18 ? [{ id: 'career:education', label: 'Rever com a família o equilíbrio com a escola', hint: 'Reabrir a prioridade escolar deste ano' }] : [])];
     }
     return event;
 }
 function endCareerEvent(p) { p.phase = 'APOSENTADO'; return { id: 'retire', kind: 'MILESTONE', title: 'Fim de carreira', body: `${legacyNarrative(p)} ${ensureLife(p).education.completed ? 'Você concluiu a escola e pode buscar formação técnica ou superior para uma nova profissão.' : 'Os estudos ficaram incompletos; retomar a formação pode ampliar suas opções profissionais.'} ${p.careerStats.appearances} jogos profissionais · ${p.careerStats.goals} gols · ${p.careerStats.assists} assistências · ${p.careerStats.motm} prêmios de melhor em campo · ${p.careerStats.titles.length} títulos.`, tags: ['LEGADO', 'APOSENTADORIA'], choices: [{ id: 'after:WORK', label: 'Buscar uma nova ocupação', hint: ensureLife(p).education.completed ? 'Escola concluída amplia suas opções' : 'Opções de entrada; retomar estudos pode ampliar oportunidades' }, ...(ensureLife(p).education.completed ? [{ id: 'after:TECHNICAL', label: 'Iniciar formação técnica', hint: 'Qualificar-se para uma nova profissão; não é um diploma automático' }, { id: 'after:DEGREE', label: 'Buscar formação superior', hint: 'Um novo projeto de estudo depois do futebol' }, ...(p.careerStats.appearances >= 100 ? [{ id: 'after:COACH_COURSE', label: 'Buscar formação para treinador', hint: 'Experiência ajuda, mas é preciso obter formação e oportunidades' }] : [])] : [])] }; }
-function resolveChoice(save, choiceId) {
+function resolveChoiceInternal(save, choiceId) {
     const p = save.player;
     const rng = new RNG(p.rngState);
     if (!save.pendingEvent || !save.pendingEvent.choices?.some(c => c.id === choiceId))
@@ -2884,8 +3007,10 @@ function resolveChoice(save, choiceId) {
             rememberCoach(p, accepted ? 'Aceitou disputa por maior responsabilidade' : 'Pediu responsabilidade antes de sustentar confiança', accepted ? 1 : -1, 0, accepted ? 0 : 2);
             log(p, 'PROJETO', accepted ? 'Maior responsabilidade negociada' : 'O treinador pede evidências antes de ampliar seu papel', accepted ? 'Mais disputa por titularidade, acompanhada de maior cobrança.' : 'O pedido não assegurou mais espaço. Você pode insistir em campo ou ouvir outros clubes.');
         }
-        if (choiceId === 'career:local')
+        if (choiceId === 'career:local') {
+            p.transferIntent = 'STAY';
             log(p, 'FORMAÇÃO', 'Continuidade escolhida', 'A família sustenta a trajetória atual.');
+        }
         if (choiceId === 'career:explore') {
             const scouting = ensureLife(p).scouting;
             scouting.observations = Math.min(30, scouting.observations + 1);
@@ -3065,7 +3190,7 @@ function setTransferIntent(save, intent) {
     return save;
 }
 function transferIntentLabel(i) { return i === 'STAY' ? 'Quero permanecer' : i === 'OPEN' ? 'Aberto a propostas' : i === 'LEAVE' ? 'Quero sair' : 'Vou forçar uma saída'; }
-function advanceCareer(save) {
+function advanceCareerInternal(save) {
     if (save.pendingEvent?.choices?.length)
         return save;
     if (save.pendingEvent)
@@ -3144,8 +3269,11 @@ function advanceCareer(save) {
             log(p, 'AFASTAMENTO', injuryEvent.title, injuryEvent.body);
         ev = injuryEvent ?? simulateProfessionalBlock(p, rng, fixtures);
         const marketNow = (p.seasonTurn === Math.floor(seasonGames(p) / 2) && (p.transferIntent === 'LEAVE' || p.transferIntent === 'FORCE')) ? buildMarketEvent(p, rng, 'Seu pedido para sair movimentou a janela') : null;
-        if (marketNow && !injuryEvent)
+        if (marketNow && !injuryEvent) {
+            const m = ev.matchFeedback;
+            updateStories(p, m ? { appearances: m.blockGames, minutes: m.blockMinutes, rating: m.rating, category: 'SENIOR' } : undefined);
             ev = marketNow;
+        }
     }
     else {
         ev = { id: `wait-${p.careerTurn}`, kind: 'INFO', title: 'Ainda procurando uma estrutura', body: 'Você segue competindo localmente. A carreira ainda pode abrir por outra porta.', tags: ['ESCOLINHA'] };
@@ -3158,6 +3286,32 @@ function advanceCareer(save) {
     p.rngState = rng.state;
     save.pendingEvent = contextualDecision(p, ev);
     save.updatedAt = new Date().toISOString();
+    return save;
+}
+function resolveChoice(save, choiceId) {
+    const event = save.pendingEvent;
+    if (!event?.choices?.some(c => c.id === choiceId))
+        return save;
+    ensureStories(save.player);
+    const before = choiceSnapshot(save.player), previousLog = save.player.history[0];
+    resolveChoiceInternal(save, choiceId);
+    recordChoice(save.player, event, choiceId, before, save.pendingEvent, previousLog);
+    updateStories(save.player, undefined, choiceId.startsWith('comeback:'));
+    save.updatedAt = new Date().toISOString();
+    return save;
+}
+function advanceCareer(save) {
+    if (save.pendingEvent?.choices?.length)
+        return save;
+    const p = save.player;
+    ensureStories(p);
+    const season = p.season, category = competitionCategory(p), before = { ...p.currentSeason };
+    advanceCareerInternal(save);
+    const after = p.currentSeason;
+    const appearances = p.season === season ? after.appearances - before.appearances : 0;
+    const minutes = p.season === season ? after.minutes - before.minutes : 0;
+    const rating = save.pendingEvent?.matchFeedback?.rating ?? (appearances > 0 ? (after.avgRating * after.appearances - before.avgRating * before.appearances) / appearances : 0);
+    updateStories(p, { appearances, minutes, rating, category });
     return save;
 }
 function overallVisible(p) { return p.age < 16 ? '—' : overall(p).toFixed(0); }
@@ -3173,7 +3327,7 @@ function requestCoachDiscussion(save) {
     return save;
 }
 
-return {createCareerWithSeed, createCareer, resolveChoice, setTransferIntent, transferIntentLabel, advanceCareer, overallVisible, getClub, clubCount, getPositionLabel, requestCoachDiscussion};
+return {createCareerWithSeed, createCareer, setTransferIntent, transferIntentLabel, resolveChoice, advanceCareer, overallVisible, getClub, clubCount, getPositionLabel, requestCoachDiscussion};
 })();
 __modules['core/persistence.js'] = (() => {
 
@@ -3223,7 +3377,15 @@ const feedback = fields({ opponent: text, coachName: text, fanReaction: text, co
     category: optional(category), showScore: optional(boolean) });
 const event = fields({ id: text, kind: oneOf('INFO', 'CHOICE', 'MATCH', 'SEASON_END', 'MARKET', 'MILESTONE'), title: text, body: text, tags: array(text),
     choices: optional(array(fields({ id: text, label: text, hint: optional(text) }))), payload: optional(object), matchFeedback: optional(feedback) });
-const player = fields({ id: text, name: text, hometown: text, heartClubId: text, currentClubId: nullable(text),
+const natural = v => number(v) && Number.isSafeInteger(v) && Number(v) >= 0;
+const chapterShape = { id: text, kind: oneOf('FORMATION', 'REGULARITY', 'COMEBACK'), title: text, objective: text,
+    startedSeason: natural, startedTurn: natural, deadlineTurn: natural, clubId: nullable(text), category,
+    appearances: natural, minutes: natural, goodMatches: natural, targetAppearances: natural, targetMinutes: natural, targetGoodMatches: natural };
+const chapter = v => fields(chapterShape)(v) && object(v) && Number(v.deadlineTurn) > Number(v.startedTurn) && Number(v.targetAppearances) > 0 && Number(v.targetMinutes) > 0 && Number(v.goodMatches) <= Number(v.appearances);
+const archivedChapter = v => chapter(v) && fields({ endedSeason: natural, endedTurn: natural, outcome: oneOf('ACHIEVED', 'PARTIAL', 'UNMET'), payoff: text })(v) && object(v) && Number(v.endedTurn) >= Number(v.startedTurn);
+const story = fields({ active: nullable(chapter), archive: array(archivedChapter), lastObservedTurn: natural, sequence: natural });
+const choiceResult = fields({ eventId: text, choiceId: text, label: text, season: natural, turn: natural, summary: text, effects: array(text) });
+const player = fields({ story: optional(story), lastChoiceResult: optional(choiceResult), id: text, name: text, hometown: text, heartClubId: text, currentClubId: nullable(text),
     ...numeric('birthYear age season seasonTurn careerTurn adaptationDebt positionChanges heightCm weightKg morale confidence pressure mentalFatigue physicalCondition reputation marketValue contractYearsLeft rngState'),
     phase: oneOf('ESCOLINHA', 'BASE', 'PROFISSIONAL', 'AUGE', 'VETERANO', 'APOSENTADO'), position: oneOf('IND', 'GK', 'CB', 'FB', 'DM', 'CM', 'AM', 'WG', 'ST'),
     transferIntent: oneOf('STAY', 'OPEN', 'LEAVE', 'FORCE'), secondaryPositions: array(position),
@@ -3360,7 +3522,6 @@ const {POSITIONS, POSITION_LABEL, coachPositionFeedback} = __modules['core/posit
 
 let save = loadSave();
 let tab = 'career';
-let lastDecision = '';
 const root = document.querySelector('#app');
 const esc = (s) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[c]));
 const pct = (v) => v >= 82 ? 'Muito alta' : v >= 66 ? 'Alta' : v >= 45 ? 'Média' : v >= 28 ? 'Baixa' : 'Muito baixa';
@@ -3371,7 +3532,7 @@ function theme() {
     const colors = c?.colors ?? ['#7bbcff', '#e8eef4'];
     return `style="--club:${colors[0]};--club2:${colors[1]};"`;
 }
-function appShell(content) { return `<main class="shell ${save ? 'playing' : 'creating'}" ${theme()}><div class="brand"><div><h1>1903</h1><span class="subbrand">CARREIRA</span></div><span class="build">0.3.1 · EXPERIMENTAL</span></div>${save ? nav() : ''}${persistenceNotice()}<div class="page-content">${content}</div></main>`; }
+function appShell(content) { return `<main class="shell ${save ? 'playing' : 'creating'}" ${theme()}><div class="brand"><div><h1>1903</h1><span class="subbrand">CARREIRA</span></div><span class="build">0.3.2 · EXPERIMENTAL</span></div>${save ? nav() : ''}${persistenceNotice()}<div class="page-content">${content}</div></main>`; }
 const navPaths = { career: 'M8 5l10 7-10 7V5Z', player: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM5 21v-2a7 7 0 0 1 14 0v2', stats: 'M5 20V10m7 10V4m7 16v-7', world: 'M4 7h16v13H4V7Zm4 0V4h8v3M4 12h16m-8-2v4' };
 function nav() { return `<nav class="bottom-nav" aria-label="Navegação da carreira"><div class="bottom-nav-inner">${[['career', 'Jogar', 'Jogar'], ['player', 'Jogador', 'Meu jogador'], ['stats', 'Histórico', 'Histórico'], ['world', 'Clube', 'Clube e mercado']].map(([id, label, full]) => `<button class="nav ${tab === id ? 'active' : ''}" data-tab="${id}" aria-label="${full}" aria-current="${tab === id ? 'page' : 'false'}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${navPaths[id]}"/></svg><span>${label}</span></button>`).join('')}</div></nav>`; }
 function persistenceNotice() {
@@ -3385,7 +3546,7 @@ function persistenceNotice() {
 function renderRecovery() { root.innerHTML = appShell(`<section class="recovery-panel"><span class="eyebrow">RECUPERAÇÃO DO SAVE</span><h2>Sua carreira foi preservada.</h2><p>O navegador encontrou dados que não consegue abrir com segurança. Eles continuam armazenados e não serão substituídos por uma nova carreira.</p><p>Baixe o arquivo original para recuperarmos seu progresso.</p><button class="action primary" id="recover-raw">Baixar save original</button><button class="action" id="retry-load">Tentar abrir novamente</button></section>`); bind(); }
 function downloadRecovery() { const raw = getRecoveryRaw(); if (raw === null)
     return; const url = URL.createObjectURL(new Blob([raw], { type: 'application/json' })); const a = document.createElement('a'); a.href = url; a.download = '1903-save-recuperacao.json'; a.click(); URL.revokeObjectURL(url); }
-function focusEvent() { const target = document.querySelector('.save-notice') ?? document.querySelector('.event-card'); target?.focus({ preventScroll: true }); target?.scrollIntoView({ block: 'start', behavior: 'instant' }); }
+function focusEvent() { const target = document.querySelector('.save-notice') ?? document.querySelector('.career-situation') ?? document.querySelector('.event-card'); target?.focus({ preventScroll: true }); target?.scrollIntoView({ block: 'start', behavior: 'instant' }); }
 const birthCities = BRAZIL_CLUBS_2026.filter(c => c.city && c.city !== c.name && c.city !== 'A DEFINIR');
 const brazilStates = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'];
 function clubOptions() { return BRAZIL_CLUBS_2026.slice().sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')).map(c => `<option value="${c.id}">${esc(c.name)} · ${c.state}</option>`).join(''); }
@@ -3426,6 +3587,30 @@ function coachRows(query) {
     const matches = REAL_COACHES.filter(c => normal(c.name).includes(normal(query)));
     return matches.map(c => { const profile = coachProfile(c.id); return `<div class="coach-db-row"><b>${esc(c.name)}</b><small>${c.market === 'REGIONAL' ? 'Referência no futebol regional' : c.market === 'BRAZIL' ? 'Referência no mercado brasileiro' : 'Referência internacional'}${c.historicalOnly ? ' · acervo histórico' : ''}</small><span>Perfil de jogo: ${profile.style === 'POSSESSION' ? 'posse' : profile.style === 'DIRECT' ? 'verticalidade' : 'organização defensiva'} · ${profile.dialogue >= 60 ? 'mais aberto ao diálogo' : 'mais firme na negociação'}</span></div>`; }).join('') || '<div class="empty">Nenhum treinador encontrado.</div>';
 }
+function choiceResultCard() {
+    const result = save.player.lastChoiceResult;
+    if (!result)
+        return '';
+    return `<aside class="choice-result" aria-label="Resultado da última escolha"><span class="eyebrow">SUA DECISÃO · ${result.season}</span><b>${esc(result.label)}</b><p>${esc(result.summary)}</p>${result.effects.length ? `<details><summary>O que mudou</summary><ul>${result.effects.map(effect => `<li>${esc(effect)}</li>`).join('')}</ul></details>` : ''}</aside>`;
+}
+function chapterCard() {
+    const p = save.player, story = p.story;
+    if (!story)
+        return '';
+    const chapter = story.active, last = story.archive[story.archive.length - 1];
+    const outcome = last && p.careerTurn - last.endedTurn <= 1 ? `<aside class="chapter-payoff" role="status"><span class="eyebrow">${last.outcome === 'ACHIEVED' ? 'CAPÍTULO CONCLUÍDO' : 'BALANÇO DO CAPÍTULO'}</span><b>${esc(last.title)}</b><p>${esc(last.payoff)}</p></aside>` : '';
+    if (!chapter)
+        return outcome;
+    const targets = [{ label: 'participações', value: chapter.appearances, target: chapter.targetAppearances }, { label: 'minutos', value: chapter.minutes, target: chapter.targetMinutes }, { label: 'boas atuações', value: chapter.goodMatches, target: chapter.targetGoodMatches }].filter(x => x.target > 0);
+    const progress = targets.length ? Math.min(...targets.map(x => Math.min(1, x.value / x.target))) : 0;
+    return `${outcome}<section class="chapter-card" aria-label="Capítulo em andamento"><div class="chapter-heading"><span class="eyebrow">SEU PRÓXIMO MARCO</span><span>${Math.max(0, chapter.deadlineTurn - p.careerTurn)} rodadas restantes</span></div><h3>${esc(chapter.title)}</h3><p>${esc(chapter.objective)}</p><progress value="${Math.round(progress * 100)}" max="100" aria-label="Progresso do capítulo"></progress><div class="chapter-evidence">${targets.map(x => `<span><b>${x.value}</b> / ${x.target} ${x.label}</span>`).join('')}</div></section>`;
+}
+function biographyCard() {
+    const p = save.player, chapters = p.story?.archive ?? [];
+    if (!chapters.length)
+        return '';
+    return `<section class="biography-card"><span class="eyebrow">SUA BIOGRAFIA</span><h3>O que ficou pelo caminho</h3><p>Marcos observados desde que os capítulos começaram a ser registrados.</p><div class="biography-list">${chapters.slice().reverse().map(ch => `<article><div><span>${ch.startedSeason}${ch.endedSeason !== ch.startedSeason ? '–' + ch.endedSeason : ''} · ${esc(getClub(ch.clubId)?.shortName ?? 'Formação')}</span><b>${ch.outcome === 'ACHIEVED' ? 'Concluído' : ch.outcome === 'PARTIAL' ? 'Progresso parcial' : 'Meta não alcançada'}</b></div><h4>${esc(ch.title)}</h4><p>${esc(ch.payoff)}</p></article>`).join('')}</div></section>`;
+}
 function eventCard() {
     if (!save?.pendingEvent)
         return save?.player.phase === 'APOSENTADO' ? `<div class="empty">Carreira encerrada. ${save.player.life?.secondCareer?.path === 'TECHNICAL' ? 'Novo caminho: formação técnica.' : save.player.life?.secondCareer?.path === 'DEGREE' ? 'Novo caminho: formação superior.' : save.player.life?.secondCareer?.path === 'COACH_COURSE' ? 'Novo caminho: formação para treinador.' : 'Novo caminho: buscar uma ocupação.'} Seu histórico permanece disponível.</div>` : '<div class="event-card"><span class="eyebrow">PRÓXIMO CAPÍTULO</span><h3>Seu caminho começa aqui.</h3><p>Conheça sua primeira oportunidade e faça sua escolha.</p><button class="action primary" id="advance">Iniciar minha trajetória</button></div>';
@@ -3433,13 +3618,13 @@ function eventCard() {
     return `<article class="event-card ${e.matchFeedback ? 'has-match' : ''}" tabindex="-1" aria-label="Situação atual"><div class="event-top"><span class="eyebrow">${e.matchFeedback ? 'ÚLTIMA PARTIDA' : ({ INFO: 'SUA CARREIRA', CHOICE: 'HORA DE DECIDIR', MATCH: 'ÚLTIMA PARTIDA', SEASON_END: 'FIM DE TEMPORADA', MARKET: 'PROPOSTAS', MILESTONE: 'MOMENTO DA CARREIRA' }[e.kind])}</span><span class="event-age">${save.player.season} · ${save.player.age} anos</span></div><h3>${esc(e.title)}</h3>${feedbackCard(e)}${e.matchFeedback ? `<details class="match-context"><summary>Contexto e próximos passos</summary><p>${esc(e.body)}</p></details>` : `<p>${esc(e.body)}</p>`}<div class="tags">${e.tags.map(t => `<span>${esc(t)}</span>`).join('')}</div>${e.choices?.length ? `<section class="decision-panel"><div class="decision-heading"><h4>Qual é sua decisão?</h4><span>${e.choices.length} caminhos</span></div>${e.choices.map((c, i) => `<button class="choice" data-choice="${c.id}"><span class="choice-number" aria-hidden="true">${String(i + 1).padStart(2, '0')}</span><span class="choice-copy"><b>${esc(c.label)}</b>${c.hint ? `<small>${esc(c.hint.startsWith(c.label + ' · ') ? c.hint.slice(c.label.length + 3) : c.hint)}</small>` : ''}</span></button>`).join('')}</section>` : `<button class="action primary" id="advance">Seguir minha carreira</button>`}</article>`;
 }
 function seasonStrip() { const p = save.player, s = p.currentSeason.categories?.[competitionCategory(p)] ?? p.currentSeason; return `<div class="season-category">${esc(CATEGORY_LABEL[competitionCategory(p)])} · nesta temporada</div><div class="season-strip"><div><b>${s.appearances}</b><span>Jogos</span></div><div><b>${s.goals}</b><span>Gols</span></div><div><b>${s.assists}</b><span>Assist.</span></div><div><b>${s.motm ?? 0}</b><span>Destaques</span></div><div><b>${s.avgRating ? s.avgRating.toFixed(1) : '—'}</b><span>Nota média</span></div></div>`; }
-function renderCareer() { const p = save.player, c = getClub(p.currentClubId); root.innerHTML = appShell(`<header class="player-head"><div><span class="eyebrow">${p.season} · ${CATEGORY_LABEL[competitionCategory(p)]}</span><h2>${esc(p.name)}</h2><p>${c ? esc(c.name) : esc(p.life?.localSchool ?? 'Escolinha local')} · ${p.age} anos</p></div><div class="ovr"><b>${overallVisible(p)}</b><span>Overall</span></div></header><div class="career-layout"><section class="career-focus">${lastDecision ? `<div class="decision-receipt" role="status">Última escolha: <b>${esc(lastDecision)}</b></div>` : ''}${eventCard()}</section><aside class="career-summary"><details class="summary-details"><summary>Minha temporada e momento</summary><div class="summary-content">${seasonStrip()}<div class="state-row"><div><span>Moral</span><b>${pct(p.morale)}</b></div><div><span>Confiança</span><b>${pct(p.confidence)}</b></div><div><span>Posição</span><b>${esc(getPositionLabel(p))}</b></div></div><div class="detail-card"><div><span>Origem</span><b>${esc(p.hometown)} · ${esc(p.life?.originState ?? '')}</b></div><div><span>Clube do coração</span><b>${esc(getClub(p.heartClubId)?.shortName ?? '—')}</b></div><div><span>Estudos</span><b>${p.life?.education.completed ? 'Concluídos' : p.age <= 18 ? 'Em formação' : 'Incompletos'}</b></div></div></div></details><details class="recent-memory"><summary>Memória da carreira</summary><div class="timeline">${p.history.slice(0, 8).map(h => `<div class="timeline-item"><i></i><div><b>${esc(h.headline)}</b><span>${h.season} · ${h.age} anos — ${esc(h.detail)}</span></div></div>`).join('') || '<div class="empty">A carreira está apenas começando.</div>'}</div></details></aside></div>`); if (window.innerWidth >= 900)
+function renderCareer() { const p = save.player, c = getClub(p.currentClubId); root.innerHTML = appShell(`<header class="player-head"><div><span class="eyebrow">${p.season} · ${CATEGORY_LABEL[competitionCategory(p)]}</span><h2>${esc(p.name)}</h2><p>${c ? esc(c.name) : esc(p.life?.localSchool ?? 'Escolinha local')} · ${p.age} anos</p></div><div class="ovr"><b>${overallVisible(p)}</b><span>Overall</span></div></header><div class="career-layout"><section class="career-focus career-situation" tabindex="-1" aria-label="Seu momento na carreira">${choiceResultCard()}${chapterCard()}${eventCard()}</section><aside class="career-summary"><details class="summary-details"><summary>Minha temporada e momento</summary><div class="summary-content">${seasonStrip()}<div class="state-row"><div><span>Moral</span><b>${pct(p.morale)}</b></div><div><span>Confiança</span><b>${pct(p.confidence)}</b></div><div><span>Posição</span><b>${esc(getPositionLabel(p))}</b></div></div><div class="detail-card"><div><span>Origem</span><b>${esc(p.hometown)} · ${esc(p.life?.originState ?? '')}</b></div><div><span>Clube do coração</span><b>${esc(getClub(p.heartClubId)?.shortName ?? '—')}</b></div><div><span>Estudos</span><b>${p.life?.education.completed ? 'Concluídos' : p.age <= 18 ? 'Em formação' : 'Incompletos'}</b></div></div></div></details><details class="recent-memory"><summary>Memória da carreira</summary><div class="timeline">${p.history.slice(0, 8).map(h => `<div class="timeline-item"><i></i><div><b>${esc(h.headline)}</b><span>${h.season} · ${h.age} anos — ${esc(h.detail)}</span></div></div>`).join('') || '<div class="empty">A carreira está apenas começando.</div>'}</div></details></aside></div>`); if (window.innerWidth >= 900)
     document.querySelector('.summary-details').open = true; bind(); }
 function attrRow(k, label) { const p = save.player, know = p.attributeKnowledge[k], v = p.attributes[k]; const shown = know < 18 ? '?' : know < 58 ? `${Math.max(20, Math.round(v - 6))}–${Math.min(99, Math.round(v + 6))}` : Math.round(v).toString(); const cls = know < 18 ? 'unknown' : ''; return `<div class="attribute ${cls}"><span>${label}</span><b>${shown}</b></div>`; }
 function positionGrid() { const p = save.player; return `<div class="position-grid">${POSITIONS.map(pos => `<div class="position-cell ${p.position === pos ? 'current' : ''}"><span>${POSITION_LABEL[pos]}</span><b>${Math.round(p.positionProficiency[pos])}</b><small>experiência</small></div>`).join('')}</div>`; }
 function renderPlayer() { const p = save.player, c = getClub(p.currentClubId); const foot = p.age <= 12 ? 'em descoberta' : p.dna.dominantFoot === 'D' ? 'direito' : 'esquerdo'; root.innerHTML = appShell(`<header class="player-head compact"><div><span class="eyebrow">PERFIL</span><h2>${esc(p.name)}</h2><p>${esc(getPositionLabel(p))} · pé ${foot} · ${p.heightCm.toFixed(1)} cm · ${p.weightKg.toFixed(1)} kg</p></div><div class="ovr"><b>${overallVisible(p)}</b><span>OVR</span></div></header><div class="quote">“${esc(coachPositionFeedback(p))}”<span>leitura atual do treinador</span></div><h3 class="section-title">Experiência por posição</h3>${positionGrid()}<div class="detail-card"><div><span>Origem</span><b>${esc(p.hometown)}</b></div><div><span>Família</span><b>${esc(p.life?.family.parents.join(' e ') ?? 'Em descoberta')}</b></div><div><span>Estudos</span><b>${p.life?.education.completed ? 'Escola concluída' : p.age <= 18 ? 'Em formação' : 'Escola incompleta'}</b></div><div><span>Função</span><b>${p.tactical?.role === 'HOLD' ? 'Mais fixa' : p.tactical?.role === 'MOBILE' ? 'Mais móvel' : 'Equilibrada'}</b></div></div><h3 class="section-title">Características descobertas</h3><div class="attr-grid">${attrRow('technique', 'Técnica')}${attrRow('passing', 'Passe')}${attrRow('finishing', 'Finalização')}${attrRow('dribbling', 'Drible')}${attrRow('vision', 'Visão')}${attrRow('decisions', 'Decisão')}${attrRow('pace', 'Velocidade')}${attrRow('stamina', 'Resistência')}${attrRow('strength', 'Força')}${attrRow('positioning', 'Posicionamento')}${attrRow('tackling', 'Desarme')}${attrRow('crossing', 'Cruzamento')}${attrRow('heading', 'Cabeceio')}${attrRow('reflexes', 'Reflexos')}${attrRow('handling', 'Mãos')}${attrRow('aerial', 'Jogo aéreo')}</div><div class="detail-card"><div><span>Clube</span><b>${c?.name ?? 'Escolinha'}</b></div><div><span>Clube do coração</span><b>${getClub(p.heartClubId)?.name ?? '—'}</b></div><div><span>Valor</span><b>${money(p.marketValue)}</b></div><div><span>Contrato</span><b>${p.contractYearsLeft ? p.contractYearsLeft + ' ano' + (p.contractYearsLeft > 1 ? 's' : '') : '—'}</b></div></div>`); bind(); }
 function barChart(rows) { const max = Math.max(1, ...rows.map(r => r.value)); return `<div class="bars">${rows.map(r => `<div class="bar-row"><span>${esc(r.label)}</span><div class="bar-track"><i style="width:${Math.max(2, r.value / max * 100).toFixed(1)}%"></i></div><b>${esc(r.display)}</b></div>`).join('')}</div>`; }
-function renderStats() { const p = save.player, s = p.careerStats; const seasons = p.seasonHistory.slice(0, 8).reverse(); const chart = barChart(seasons.map(x => ({ label: String(x.season).slice(-2), value: x.categories?.SENIOR ? (x.categories.SENIOR.goals + x.categories.SENIOR.assists) : 0, display: String(x.categories?.SENIOR ? (x.categories.SENIOR.goals + x.categories.SENIOR.assists) : 0) }))); root.innerHTML = appShell(`<section class="stat-hero"><span class="eyebrow">CARREIRA PROFISSIONAL · BASE CONTADA À PARTE</span><div class="career-total">${s.goals}<small>gols</small></div><p>${s.appearances} jogos · ${s.assists} assistências · ${s.motm}× melhor em campo</p></section><div class="grid six"><div class="metric"><b>${s.goals}</b><span>GOLS</span></div><div class="metric"><b>${s.assists}</b><span>ASSIST.</span></div><div class="metric"><b>${s.motm}</b><span>Destaques</span></div><div class="metric"><b>${s.reds}</b><span>Vermelhos</span></div><div class="metric"><b>${s.titles.length}</b><span>TÍTULOS</span></div><div class="metric"><b>${s.cleanSheets}</b><span>Sem sofrer gols</span></div></div><h3 class="section-title">Produção profissional G+A por temporada</h3><div class="chart-card">${seasons.length ? chart : '<div class="empty">Ainda não há temporadas profissionais concluídas.</div>'}</div><h3 class="section-title">Temporadas</h3>${p.seasonHistory.map(x => `<article class="season-card"><div><span>${x.season}</span><b>${x.age} anos</b></div><h3>${getClub(x.clubId)?.shortName ?? 'Formação'}</h3><div class="season-position">${esc(seasonPosition(x))}</div>${seasonCategoryRows(x)}<p>Total da temporada: ${x.appearances}J · ${x.goals}G · ${x.assists}A · ${x.motm} destaque(s)${x.avgRating ? ` · ${x.avgRating.toFixed(2)}` : ''}${x.titles.length ? ` · 🏆 ${x.titles.join(', ')}` : ''}</p><small>${money(x.marketValueStart)} → ${money(x.marketValueEnd)}</small></article>`).join('') || '<div class="empty">A primeira temporada ainda está em andamento.</div>'}`); bind(); }
+function renderStats() { const p = save.player, s = p.careerStats; const seasons = p.seasonHistory.slice(0, 8).reverse(); const chart = barChart(seasons.map(x => ({ label: String(x.season).slice(-2), value: x.categories?.SENIOR ? (x.categories.SENIOR.goals + x.categories.SENIOR.assists) : 0, display: String(x.categories?.SENIOR ? (x.categories.SENIOR.goals + x.categories.SENIOR.assists) : 0) }))); root.innerHTML = appShell(`<section class="stat-hero"><span class="eyebrow">CARREIRA PROFISSIONAL · BASE CONTADA À PARTE</span><div class="career-total">${s.goals}<small>gols</small></div><p>${s.appearances} jogos · ${s.assists} assistências · ${s.motm}× melhor em campo</p></section><div class="grid six"><div class="metric"><b>${s.goals}</b><span>GOLS</span></div><div class="metric"><b>${s.assists}</b><span>ASSIST.</span></div><div class="metric"><b>${s.motm}</b><span>Destaques</span></div><div class="metric"><b>${s.reds}</b><span>Vermelhos</span></div><div class="metric"><b>${s.titles.length}</b><span>TÍTULOS</span></div><div class="metric"><b>${s.cleanSheets}</b><span>Sem sofrer gols</span></div></div>${biographyCard()}<h3 class="section-title">Produção profissional G+A por temporada</h3><div class="chart-card">${seasons.length ? chart : '<div class="empty">Ainda não há temporadas profissionais concluídas.</div>'}</div><h3 class="section-title">Temporadas</h3>${p.seasonHistory.map(x => `<article class="season-card"><div><span>${x.season}</span><b>${x.age} anos</b></div><h3>${getClub(x.clubId)?.shortName ?? 'Formação'}</h3><div class="season-position">${esc(seasonPosition(x))}</div>${seasonCategoryRows(x)}<p>Total da temporada: ${x.appearances}J · ${x.goals}G · ${x.assists}A · ${x.motm} destaque(s)${x.avgRating ? ` · ${x.avgRating.toFixed(2)}` : ''}${x.titles.length ? ` · 🏆 ${x.titles.join(', ')}` : ''}</p><small>${money(x.marketValueStart)} → ${money(x.marketValueEnd)}</small></article>`).join('') || '<div class="empty">A primeira temporada ainda está em andamento.</div>'}`); bind(); }
 function relationLabel(r) { const vals = [['Paixão', r.passion], ['Ódio', r.hate], ['Temor', r.fear], ['Respeito', r.respect]]; return vals.sort((a, b) => b[1] - a[1])[0]; }
 function intentButtons() { const p = save.player; const intents = ['STAY', 'OPEN', 'LEAVE', 'FORCE']; return `<div class="intent-grid">${intents.map(i => `<button class="intent ${p.transferIntent === i ? 'active' : ''}" data-intent="${i}" aria-pressed="${p.transferIntent === i}">${transferIntentLabel(i)}</button>`).join('')}</div>`; }
 function renderWorld() { const p = save.player; const rel = Object.values(p.fanRelations).filter(x => Math.max(x.passion, x.hate, x.fear, x.respect) > 1).sort((a, b) => Math.max(b.passion, b.hate, b.fear, b.respect) - Math.max(a.passion, a.hate, a.fear, a.respect)).slice(0, 8); root.innerHTML = appShell(`<section class="world-head"><span class="eyebrow">MUNDO</span><h2>Brasil · 156 clubes</h2><p>Seu nome começa a significar coisas diferentes em cada estádio.</p></section>${currentCoachCard()}${save.player.currentClubId && p.coaching ? `<h3 class="section-title">Campanha do clube</h3><div class="league-table">${standings(p, p.currentClubId).map((c, i) => `<div class="league-row ${c.clubId === p.currentClubId ? 'current' : ''}"><span>${i + 1}</span><b>${esc(getClub(c.clubId).shortName)}</b><span>${c.games}J</span><strong>${c.points} pts</strong></div>`).join('')}</div>` : ''}<h3 class="section-title">Minha posição no mercado</h3>${intentButtons()}<h3 class="section-title">Torcidas</h3><div class="relation-list">${rel.length ? rel.map(r => { const [label, v] = relationLabel(r); return `<div class="relation"><div><b>${getClub(r.clubId)?.name ?? r.clubId}</b><span>${label}</span></div><strong>${Math.round(v)}</strong></div>`; }).join('') : '<div class="empty">Ainda é cedo para o futebol ter uma opinião forte sobre você.</div>'}</div><h3 class="section-title">Transferências</h3>${p.transferHistory.length ? p.transferHistory.map(t => `<div class="transfer"><span>${t.season}</span><b>${getClub(t.fromClubId)?.shortName ?? 'Formação'} → ${getClub(t.toClubId)?.shortName}</b><strong>${money(t.fee)}</strong></div>`).join('') : '<div class="empty small">Nenhuma transferência profissional.</div>'}${coachDatabase()}<details class="settings"><summary>Configurações e dados</summary><button class="action" id="export">Exportar diagnóstico completo</button><button class="action danger" id="reset">Apagar carreira</button></details>`); bind(); }
@@ -3466,7 +3651,7 @@ function bind() {
     document.querySelector('#advance')?.addEventListener('click', () => { if (!save)
         return; save = advanceCareer(save); storeSave(save); render(); focusEvent(); });
     document.querySelectorAll('[data-choice]').forEach(b => b.onclick = () => { if (!save)
-        return; lastDecision = save.pendingEvent?.choices?.find(c => c.id === b.dataset.choice)?.label ?? ''; save = resolveChoice(save, b.dataset.choice); storeSave(save); save = advanceCareer(save); storeSave(save); render(); focusEvent(); });
+        return; save = resolveChoice(save, b.dataset.choice); storeSave(save); save = advanceCareer(save); storeSave(save); render(); focusEvent(); });
     document.querySelectorAll('[data-intent]').forEach(b => b.onclick = () => { if (!save)
         return; save = setTransferIntent(save, b.dataset.intent); storeSave(save); render(); });
     document.querySelector('#export')?.addEventListener('click', () => save && exportDiagnostic(save));
@@ -3476,7 +3661,6 @@ function bind() {
             return;
         }
         save = null;
-        lastDecision = '';
         tab = 'career';
         render();
         window.scrollTo(0, 0);

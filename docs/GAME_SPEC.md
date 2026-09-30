@@ -131,3 +131,12 @@ Limites: elenco, passes/posses, competições reais completas, substituições e
 Esta decisão substitui a regra anterior de sorteio de cidade e clube do coração: o usuário escolhe cidade de nascimento, UF e clube do coração na criação. Família, condições sociais, infância e características continuam sorteadas. A residência aos 12 anos e a escolinha local usam a cidade escolhida. Não há ingresso automático no clube do coração. O campo cidade admite municípios fora das sugestões; os metadados incompletos dos clubes continuam limitando a precisão geográfica dos convites.
 
 A UX prioriza evento e decisões: duas colunas no desktop, resumo e memória expansíveis no celular, navegação com nomes claros, textos legíveis, reações e contexto da partida expansíveis, confirmação visual da última escolha. Saves existentes mantêm suas origens.
+
+
+## 0.3.2 experimental — capítulos e retorno das escolhas
+
+Adaptação inicial de referências de jogos descritas em `GAMEPLAY_CASE_STUDIES.md`: um capítulo esportivo visível, objetivo curto e balanço factual. Formação: 3 participações/120 minutos; profissional: 3 participações/150 minutos/2 notas >=6,8; retorno: 2 participações/45 minutos. Janela de 8 rodadas do calendário, com resultado parcial possível. São marcos narrativos para leitura da carreira; não são promessas do treinador, critérios novos de promoção nem bônus numéricos. Banco e afastamento não contam como participação. Mudanças de clube/categoria/temporada encerram o contexto anterior.
+
+Um capítulo regular por contexto temporada/clube/categoria, além de retorno após afastamento. Arquivo biográfico limitado aos 60 registros mais recentes. Meta não cumprida não altera potencial nem condena a trajetória. Uma partida por turno e decisões conforme D0021 continuam vigentes. O registro da última escolha é capturado antes da próxima simulação e explica apenas efeitos já aplicados; conversas e prioridades que abrem outra decisão também geram registro.
+
+Saves existentes sem narrativa iniciam o registro daqui em diante. Não reconstruir marcos retroativos. Campo opcional, mesma chave e versão estrutural do save. Este ciclo não implementa toda a pesquisa: promessas negociadas, arcos paralelos de mercado/torcida e eventos que retornam memórias específicas permanecem planejados.

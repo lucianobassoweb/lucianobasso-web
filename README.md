@@ -2,7 +2,7 @@
 
 Jogo de carreira individual no futebol, responsivo para celular e desktop, com funcionamento offline. Começa aos 12 numa escolinha local. As decisões profissionais e de vida conduzem uma biografia sorteada.
 
-Versão experimental 0.3.1: estudos de Ronaldinho, Kaká, Romário, Diego Souza, Rivaldo, Lulinha e Somália aplicados a origem familiar, escola, descoberta, reconversão, transição, afastamentos e longevidade. Ver `docs/CAREER_CASE_STUDIES.md`, `docs/GAME_SPEC.md` e `PROJECT_LOG.md` para decisões, fórmulas, fontes e limites.
+Versão experimental 0.3.2: estudos de Ronaldinho, Kaká, Romário, Diego Souza, Rivaldo, Lulinha e Somália aplicados a origem familiar, escola, descoberta, reconversão, transição, afastamentos e longevidade. Ver `docs/CAREER_CASE_STUDIES.md`, `docs/GAME_SPEC.md` e `PROJECT_LOG.md` para decisões, fórmulas, fontes e limites.
 
 ```bash
 npm ci
@@ -41,3 +41,9 @@ Identidade editorial de futebol, placar com os dois times, métricas específica
 `npm test` inclui os 18 grupos de persistência. Para verificar os estados visuais sem tocar saves reais, depois de `npm run standalone` abra `tests/persistence-ui.html?scenario=corrupt` ou `?scenario=quota` pelo servidor local: a fixture usa somente armazenamento em memória. Evidências e limites em `docs/UI_REVIEW_0.3.1.md` e `PROJECT_LOG.md`.
 
 A geração standalone atualiza o identificador do cache pelo conteúdo do HTML. A atualização não apaga localStorage. A configuração de subagentes e o roteamento estão em `AGENTS.md` e `docs/ORCHESTRATION.md`; verificação: `npm run check:orchestration`.
+
+## 0.3.2 — capítulos e consequências visíveis
+
+A pesquisa de New Star Soccer, Football Manager, Wildermyth e Citizen Sleeper está em [docs/GAMEPLAY_CASE_STUDIES.md](docs/GAMEPLAY_CASE_STUDIES.md). A primeira adaptação adiciona objetivos curtos por contexto, progresso por participação real, resultado parcial e arquivo biográfico em Histórico. A última decisão mantém um recibo factual após recarga, capturado antes da próxima partida.
+
+Capítulos não distribuem bônus nem garantem propostas, e não consultam o DNA oculto. Motor, calendário e critérios de promoção permanecem iguais. Saves antigos começam a registrar capítulos a partir da atualização. `npm test` inclui `tests/story-career.mjs`; verificação e limites completos em `docs/GAMEPLAY_REVIEW_0.3.2.md`.

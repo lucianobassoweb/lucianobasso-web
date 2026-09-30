@@ -1,3 +1,4 @@
+import {ensureStories, updateStories, choiceSnapshot, recordChoice} from './stories.js';
 import { ensureProfessionalStatus, competitionCategory, CATEGORY_LABEL, seasonGames, calendarScale, promotionEvidence } from './calendar.js';
 import { ensureCoaching, syncCoachContext, simulateWorldBlock, reviewWorldCoaches, coachChangeEvent, resolveCoachChoice, coachDossier, roleProspect, opportunityAdjustment, performanceFeedback, rememberCoach, coachProfile, leagueTitle, coachDiscussionEvent, coachName, coachBond } from './coaches.js';
 import { ensureTransition, transitionEvent, transitionLoad, maybeInjury, injuryBlock, comebackEvent, legacyNarrative } from './transitions.js';
@@ -39,6 +40,7 @@ export function createCareerWithSeed(name:string,seed:number,heartClubId?:string
   const childhood=life.childhood;
   const learned:Partial<Record<keyof VisibleAttributes,number>>=childhood==='FUTSAL'?{technique:1.5,decisions:1}:childhood==='RUA'?{dribbling:1.5,technique:1}:childhood==='MULTIESPORTE'?{stamina:1.5,strength:1}:{passing:1.5,vision:1};
   for(const [key,gain] of Object.entries(learned))p.attributes[key as keyof VisibleAttributes]+=gain;
+  ensureStories(p);
   return {version:VERSION,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),player:p,pendingEvent:{id:'intro',kind:'MILESTONE',title:'12 anos. Tudo começa agora.',body:`Você começa na ${life.localSchool}. Sua família: ${life.family.parents.join(" e ")}. Sua infância teve ${life.childhood.toLowerCase()}. As oportunidades serão descobertas a partir daqui.`,tags:['ESCOLINHA','DNA OCULTO']}};
 }
 export function createCareer(name:string,heartClubId?:string,hometown?:string,hometownState?:string):SaveGame{return createCareerWithSeed(name,hashSeed(`${name}|${Date.now()}|1903`),heartClubId,hometown,hometownState);}
@@ -255,14 +257,14 @@ function contextualDecision(p:PlayerState,event:CareerEvent):CareerEvent{
   }else{
     event.body+=' Você e sua família avaliam a continuidade deste caminho.';
     event.choices=[{id:'career:local',label:'Sustentar o caminho atual',hint:'Preservar o vínculo e seguir competindo'},
-      {id:'career:explore',label:'Buscar outras oportunidades de avaliação',hint:'Ampliar observação para convites futuros; não garante vaga'},
-      {id:'career:education',label:'Rever com a família o equilíbrio com a escola',hint:p.age<=18?'Reabrir a prioridade escolar deste ano':'Avaliar oportunidades de retomar a formação'}];
+      ...(ensureLife(p).scouting.observations<30?[{id:'career:explore',label:'Buscar outras oportunidades de avaliação',hint:'Ampliar observação para convites futuros; não garante vaga'}]:[]),
+      ...(p.age<=18?[{id:'career:education',label:'Rever com a família o equilíbrio com a escola',hint:'Reabrir a prioridade escolar deste ano'}]:[])];
   }
   return event;
 }
 function endCareerEvent(p:PlayerState):CareerEvent{p.phase='APOSENTADO';return {id:'retire',kind:'MILESTONE',title:'Fim de carreira',body:`${legacyNarrative(p)} ${ensureLife(p).education.completed?'Você concluiu a escola e pode buscar formação técnica ou superior para uma nova profissão.':'Os estudos ficaram incompletos; retomar a formação pode ampliar suas opções profissionais.'} ${p.careerStats.appearances} jogos profissionais · ${p.careerStats.goals} gols · ${p.careerStats.assists} assistências · ${p.careerStats.motm} prêmios de melhor em campo · ${p.careerStats.titles.length} títulos.`,tags:['LEGADO','APOSENTADORIA'],choices:[{id:'after:WORK',label:'Buscar uma nova ocupação',hint:ensureLife(p).education.completed?'Escola concluída amplia suas opções':'Opções de entrada; retomar estudos pode ampliar oportunidades'},...(ensureLife(p).education.completed?[{id:'after:TECHNICAL',label:'Iniciar formação técnica',hint:'Qualificar-se para uma nova profissão; não é um diploma automático'},{id:'after:DEGREE',label:'Buscar formação superior',hint:'Um novo projeto de estudo depois do futebol'},...(p.careerStats.appearances>=100?[{id:'after:COACH_COURSE',label:'Buscar formação para treinador',hint:'Experiência ajuda, mas é preciso obter formação e oportunidades'}]:[])]:[])]};}
 
-export function resolveChoice(save:SaveGame,choiceId:string):SaveGame{
+function resolveChoiceInternal(save:SaveGame,choiceId:string):SaveGame{
   const p=save.player;const rng=new RNG(p.rngState);if(!save.pendingEvent||!save.pendingEvent.choices?.some(c=>c.id===choiceId))return save;
   if(choiceId.startsWith('career:')){
     if(choiceId==='career:discuss'){p.coachTalkFor=`${p.season}:${p.seasonTurn}`;save.pendingEvent=coachDiscussionEvent(p);return save;}
@@ -275,7 +277,7 @@ export function resolveChoice(save:SaveGame,choiceId:string):SaveGame{
       rememberCoach(p,accepted?'Aceitou disputa por maior responsabilidade':'Pediu responsabilidade antes de sustentar confiança',accepted?1:-1,0,accepted?0:2);
       log(p,'PROJETO',accepted?'Maior responsabilidade negociada':'O treinador pede evidências antes de ampliar seu papel',accepted?'Mais disputa por titularidade, acompanhada de maior cobrança.':'O pedido não assegurou mais espaço. Você pode insistir em campo ou ouvir outros clubes.');
     }
-    if(choiceId==='career:local')log(p,'FORMAÇÃO','Continuidade escolhida','A família sustenta a trajetória atual.');
+    if(choiceId==='career:local'){p.transferIntent='STAY';log(p,'FORMAÇÃO','Continuidade escolhida','A família sustenta a trajetória atual.');}
     if(choiceId==='career:explore'){const scouting=ensureLife(p).scouting;scouting.observations=Math.min(30,scouting.observations+1);log(p,'OBSERVAÇÃO','Família procura outras portas','Mais observação pode ampliar os convites futuros.');}
     if(choiceId==='career:education'){if(p.age<=18){save.pendingEvent=educationEvent(p);return save;}else log(p,'EDUCAÇÃO','Você considera retomar os estudos','Seu percurso escolar permanece registrado; uma nova formação exige um projeto próprio.');}
   }else if(choiceId.startsWith('coach:')||choiceId.startsWith('coach-talk:')){
@@ -349,7 +351,7 @@ export function setTransferIntent(save:SaveGame,intent:TransferIntent):SaveGame{
 }
 export function transferIntentLabel(i:TransferIntent):string{return i==='STAY'?'Quero permanecer':i==='OPEN'?'Aberto a propostas':i==='LEAVE'?'Quero sair':'Vou forçar uma saída';}
 
-export function advanceCareer(save:SaveGame):SaveGame{
+function advanceCareerInternal(save:SaveGame):SaveGame{
   if(save.pendingEvent?.choices?.length)return save;
   if(save.pendingEvent)save.pendingEvent=null;const p=save.player;if(p.phase==='APOSENTADO')return save;const rng=new RNG(p.rngState);
   ensureProfessionalStatus(p);ensureCoaching(p);
@@ -367,12 +369,33 @@ export function advanceCareer(save:SaveGame):SaveGame{
   let ev:CareerEvent;
   if(p.age>=13&&!p.currentClubId&&p.seasonTurn===3&&life.scouting.lastAttemptSeason!==p.season){ev=assignYouthClub(p,rng);}
   else if(competitionCategory(p)!=='SENIOR'){ev=simulateYouthBlock(p,rng);}
-  else if(p.currentClubId){const injuryEvent=injuryBlock(p)??maybeInjury(p,rng);if(injuryEvent&&injuryEvent.id.startsWith('injury-'))log(p,'AFASTAMENTO',injuryEvent.title,injuryEvent.body);ev=injuryEvent??simulateProfessionalBlock(p,rng,fixtures);const marketNow=(p.seasonTurn===Math.floor(seasonGames(p)/2)&&(p.transferIntent==='LEAVE'||p.transferIntent==='FORCE'))?buildMarketEvent(p,rng,'Seu pedido para sair movimentou a janela'):null;if(marketNow&&!injuryEvent)ev=marketNow;}
+  else if(p.currentClubId){const injuryEvent=injuryBlock(p)??maybeInjury(p,rng);if(injuryEvent&&injuryEvent.id.startsWith('injury-'))log(p,'AFASTAMENTO',injuryEvent.title,injuryEvent.body);ev=injuryEvent??simulateProfessionalBlock(p,rng,fixtures);const marketNow=(p.seasonTurn===Math.floor(seasonGames(p)/2)&&(p.transferIntent==='LEAVE'||p.transferIntent==='FORCE'))?buildMarketEvent(p,rng,'Seu pedido para sair movimentou a janela'):null;if(marketNow&&!injuryEvent){const m=ev.matchFeedback;updateStories(p,m?{appearances:m.blockGames,minutes:m.blockMinutes,rating:m.rating,category:'SENIOR'}:undefined);ev=marketNow;}}
   else{ev={id:`wait-${p.careerTurn}`,kind:'INFO',title:'Ainda procurando uma estrutura',body:'Você segue competindo localmente. A carreira ainda pode abrir por outra porta.',tags:['ESCOLINHA']};}
   reviewWorldCoaches(p);
   if((p.coaching?.progress??0)>=1-1e-8)p.seasonReviewDue=true;
   if(p.age>=40)ev=endCareerEvent(p);
   p.rngState=rng.state;save.pendingEvent=contextualDecision(p,ev);save.updatedAt=new Date().toISOString();return save;
+}
+
+export function resolveChoice(save:SaveGame,choiceId:string):SaveGame {
+  const event=save.pendingEvent;
+  if(!event?.choices?.some(c=>c.id===choiceId))return save;
+  ensureStories(save.player);const before=choiceSnapshot(save.player),previousLog=save.player.history[0];
+  resolveChoiceInternal(save,choiceId);
+  recordChoice(save.player,event,choiceId,before,save.pendingEvent,previousLog);
+  updateStories(save.player,undefined,choiceId.startsWith('comeback:'));
+  save.updatedAt=new Date().toISOString();return save;
+}
+export function advanceCareer(save:SaveGame):SaveGame {
+  if(save.pendingEvent?.choices?.length)return save;
+  const p=save.player;ensureStories(p);
+  const season=p.season,category=competitionCategory(p),before={...p.currentSeason};
+  advanceCareerInternal(save);
+  const after=p.currentSeason;
+  const appearances=p.season===season?after.appearances-before.appearances:0;
+  const minutes=p.season===season?after.minutes-before.minutes:0;
+  const rating=save.pendingEvent?.matchFeedback?.rating??(appearances>0?(after.avgRating*after.appearances-before.avgRating*before.appearances)/appearances:0);
+  updateStories(p,{appearances,minutes,rating,category});return save;
 }
 
 export function overallVisible(p:PlayerState):string{return p.age<16?'—':overall(p).toFixed(0);}

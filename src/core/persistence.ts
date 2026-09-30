@@ -54,7 +54,15 @@ const feedback=fields({opponent:text,coachName:text,fanReaction:text,coachReacti
   category:optional(category),showScore:optional(boolean)});
 const event=fields({id:text,kind:oneOf('INFO','CHOICE','MATCH','SEASON_END','MARKET','MILESTONE'),title:text,body:text,tags:array(text),
   choices:optional(array(fields({id:text,label:text,hint:optional(text)}))),payload:optional(object),matchFeedback:optional(feedback)});
-const player=fields({id:text,name:text,hometown:text,heartClubId:text,currentClubId:nullable(text),
+const natural:Guard=v=>number(v)&&Number.isSafeInteger(v)&&Number(v)>=0;
+const chapterShape={id:text,kind:oneOf('FORMATION','REGULARITY','COMEBACK'),title:text,objective:text,
+  startedSeason:natural,startedTurn:natural,deadlineTurn:natural,clubId:nullable(text),category,
+  appearances:natural,minutes:natural,goodMatches:natural,targetAppearances:natural,targetMinutes:natural,targetGoodMatches:natural};
+const chapter:Guard=v=>fields(chapterShape)(v)&&object(v)&&Number(v.deadlineTurn)>Number(v.startedTurn)&&Number(v.targetAppearances)>0&&Number(v.targetMinutes)>0&&Number(v.goodMatches)<=Number(v.appearances);
+const archivedChapter:Guard=v=>chapter(v)&&fields({endedSeason:natural,endedTurn:natural,outcome:oneOf('ACHIEVED','PARTIAL','UNMET'),payoff:text})(v)&&object(v)&&Number(v.endedTurn)>=Number(v.startedTurn);
+const story=fields({active:nullable(chapter),archive:array(archivedChapter),lastObservedTurn:natural,sequence:natural});
+const choiceResult=fields({eventId:text,choiceId:text,label:text,season:natural,turn:natural,summary:text,effects:array(text)});
+const player=fields({story:optional(story),lastChoiceResult:optional(choiceResult),id:text,name:text,hometown:text,heartClubId:text,currentClubId:nullable(text),
   ...numeric('birthYear age season seasonTurn careerTurn adaptationDebt positionChanges heightCm weightKg morale confidence pressure mentalFatigue physicalCondition reputation marketValue contractYearsLeft rngState'),
   phase:oneOf('ESCOLINHA','BASE','PROFISSIONAL','AUGE','VETERANO','APOSENTADO'),position:oneOf('IND','GK','CB','FB','DM','CM','AM','WG','ST'),
   transferIntent:oneOf('STAY','OPEN','LEAVE','FORCE'),secondaryPositions:array(position),

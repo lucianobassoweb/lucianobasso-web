@@ -441,3 +441,33 @@ Verificação: build TypeScript; browser-smoke (48 transições, save e offline)
 **Resultado/limites/próximo passo:** 0.3.1 experimental jogável; docs/UI_REVIEW_0.3.1.md registra decisões e evidências. docs/TECHNICAL_AUDIT_0.3.1.md resume cinco riscos, incluindo duração 401–909 turnos, ledger por adversário/estádio ausente e dependência da política na profissionalização. A carreira de quatro horas, Safari/iPhone físico, offline no dispositivo e leitor de tela real continuam sem validação nesta sessão. Medir uma carreira humana e persistir memória compacta de partidas são as próximas melhorias do core. GitHub Pages não entrou no escopo.
 
 **Adendo de entrega local:** a build 0.3.1 foi aberta em 8765 no mesmo origin da carreira existente. A carga exibiu Luciano Basso, Grêmio, 23 anos, OVR83 e o mesmo balanço 2036 com proposta do Vasco. Apenas abertura/recarga; nenhuma escolha, avanço ou gravação foi executada nesse save. Captura móvel salva e viewport temporário restaurado.
+
+## 2026-09-30 — H0002 — Casos de jogos e expectativa entre partidas
+
+**Pedido:** estudar outros cases e trazer suas mecânicas para o 1903, após a comparação com o Modo Carreira do Lance.
+
+**Hipótese antes da implementação:** decisões repetidas, recibos que mostram apenas o rótulo e consequências escondidas enfraquecem a expectativa. Objetivos curtos, retorno factual da escolha e capítulos persistentes podem melhorar a compreensão do percurso sem acrescentar partidas, controle de treino ou sorteios ao motor. Diversão precisa de avaliação humana; aprovação técnica não comprova envolvimento.
+
+**Plano/escopo:** fontes oficiais de New Star Soccer, Football Manager, Wildermyth e Citizen Sleeper. Separar fatos e inferências em docs/GAMEPLAY_CASE_STUDIES.md. Camada narrativa opcional e determinística, com contexto da escolinha/base/profissional/retorno, progresso por participação real, prazo e resultado parcial. Resultados de escolhas capturados antes de simular o próximo turno. Sem alterar fórmulas de DNA, posição, partida, promoção, calendário ou garantias de mercado; saves antigos iniciam novos capítulos a partir da atualização, sem inventar passado.
+
+**Orquestração:** Luna low pesquisa exclusivamente o documento; Sol 6.1 medium implementa core/tipos/validação/teste focado; principal integra UI, versões, documentação, gates e entrega. Typecheck anterior às edições PASS. As mecânicas propostas na pesquisa que alteram confiança/promessas ficam para outro experimento: neste ciclo objetivos documentam evidências, sem bônus numéricos.
+
+## 2026-09-30 — D0025 / A0009 — 0.3.2: referência de jogos aplicada
+
+**Causa/hipótese:** H0002. O fluxo anterior repetia opções genéricas, guardava somente o rótulo da escolha na UI e recolhia consequências em contexto/histórico. A pesquisa oficial (New Star Soccer, Football Manager, Wildermyth, Citizen Sleeper) sugeriu retorno próximo, objetivos, memória e arcos. Não houve experiência pessoal de jogar essas referências nesta sessão; fatos/inferências/fontes estão em docs/GAMEPLAY_CASE_STUDIES.md.
+
+**Implementação:** stories.ts observa o motor determinístico. Formação3partidas/120min; regularidade3partidas/150min/2notas>=6,8 (tambémGK); retorno2partidas/45min. Prazo8careerTurns. Banco/afastamento não contam. Fecha por êxito/prazo/mudança temporada-clube-categoria/aposentadoria, registra progresso parcial. Sem bônus numéricos, novo RNG, critério novo de promoção, garantia de vaga/proposta ou leitura do DNA. Limite60capítulos; no máximo1capítulo regular por contexto anual, além de retorno. UI mostra objetivo/progresso/balanço e arquivo biográfico no Histórico.
+
+**Retorno das escolhas:** wrapper cobre early returns de escola/conversa/aposentadoria/reconsideração de mercado. Captura antes do próximo advance para não atribuir nota/gols futuros à escolha. Guarda explicação e diferenças observáveis com rótulos humanos. Removidas educação adulta sem implementação e busca de avaliação quando já saturada. career:local passa a estabelecer intenção STAY, tornando continuidade uma escolha de permanência quando estava aberta; fórmula esportiva inalterada.
+
+**Revisão causa/efeito:** protótipo do trabalhador reabria a mesma meta a cada conclusão; principal identificou repetição/arquivo crescente e pediu limite por contexto, cap60 e copy factual. Resultado ajustado antes de gates finais. Microajuste de copy: prazo contado desde abertura, não oito novas rodadas a cada leitura.
+
+**Compatibilidade:** story/lastChoiceResult opcionais e guardados estruturalmente. Inicialização só registra daqui em diante, sem transformar estatísticas antigas em capítulo. Key1903.save.playable2 e version0.1.0-playable.2 iguais. Recibo/progresso persistem e dados corrompidos continuam protegidos.
+
+**Gates:** typecheck, npm test (quatro roteiros+18grupos persistência+histórias), standalone14módulos e checker PASS. Histórias validam migração, progresso real GK, idempotência, prazo parcial, banco/lesão, retorno e todos os recibos antecipados citados. Diferencial versus dist0.3.1 preservado antes dos edits:24carreiras até aposentadoria/31.632operações, estado esportivo/RNG/vida/mercado/coaching idêntico por operação com mesmas escolhas,741capítulos no lote. Excluídos só story/lastChoiceResult/history. Políticas aleatórias podem mudar ao remover opções sem efeito: não inferir que distribuições agregadas sob índices diferentes sejam invariantes.
+
+**Amostras/métricas:** 200carreiras neutras:391–909turnos,média621,9;OVR18médio56,OVR30médio71,1. Auditoria100DNAs por política:OVR30natural81,5,exploração78,8,piorposição63,9,trocatardia61,8; oito posições presentes. Sem alteração de fórmulas ou recalibração. Relatórios calibração/diferencial em outputs.
+
+**Fluxo real:** navegadorCodex em8766 independente do save do usuário8765. Save antigo de teste13anos/GK começou0participações após ação, sem retrospectiva; convite/continuidade e3partidas somaram184min/progresso0→1→2→3; payoff e biografia, recarga preservou registro.390/320/1440px sem overflow/aviso save/erroJS observado. Capturas e HTML em outputs. Save real não avançado/gravadopelos testes.
+
+**Interpretação/decisão:** manter0.3.2experimental. A camada tornou expectativa e consequência legíveis; não comprova que o jogo ficou mais divertido. Não resolve todos os menus genéricos de partidas. Promessas negociadas, arcos paralelos e eventos que relembram rivalidades estão planejados, não entregues. Próximo experimento: dilemas raros condicionados a fatos e playtest humano de leitura/expectativa. Safari/iPhone físico, offline físico, leitor de tela e alvo4h permanecem pendentes. Nenhuma ação em GitHubPages.

@@ -202,7 +202,25 @@ export interface CoachingWorld {
   campaigns:Record<string,Campaign>; jobs:Record<string,CoachJob>; bonds:Record<string,CoachBond>;
   changes:CoachChange[]; pendingChange:CoachChange|null;
 }
+export interface StoryChapter {
+  id:string; kind:'FORMATION'|'REGULARITY'|'COMEBACK'; title:string; objective:string;
+  startedSeason:number; startedTurn:number; deadlineTurn:number; clubId:string|null; category:CompetitionCategory;
+  appearances:number; minutes:number; goodMatches:number;
+  targetAppearances:number; targetMinutes:number; targetGoodMatches:number;
+}
+export interface StoryArchiveEntry extends StoryChapter {
+  endedSeason:number; endedTurn:number; outcome:'ACHIEVED'|'PARTIAL'|'UNMET'; payoff:string;
+}
+export interface StoryState {
+  active:StoryChapter|null; archive:StoryArchiveEntry[]; lastObservedTurn:number; sequence:number;
+}
+export interface ChoiceResult {
+  eventId:string; choiceId:string; label:string; season:number; turn:number; summary:string; effects:string[];
+}
+
 export interface PlayerState {
+  story?:StoryState;
+  lastChoiceResult?:ChoiceResult;
   id: string;
   name: string;
   birthYear: number;
