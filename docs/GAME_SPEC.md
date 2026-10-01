@@ -152,3 +152,21 @@ O contexto deve interpretar fatos observados, selecionar as tensões relevantes 
 ## 0.3.5 — dilemas entre partidas
 
 O pedido de variar decisões autoriza esforço pontual fora do horário, aproximação da comissão e disputa desleal não violenta entre concorrentes abstratos. São acontecimentos ligados a participação, condição/carga, pressão, adaptação, escola/projeto e relações no grupo. Três respostas com benefícios/custos distintos; famílias têm intervalo de reaparição. Isso não é um menu de treino semanal nem um simulador social. Dilemas não substituem marcos, mercado, posição ou aposentadoria. Favores podem melhorar abertura ao diálogo sem comprar confiança técnica; rumores podem deixar rivalidade/ressentimento e afetar confiança se descobertos. Nenhum caminho garante titularidade ou contratação. Saves existentes mantêm o evento já oferecido; campos novos opcionais.
+
+
+## Decisão do usuário — sonho, experimentação e consequência (30/09/2026)
+
+- O usuário escolhe o sonho inicial. Desejo e posição exercida são distintos; a posição continua em descoberta aos12 e o sonho não altera características geradas.
+- Treinador pode propor experimentar outra posição, com justificativa observável. O usuário aceita ou recusa. Recusa pode custar espaço, apoio ou oportunidade; não muda posição automaticamente. Aceite inicia aprendizado e adaptação, sem garantia de sucesso.
+- Insistir por tempo prolongado sem rendimento suficiente numa posição pode impedir a profissionalização, limitar a carreira a clubes fracos e estagnar evolução relevante na função/carreira. Maturação e aprendizagem não são congeladas arbitrariamente; consequência decorre das exigências e da resposta do atleta.
+- Todas as posições têm rotas de grandeza. Cada save mantém possibilidade de revisão do percurso, sem sucesso garantido na posição sonhada nem hard cap permanente. Uma rota alternativa exige experiência, negociação e oportunidade.
+- Feedback não revela compatibilidade/DNA. Uma avaliação ruim não sentencia a posição. Saves existentes não recebem sonho retrospectivo inventado.
+
+**Status:** decisões aprovadas; implementação de sonho persistente/evento de experiência e calibração das consequências ainda pendentes. A porta profissional adulta identificada em D0028 precisa ser aberta para preservar caminhos posteriores. Ver D0029 no PROJECT_LOG.
+
+
+## 0.3.6 — avaliação da torcida
+
+A torcida julga responsabilidade do setor e evidência individual separadamente. Derrota e gols sofridos expõem defesa/goleiro; falta de gols expõe ataque. Funções intermediárias dividem os pesos. Uma boa atuação atenua cobrança individual e pode gerar respeito mesmo na derrota; vitória não elimina má nota/expulsão. Minutos limitam os efeitos, banco não tem cobrança individual, formação/local têm menor intensidade. Expectativa, força do adversário, clássico, campanha real e memórias modulam o julgamento. Usar apenas fatos observados, sem revelar DNA ou declarar uma falha pessoal não registrada.
+
+Efeitos persistentes na relação e estado mental, limitados por avaliação. Memórias negativas somente em atuações severas e respostas excepcionais documentadas podem registrar uma redenção por episódio. Nenhuma reavaliação retroativa de partidas ou troca de chave/schema obrigatório. Esta versão não cria cronologia de gols durante a presença, erros individuais ou duelos; a cobrança é de setor quando esses fatos são desconhecidos.

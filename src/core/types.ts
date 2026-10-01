@@ -136,7 +136,7 @@ export interface FanRelation {
 export interface FanMemory {
   season: number;
   weight: number;
-  type: 'GOAL' | 'HATTRICK' | 'TITLE' | 'FLOP' | 'TRANSFER' | 'CELEBRATION' | 'RED_CARD' | 'CLASSIC' | 'REDEMPTION';
+  type: 'GOAL' | 'HATTRICK' | 'TITLE' | 'FLOP' | 'TRANSFER' | 'CELEBRATION' | 'RED_CARD' | 'CLASSIC' | 'REDEMPTION' | 'PRESSURE' | 'RECOGNITION';
   description: string;
 }
 

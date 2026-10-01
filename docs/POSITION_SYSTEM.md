@@ -190,3 +190,14 @@ Falha de regressão se:
 - diferença BEST vs WORST aos 18 cair abaixo de ~0,35;
 - correção tardia não melhorar claramente sobre permanecer na pior posição;
 - trocar todo ano não tiver custo acumulado mensurável.
+
+
+## Decisão do usuário — sonho, experimentação e consequência (30/09/2026)
+
+- O usuário escolhe o sonho inicial. Desejo e posição exercida são distintos; a posição continua em descoberta aos12 e o sonho não altera características geradas.
+- Treinador pode propor experimentar outra posição, com justificativa observável. O usuário aceita ou recusa. Recusa pode custar espaço, apoio ou oportunidade; não muda posição automaticamente. Aceite inicia aprendizado e adaptação, sem garantia de sucesso.
+- Insistir por tempo prolongado sem rendimento suficiente numa posição pode impedir a profissionalização, limitar a carreira a clubes fracos e estagnar evolução relevante na função/carreira. Maturação e aprendizagem não são congeladas arbitrariamente; consequência decorre das exigências e da resposta do atleta.
+- Todas as posições têm rotas de grandeza. Cada save mantém possibilidade de revisão do percurso, sem sucesso garantido na posição sonhada nem hard cap permanente. Uma rota alternativa exige experiência, negociação e oportunidade.
+- Feedback não revela compatibilidade/DNA. Uma avaliação ruim não sentencia a posição. Saves existentes não recebem sonho retrospectivo inventado.
+
+**Status:** decisões aprovadas; implementação de sonho persistente/evento de experiência e calibração das consequências ainda pendentes. A porta profissional adulta identificada em D0028 precisa ser aberta para preservar caminhos posteriores. Ver D0029 no PROJECT_LOG.

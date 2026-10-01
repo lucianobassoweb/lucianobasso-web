@@ -2210,6 +2210,125 @@ function leagueTitle(p) {
 
 return {coachName, coachProfile, ensureCoaching, ensureCoachJob, coachBond, syncCoachContext, standings, jobStability, objective, bondLabel, coachDossier, roleProspect, opportunityAdjustment, rememberCoach, performanceFeedback, evaluateCoachJob, simulateWorldBlock, reviewWorldCoaches, coachChangeEvent, coachDiscussionEvent, resolveCoachChoice, leagueTitle};
 })();
+__modules['core/fans.js'] = (() => {
+
+const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
+const finite = (n, fallback = 0) => Number.isFinite(n) ? n : fallback;
+const value = (n, fallback = 50) => clamp(finite(n, fallback), 0, 100);
+// Defensive and attacking exposure; mixed positions carry responsibilities in both phases.
+const responsibilities = { GK: [1, 0], CB: [.95, .08], FB: [.68, .38], DM: [.72, .32], CM: [.42, .55], AM: [.2, .82], WG: [.12, .95], ST: [.08, 1], IND: [.4, .5] };
+function evaluateFanMatch(p, m, o = {}) {
+    const zero = { passion: 0, hate: 0, respect: 0, pressure: 0, morale: 0, confidence: 0 };
+    const category = o.category ?? (p.age <= 14 ? 'U15' : p.age === 15 ? 'U17' : p.age <= 20 ? 'U20' : 'SENIOR');
+    const audience = category === 'SENIOR' ? 'A torcida' : category === 'AMATEUR' ? 'Quem acompanha o time local' : 'Quem acompanha a formação';
+    const minutes = clamp(finite(m.minutes), 0, 90);
+    if (!minutes)
+        return { text: `${audience} avalia o resultado coletivo; você não entrou e não recebe cobrança individual.`, deltas: zero, assessment: { reason: 'Sem participação individual', tags: ['BENCH'] } };
+    const [defence, attack] = responsibilities[p.position] ?? responsibilities.IND;
+    const gf = clamp(finite(m.teamGoals), 0, 20), ga = clamp(finite(m.oppGoals), 0, 20);
+    const lost = gf < ga, won = gf > ga, margin = Math.max(0, ga - gf);
+    const rating = clamp(finite(m.rating, 6.5), 0, 10), good = rating >= 7.2 && !m.red;
+    const goals = clamp(finite(m.goals), 0, gf), assists = clamp(finite(m.assists), 0, Math.max(0, gf - goals));
+    const contribution = goals * 1.0 + assists * .65;
+    const saves = p.position === 'GK' ? clamp(finite(m.saves), 0, 20) : 0;
+    const ageScale = p.age <= 13 ? .28 : p.age <= 15 ? .45 : p.age <= 17 ? .65 : 1;
+    const categoryScale = category === 'SENIOR' ? 1 : category === 'AMATEUR' ? .6 : .75;
+    const scale = (minutes / 90) * Math.min(ageScale, categoryScale) * clamp(finite(o.intensity, 1), 0, 1.5);
+    const expectation = (value(o.priorFan?.expectation) - 50) / 100;
+    const relative = o.own && o.opponent ? clamp((finite(o.own.prestige, 50) - finite(o.opponent.prestige, 50)) / 100, -.35, .35) : 0;
+    const c = o.campaign;
+    const campaign = c && finite(c.games) >= 5 ? clamp((finite(c.expectedPPG, 1.3) - finite(c.points) / Math.max(1, finite(c.games))) * .15, 0, .2) : 0;
+    const experience = clamp((o.priorFan?.memories ?? []).filter(x => x.season <= p.season && x.season >= p.season - 2).reduce((sum, x) => sum + (x.type === 'PRESSURE' || x.type === 'FLOP' ? .03 : x.type === 'REDEMPTION' || x.type === 'RECOGNITION' ? -.02 : 0), 0), -.08, .1);
+    const relationship = (value(o.priorFan?.hate, 0) - value(o.priorFan?.respect, 0)) * .0008;
+    const demand = clamp(1 + expectation * .4 + relative * .5 + campaign + experience + relationship + (o.rivalry ? .18 : 0), .7, 1.5);
+    const defensiveBurden = defence * (ga > 0 ? (lost ? .7 : .18) + Math.max(0, ga - 1) * .24 : 0);
+    const creation = ['AM', 'CM', 'WG'].includes(p.position) && gf === 0 ? clamp(finite(m.xa), 0, 2) : 0;
+    const attackingBurden = attack * (gf === 0 ? .8 : 0) * (1 - Math.min(.35, creation * .25));
+    const burden = (defensiveBurden + attackingBurden) * demand;
+    const poor = clamp((6.4 - rating) * .8, 0, 2);
+    const merit = clamp((rating - 6.6) * .65, -1.8, 1.8) + (ga === 0 ? defence * .45 : 0) + Math.min(.35, saves * .04) + Math.min(.3, creation * .2);
+    // Strong performances reduce personal resentment, but do not erase a sector's collective obligation.
+    const criticism = Math.max(0, burden * (good ? .35 : 1) + poor + (m.red ? 1.2 : 0) + (gf === 0 ? attack * Math.min(.6, clamp(finite(m.xg), 0, 5) * .35) : 0) - contribution * .45);
+    const support = contribution * .8 + Math.max(0, merit) * .5 + (m.motm && !m.red ? .5 : 0);
+    const raw = {
+        passion: (won ? .45 : lost ? -.4 : 0) + support - criticism * .3 - margin * .1,
+        hate: criticism * .65 - support * .15,
+        respect: merit - poor * .4 - (m.red ? 1 : 0),
+        pressure: criticism * .9 + burden * .2 - support * .35,
+        morale: support * .3 - criticism * .4,
+        confidence: Math.max(0, merit) * .25 - poor * .4 - criticism * .16,
+    };
+    const delta = (current, n, cap) => {
+        const before = value(current);
+        return clamp(before + clamp(n * scale, -cap, cap), 0, 100) - before;
+    };
+    const deltas = { passion: delta(o.priorFan?.passion, raw.passion, 3), hate: delta(o.priorFan?.hate, raw.hate, 3), respect: delta(o.priorFan?.respect, raw.respect, 2), pressure: delta(p.pressure, raw.pressure, 3), morale: delta(p.morale, raw.morale, 2), confidence: delta(p.confidence, raw.confidence, 2) };
+    const tags = [];
+    let text;
+    if (defensiveBurden >= attackingBurden && defensiveBurden > .35) {
+        tags.push('DEFENSIVE_ACCOUNTABILITY');
+        text = category === 'SENIOR' ? (ga >= 3 ? 'A torcida se revolta com o setor defensivo após os gols sofridos.' : `A torcida cobra o setor defensivo ${lost ? 'após a derrota' : 'pelos gols sofridos'}.`) : `${audience} cobra a organização defensiva após os gols sofridos.`;
+    }
+    else if (attackingBurden > .35) {
+        tags.push('ATTACKING_ACCOUNTABILITY');
+        text = `${audience} cobra o ataque: o time terminou sem marcar.`;
+    }
+    else if (poor > .3) {
+        tags.push('POOR_PERFORMANCE');
+        text = `${audience} cobra sua atuação abaixo do esperado${won ? ', apesar da vitória' : ''}.`;
+    }
+    else if (ga === 0 && defence >= .68 && rating >= 6.4) {
+        tags.push('DEFENSIVE_RECOGNITION');
+        text = `${audience} reconhece seu trabalho defensivo no jogo sem sofrer gol.`;
+    }
+    else if (contribution > 0 || good) {
+        tags.push('RECOGNITION');
+        text = `${audience} reconhece ${contribution > 0 ? 'sua participação nos gols' : 'sua boa atuação'}.`;
+    }
+    else {
+        text = lost ? `${audience} demonstra insatisfação com a derrota e espera uma resposta do time.` : `${audience} acompanha sua atuação sem um destaque individual.`;
+    }
+    if ((defensiveBurden > .35 || attackingBurden > .35) && (good || contribution > 0)) {
+        text += p.position === 'GK' && good ? ` Suas ${saves} defesas e a boa nota recebem reconhecimento, mesmo com a cobrança coletiva.` : contribution > 0 ? ' Sua participação nos gols recebe apoio, mas não apaga a cobrança pelo resultado.' : ' Sua boa atuação recebe reconhecimento dentro da cobrança coletiva.';
+        tags.push('INDIVIDUAL_RECOGNITION');
+    }
+    if (creation >= .5)
+        text += ' Seu xA indica criação de oportunidades, o que atenua a cobrança individual sem apagar a falta de gols.';
+    if (m.red) {
+        text += ' A expulsão aumenta a cobrança individual.';
+        tags.push('RED_CARD');
+    }
+    if (poor > .3 && !tags.includes('POOR_PERFORMANCE')) {
+        text += ' Sua nota baixa também pesa na avaliação individual.';
+        tags.push('POOR_PERFORMANCE');
+    }
+    if (minutes < 30)
+        text += ' Sua participação curta limita o peso dessa avaliação individual.';
+    const memories = o.priorFan?.memories ?? [];
+    // Memories are newest first. One redemption closes the latest documented episode.
+    const latestPressure = memories.findIndex(x => (x.type === 'FLOP' || x.type === 'PRESSURE') && finite(x.season) <= p.season && finite(x.season) >= p.season - 2);
+    const previousPressure = latestPressure >= 0 && !memories.slice(0, latestPressure).some(x => x.type === 'REDEMPTION' && x.season <= p.season);
+    let memory;
+    if (category === 'SENIOR' && minutes >= 60 && lost && rating <= 5.4 && (margin >= 3 || o.rivalry || value(o.priorFan?.expectation) >= 80) && criticism >= 2) {
+        memory = { season: p.season, weight: 5, type: 'PRESSURE', description: `Cobrança após nota ${rating.toFixed(1)} na derrota por ${gf} × ${ga}${o.rivalry ? ' em clássico' : ''}.` };
+    }
+    else if (category === 'SENIOR' && minutes >= 60 && previousPressure && won && rating >= 8 && (contribution > 0 || p.position === 'GK' && ga === 0)) {
+        memory = { season: p.season, weight: 5, type: 'REDEMPTION', description: `Atuação de nota ${rating.toFixed(1)} na vitória por ${gf} × ${ga}, após uma cobrança registrada.` };
+        text += ' A torcida reconhece uma resposta à cobrança registrada.';
+        tags.push('REDEMPTION');
+    }
+    else if (category === 'SENIOR' && minutes >= 60 && o.rivalry && won && rating >= 8.5 && (contribution >= 1 || p.position === 'GK' && ga === 0)) {
+        memory = { season: p.season, weight: 5, type: 'RECOGNITION', description: `Destaque de nota ${rating.toFixed(1)} na vitória em clássico por ${gf} × ${ga}.` };
+    }
+    // Scores are snapshots, not an individual fault ledger or evidence of a losing streak.
+    if (memory && (memories.some(x => x.season === memory.season && x.description === memory.description) ||
+        memory.type === 'PRESSURE' && memories.filter(x => x.season === p.season && x.type === 'PRESSURE').length >= 4))
+        memory = undefined;
+    return { text, deltas, ...(memory ? { memory } : {}), assessment: { reason: tags.join(', ') || 'Avaliação regular', tags } };
+}
+
+return {evaluateFanMatch};
+})();
 __modules['core/pathways.js'] = (() => {
 const {RNG, clamp, hashSeed} = __modules['core/random.js'];
 const {BRAZIL_CLUBS_2026} = __modules['data/clubs-br-2026.js'];
@@ -2885,6 +3004,7 @@ function simulatePlayerMatch(player, own, opponent, rng, started = true, importa
 return {simulatePlayerMatch};
 })();
 __modules['core/engine.js'] = (() => {
+const {evaluateFanMatch} = __modules['core/fans.js'];
 const {buildRoutineDecision, resolveRoutineChoice} = __modules['core/decisions.js'];
 const {ensureStories, updateStories, choiceSnapshot, recordChoice} = __modules['core/stories.js'];
 const {ensureProfessionalStatus, competitionCategory, CATEGORY_LABEL, seasonGames, calendarScale, promotionEvidence} = __modules['core/calendar.js'];
@@ -2896,6 +3016,7 @@ const {generateDNA, initialAttributes, growthStep, updateBody, overall} = __modu
 const {POSITIONS, POSITION_LABEL, changeCostPreview, changeCostLabel, selectPosition, trainPositionExperience, effectivePositionRating, observedPositionSuggestion, tacticalRating, roleRating} = __modules['core/positions.js'];
 const {BRAZIL_CLUBS_2026, CLUB_BY_ID} = __modules['data/clubs-br-2026.js'];
 const {simulatePlayerMatch} = __modules['core/match.js'];
+
 
 
 
@@ -3035,12 +3156,31 @@ function addMatchStats(p, m, professional) {
         c.xa = Number((c.xa + m.xa).toFixed(2));
     }
 }
+function applyMatchFanReaction(p, m, category, own, opp) {
+    const fan = own ? ensureFan(p, own.id) : undefined;
+    const campaign = category === 'SENIOR' && own ? p.coaching?.campaigns[own.id] : undefined;
+    const evaluation = evaluateFanMatch(p, m, { category, ...(own ? { own } : {}), ...(opp ? { opponent: opp } : {}), ...(fan ? { priorFan: fan } : {}),
+        rivalry: !!(own && opp && (own.rivals.includes(opp.id) || opp.rivals.includes(own.id))),
+        ...(campaign ? { campaign } : {}) });
+    if (fan) {
+        fan.passion = clamp(fan.passion + evaluation.deltas.passion);
+        fan.hate = clamp(fan.hate + evaluation.deltas.hate);
+        fan.respect = clamp(fan.respect + evaluation.deltas.respect);
+        if (evaluation.memory) {
+            const memory = evaluation.memory;
+            addFanMemory(p, own.id, memory.type, memory.description, memory.weight);
+            log(p, 'TORCIDA', memory.type === 'PRESSURE' ? 'Cobrança que marcou' : memory.type === 'REDEMPTION' ? 'Uma resposta à cobrança' : 'Reconhecimento em clássico', memory.description);
+        }
+    }
+    p.pressure = clamp(p.pressure + evaluation.deltas.pressure);
+    p.morale = clamp(p.morale + evaluation.deltas.morale);
+    p.confidence = clamp(p.confidence + evaluation.deltas.confidence);
+    return evaluation.text;
+}
 function fanEffectsForMatch(p, own, opp, m) {
+    const reaction = applyMatchFanReaction(p, m, 'SENIOR', own, opp);
     const ownFan = ensureFan(p, own.id), oppFan = ensureFan(p, opp.id);
     const rival = own.rivals.includes(opp.id) || opp.rivals.includes(own.id);
-    const won = m.teamGoals > m.oppGoals, lost = m.teamGoals < m.oppGoals;
-    ownFan.passion = clamp(ownFan.passion + (won ? 1.2 : lost ? -.8 : 0) + m.goals * 1.7 + m.assists * .8 + (m.motm ? 1.8 : 0));
-    ownFan.respect = clamp(ownFan.respect + (m.rating >= 8 ? 1.2 : .15));
     if (m.goals > 0) {
         oppFan.fear = clamp(oppFan.fear + m.goals * (rival ? 3.2 : 1.7));
         oppFan.respect = clamp(oppFan.respect + m.goals * .7);
@@ -3055,10 +3195,9 @@ function fanEffectsForMatch(p, own, opp, m) {
         ownFan.passion = clamp(ownFan.passion + 3 + m.goals * 2);
         addFanMemory(p, opp.id, 'CLASSIC', `Atuação marcante em clássico contra ${opp.name}`, 7);
     }
-    if (m.red) {
-        ownFan.respect = clamp(ownFan.respect - 2);
+    if (m.red)
         oppFan.hate = clamp(oppFan.hate + 1);
-    }
+    return reaction;
 }
 function roleBaseline(p, pos) {
     const a = p.attributes;
@@ -3104,7 +3243,8 @@ function simulateYouthBlock(p, rng) {
     p.confidence = clamp(p.confidence + goals * 2 + assists + good * .5);
     const signal = goals + assists ? `${goals} gol${goals === 1 ? '' : 's'} e ${assists} assistência${assists === 1 ? '' : 's'} nesta partida.` : good ? `${good} boas atuações nesta partida.` : 'Partida sem destaque estatístico.';
     const featured = [...youthMatches].sort((a, b) => b.rating - a.rating)[0];
-    return { matchFeedback: { category: competitionCategory(p), opponent: p.age > 20 ? 'Equipe do futebol local' : p.currentClubId ? 'Adversário da base' : 'Equipe local de formação', coachName: p.age > 20 ? 'Treinador do futebol local' : 'Treinador da formação', started: featured.started, minutes: featured.minutes, goals: featured.goals, assists: featured.assists, rating: featured.rating, saves: featured.saves, cleanSheet: featured.cleanSheet, teamGoals: featured.teamGoals, oppGoals: featured.oppGoals, fanReaction: featured.goals || featured.assists ? 'Quem acompanha seus jogos reconhece sua participação.' : 'Acompanhantes observam sua evolução; vínculo profissional ainda em formação.', coachReaction: featured.rating >= 7.4 ? 'A atuação chamou atenção para seu repertório.' : 'O treinador observa sua evolução sem concluir seu potencial.', blockGames: games, blockStarts: youthMatches.filter(m => m.started).length, blockGoals: goals, blockAssists: assists, blockMinutes: youthMatches.reduce((sum, m) => sum + m.minutes, 0) }, id: `y-${p.careerTurn}`, kind: 'INFO', title: `${CATEGORY_LABEL[competitionCategory(p)]} · ${featured.teamGoals} × ${featured.oppGoals}`, body: `${CATEGORY_LABEL[competitionCategory(p)]}: ${featured.minutes} minutos nesta partida. ${signal} Os treinadores agora observam melhor: ${ATTRIBUTE_LABELS[key]}.`, tags: [p.age > 20 ? 'FUTEBOL LOCAL' : 'FORMAÇÃO', POSITION_LABEL[pos].toUpperCase()] };
+    const fanReaction = applyMatchFanReaction(p, featured, competitionCategory(p), p.currentClubId ? CLUB_BY_ID[p.currentClubId] : undefined);
+    return { matchFeedback: { category: competitionCategory(p), opponent: p.age > 20 ? 'Equipe do futebol local' : p.currentClubId ? 'Adversário da base' : 'Equipe local de formação', coachName: p.age > 20 ? 'Treinador do futebol local' : 'Treinador da formação', started: featured.started, minutes: featured.minutes, goals: featured.goals, assists: featured.assists, rating: featured.rating, saves: featured.saves, cleanSheet: featured.cleanSheet, teamGoals: featured.teamGoals, oppGoals: featured.oppGoals, fanReaction, coachReaction: featured.rating >= 7.4 ? 'A atuação chamou atenção para seu repertório.' : 'O treinador observa sua evolução sem concluir seu potencial.', blockGames: games, blockStarts: youthMatches.filter(m => m.started).length, blockGoals: goals, blockAssists: assists, blockMinutes: youthMatches.reduce((sum, m) => sum + m.minutes, 0) }, id: `y-${p.careerTurn}`, kind: 'INFO', title: `${CATEGORY_LABEL[competitionCategory(p)]} · ${featured.teamGoals} × ${featured.oppGoals}`, body: `${CATEGORY_LABEL[competitionCategory(p)]}: ${featured.minutes} minutos nesta partida. ${signal} Os treinadores agora observam melhor: ${ATTRIBUTE_LABELS[key]}.`, tags: [p.age > 20 ? 'FUTEBOL LOCAL' : 'FORMAÇÃO', POSITION_LABEL[pos].toUpperCase()] };
 }
 function opponentPool(own) {
     const same = BRAZIL_CLUBS_2026.filter(c => c.division === own.division && c.id !== own.id);
@@ -3131,16 +3271,13 @@ function simulateProfessionalBlock(p, rng, fixtures) {
             continue;
         const opp = CLUB_BY_ID[fixture.homeId === own.id ? fixture.awayId : fixture.homeId];
         const importance = (own.rivals.includes(opp.id) || opp.rivals.includes(own.id)) ? 1.35 : rng.chance(.08) ? 1.25 : 1;
-        const beforeFan = ensureFan(p, own.id);
-        const fanBefore = { passion: beforeFan.passion, hate: beforeFan.hate, respect: beforeFan.respect };
         const m = simulatePlayerMatch(p, own, opp, rng, started, importance, { home: fixture.homeId === own.id, teamGoals: fixture.homeId === own.id ? fixture.homeGoals : fixture.awayGoals, oppGoals: fixture.homeId === own.id ? fixture.awayGoals : fixture.homeGoals, ...(p.careerStats.minutes < 120 ? { minutes: rng.int(6, 18) } : {}) });
         if (!p.debut)
             p.debut = { season: p.season, age: p.age, clubId: own.id, opponentId: opp.id, minutes: m.minutes };
         performanceFeedback(p, m.rating, m.red);
         addMatchStats(p, m, true);
-        fanEffectsForMatch(p, own, opp, m);
-        const fan = ensureFan(p, own.id), profile = coachProfile(p.tactical.coachId);
-        const fanReaction = fan.hate > fanBefore.hate ? 'A cobrança da torcida aumentou.' : fan.passion > fanBefore.passion ? (m.goals || m.assists || m.motm ? 'Sua participação ampliou o apoio da torcida.' : 'O resultado trouxe entusiasmo coletivo; sua atuação segue em avaliação.') : fan.respect - fanBefore.respect >= 1 ? 'Seu desempenho ganhou respeito.' : fan.passion < fanBefore.passion ? 'A derrota reduziu o entusiasmo da torcida; sua trajetória segue em avaliação.' : 'A torcida mantém a avaliação anterior.';
+        const fanReaction = fanEffectsForMatch(p, own, opp, m);
+        const profile = coachProfile(p.tactical.coachId);
         const coachReaction = m.red ? 'A expulsão trouxe cobrança e perda de confiança profissional.' : m.rating >= 8 ? 'O treinador destacou sua atuação e reforçou a confiança.' : m.rating >= 7 ? 'Sua atuação sustentou a confiança profissional.' : m.rating < 6.2 ? (profile.patience >= 60 ? 'O treinador reconhece a dificuldade e oferece tempo para responder.' : 'O treinador cobra uma resposta após a atuação abaixo do esperado.') : 'O treinador mantém a avaliação e observa sua continuidade.';
         results.push({ m, opp, fanReaction, coachReaction });
         const result = m.teamGoals > m.oppGoals ? 1 : m.teamGoals < m.oppGoals ? -1 : 0;
@@ -3934,7 +4071,7 @@ function theme() {
     const colors = c?.colors ?? ['#7bbcff', '#e8eef4'];
     return `style="--club:${colors[0]};--club2:${colors[1]};"`;
 }
-function appShell(content) { return `<main class="shell ${save ? 'playing' : 'creating'}" ${theme()}><div class="brand"><div><h1>1903</h1><span class="subbrand">CARREIRA</span></div><span class="build">0.3.5 · EXPERIMENTAL</span></div>${save ? nav() : ''}${persistenceNotice()}<div class="page-content">${content}</div></main>`; }
+function appShell(content) { return `<main class="shell ${save ? 'playing' : 'creating'}" ${theme()}><div class="brand"><div><h1>1903</h1><span class="subbrand">CARREIRA</span></div><span class="build">0.3.6 · EXPERIMENTAL</span></div>${save ? nav() : ''}${persistenceNotice()}<div class="page-content">${content}</div></main>`; }
 const navPaths = { career: 'M8 5l10 7-10 7V5Z', player: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM5 21v-2a7 7 0 0 1 14 0v2', stats: 'M5 20V10m7 10V4m7 16v-7', world: 'M4 7h16v13H4V7Zm4 0V4h8v3M4 12h16m-8-2v4' };
 function nav() { return `<nav class="bottom-nav" aria-label="Navegação da carreira"><div class="bottom-nav-inner">${[['career', 'Jogar', 'Jogar'], ['player', 'Jogador', 'Meu jogador'], ['stats', 'Histórico', 'Histórico'], ['world', 'Clube', 'Clube e mercado']].map(([id, label, full]) => `<button class="nav ${tab === id ? 'active' : ''}" data-tab="${id}" aria-label="${full}" aria-current="${tab === id ? 'page' : 'false'}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${navPaths[id]}"/></svg><span>${label}</span></button>`).join('')}</div></nav>`; }
 function persistenceNotice() {
