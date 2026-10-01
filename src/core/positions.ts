@@ -72,7 +72,7 @@ export function positionEffectiveness(player:PlayerState,pos:PlayablePosition,co
 }
 
 export function effectivePositionRating(player:PlayerState,pos:PlayablePosition):number{
-  return Number(clamp(roleRating(player,pos)*positionEffectiveness(player,pos,1),20,99).toFixed(1));
+  return Number(clamp(roleRating(player,pos)*positionEffectiveness(player,pos,1),5,99).toFixed(1));
 }
 
 export function developmentEfficiency(player:PlayerState,pos:PlayablePosition):number{

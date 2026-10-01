@@ -1,3 +1,4 @@
+import {migrateAttributeScale} from './attribute-scale.js';
 import type { SaveGame } from './types.js';
 const KEY='1903.save.playable2';
 
@@ -74,7 +75,7 @@ const recentForm:Guard=v=>{
 };
 
 const youthPositionResponse=fields({season:v=>number(v)&&Number.isSafeInteger(v)&&Number(v)>=0,reviewedSeason:v=>number(v)&&Number.isSafeInteger(v)&&Number(v)>=0,clubId:nullable(text),category,position,recommendedPosition:position,decision:oneOf('INSIST','EXPERIMENT'),penalty:v=>number(v)&&Number(v)>=0&&Number(v)<=.16});
-const playerFields=fields({youthPositionResponse:optional(youthPositionResponse),recentForm:optional(recentForm),decisionMemory:optional(decisionMemory),story:optional(story),lastChoiceResult:optional(choiceResult),id:text,name:text,hometown:text,heartClubId:text,currentClubId:nullable(text),
+const playerFields=fields({attributeScale:optional(oneOf('ADULT_REFERENCE_1')),youthPositionResponse:optional(youthPositionResponse),recentForm:optional(recentForm),decisionMemory:optional(decisionMemory),story:optional(story),lastChoiceResult:optional(choiceResult),id:text,name:text,hometown:text,heartClubId:text,currentClubId:nullable(text),
   ...numeric('birthYear age season seasonTurn careerTurn adaptationDebt positionChanges heightCm weightKg morale confidence pressure mentalFatigue physicalCondition reputation marketValue contractYearsLeft rngState'),
   phase:oneOf('ESCOLINHA','BASE','PROFISSIONAL','AUGE','VETERANO','APOSENTADO'),position:oneOf('IND','GK','CB','FB','DM','CM','AM','WG','ST'),
   transferIntent:oneOf('STAY','OPEN','LEAVE','FORCE'),secondaryPositions:array(position),
@@ -123,7 +124,7 @@ function canMutate():boolean{
 export function loadSave():SaveGame|null{
   const stored=readStored();if(!stored.ok)return null;
   if(stored.raw===null){recoveryRaw=null;report('empty','');return null;}
-  const save=inspect(stored.raw);if(save)report('loaded','');return save;
+  const save=inspect(stored.raw);if(save){migrateAttributeScale(save.player);report('loaded','');}return save;
 }
 export function storeSave(save:SaveGame):boolean{
   try{

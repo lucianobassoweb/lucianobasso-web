@@ -210,3 +210,15 @@ Alternativa escolhe maior roleRating+proficiência×0,045−distância×2 entre 
 Aceitar muda posição com custo/proficiência existentes. Insistir preserva posição, registra resposta e reduz chance titularjuvenil em0,08até13/0,12até15/0,16até18, somada à forma antesclamp0,25–0,85. Consequência somente mesma temporada/projeto/clube/posição/categoria, foraSENIOR. Amostra atual>=5j240min com STprodução>=0,25/nota>=6,7,WGprodução>=0,40/nota>=6,7,demaisnota>=6,7 remove custo enquanto sustentar essa evidência; desempenho posterior ruim pode reabrir cobrança. Não é clearance permanente nem escolha que condena potencial. Promoção continua por evidência independente.
 
 Resposta opcional youthPositionResponse, sem trocar chave/schema. Apenas novo evento compayload aplica plano; pendinglegado permaneceigual, sem cobrança nova retroativa. Persistência rejeita valores fora dos limites, temporada futura/reviewanoerrado, INSIST com posição igual à recomendada oupenalty<0,08, EXPERIMENTpenalty nãozero. Recibo informa resposta. Primeiroano/posição misturada desconhecida não inventados.
+
+
+## 0.3.11 — escala infantil e estado visível
+
+Pedido: atributos50 aos13 não devem ser o ponto de partida comum na referência adulta. Formação começa com menor habilidade adquirida e aumenta o ritmo de aprendizagem na adolescência, mantendo DNA e rotas de desenvolvimento. Notas iniciais e avaliações locais consideram pares; doSub-20 em diante a exigência aproxima a referência adulta. Parâmetros experimentais não são máximos fisiológicos. Migração idempotente dos saves antes18, sem reescrever partidas, DNA ou decisão pendente; atributos adultos existentes preservados.
+
+Condição física, fadiga mental, pressão, confiança e moral aparecem diretamente em Jogar, com valores/100. Fadiga menor é melhor; não criar um sexto estado de energia fictícia. Escolhas novas dizem qual desses estados alteram. Recomeçar carreira é ação visível nessa tela, com confirmação explícita de apagamento; falha/cancelamento conserva a carreira, sucesso retorna à criação aos12. Nunca usar o save real para testar essa exclusão.
+
+
+### Correção de UX após feedback — apresentação final0.3.11
+
+Esta regra substitui o cartão grandeComoestou e a janelaMinhaTemporada: Jogar usa uma coluna, HUD compacto de cinco estados persistente durante a rolagem, faixa de temporada e partida/decisão como foco. No celular os estados ficam imediatamente acima da navegação; no desktop junto à navegação superior. Capítulos ficam depois do acontecimento e suas escolhas; recibos compactos conservam consequências. Dados de origem/família/estudos ficam no perfil. Torcida, treinador, contexto e próximos passos seguem diretos, sem expandir. Balanço anual usa o ano encerrado identificado pelo evento, sem mostrar zeros do ano recém-aberto. Reinício continua visível no final da telaJogar e exige confirmação.

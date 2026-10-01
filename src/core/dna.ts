@@ -1,3 +1,4 @@
+import { formationOffset } from './attribute-scale.js';
 import { calendarScale } from './calendar.js';
 import { coachProfile } from './coaches.js';
 import { footballTime } from './pathways.js';
@@ -38,7 +39,7 @@ export function generateDNA(rng:RNG):HiddenDNA{
 }
 
 export function initialAttributes(rng:RNG,dna:HiddenDNA):VisibleAttributes{
-  const base=(apt:number,spread=4)=>Math.round(clamp(29+apt*.22+rng.normal(0,spread),28,54));
+  const base=(apt:number,spread=4)=>Number((Math.round(clamp(29+apt*.22+rng.normal(0,spread),28,54))-formationOffset(12)).toFixed(2));
   const body=clamp((dna.adultHeightCm-160)/42*100,0,100);
   return {
     technique:base(dna.technicalAptitude),passing:base((dna.technicalAptitude+dna.gameIntelligence)/2),finishing:base((dna.technicalAptitude+dna.finishingAptitude)/2,5),
@@ -74,7 +75,9 @@ export function growthStep(p:PlayerState,rng:RNG,focus:keyof VisibleAttributes|n
     if(age>=30&&['pace','stamina','strength'].includes(key))delta-=.06+(age-30)*.045;
     // Reading the game and technique age differently from running capacity.
     if(age>=33&&['vision','decisions','positioning','technique','passing','finishing'].includes(key))delta=Math.max(delta,0);
-    delta+=rng.normal(0,.045);delta*=calendarScale(p);p.attributes[key]=Number(clamp(current+delta,20,99).toFixed(2));
+    // Greater learning during formation compensates the lower acquired starting level, without a cap on potential.
+    delta*=age<=13?1.4:age<=17?2.75:age<=21?1.25:1;
+    delta+=rng.normal(0,.045);delta*=calendarScale(p);p.attributes[key]=Number(clamp(current+delta,5,99).toFixed(2));
   }
 }
 

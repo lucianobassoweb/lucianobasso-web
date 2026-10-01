@@ -3,12 +3,13 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
 import {createCareerWithSeed} from '../dist/core/engine.js';
+import {migrateAttributeScale} from '../dist/core/attribute-scale.js';
 import {ensureCoaching} from '../dist/core/coaches.js';
 
 // Compile only this module in memory; do not touch browser data or regenerate the build.
 const source=fs.readFileSync(new URL('../src/core/persistence.ts',import.meta.url),'utf8');
 const compiled=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ES2022}}).outputText
-  .replace(/^export /gm,'')+'\nglobalThis.api={loadSave,storeSave,clearSave,getPersistenceStatus,getRecoveryRaw};';
+  .replace(/^import .*$/gm,'').replace(/^export /gm,'')+'\nglobalThis.api={loadSave,storeSave,clearSave,getPersistenceStatus,getRecoveryRaw};';
 const key='1903.save.playable2';
 const fresh=()=>createCareerWithSeed('Persistência',55,'gremio','Caxias do Sul','RS');
 const copy=value=>JSON.parse(JSON.stringify(value));
@@ -20,7 +21,7 @@ function isolated(raw=null){
     setItem(k,value){if(errors.write)throw errors.write;memory.set(k,value);},
     removeItem(k){if(errors.clear)throw errors.clear;memory.delete(k);}
   };
-  const context=vm.createContext({localStorage:storage});vm.runInContext(compiled,context);
+  const context=vm.createContext({localStorage:storage,migrateAttributeScale});vm.runInContext(compiled,context);
   return {...context.api,context,memory,errors};
 }
 let checks=0;

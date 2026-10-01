@@ -276,6 +276,7 @@ export interface PlayerState {
   life?: LifeContext;
   tactical?: TacticalContext;
   dna: HiddenDNA;
+  attributeScale?: 'ADULT_REFERENCE_1';
   attributes: VisibleAttributes;
   attributeKnowledge: Record<keyof VisibleAttributes, number>;
   morale: number;

@@ -2,7 +2,7 @@
 
 Jogo de carreira individual no futebol, responsivo para celular e desktop, com funcionamento offline. Começa aos 12 numa escolinha local. As decisões profissionais e de vida conduzem uma biografia sorteada.
 
-Versão experimental 0.3.10: estudos de Ronaldinho, Kaká, Romário, Diego Souza, Rivaldo, Lulinha e Somália aplicados a origem familiar, escola, descoberta, reconversão, transição, afastamentos e longevidade. Ver `docs/CAREER_CASE_STUDIES.md`, `docs/GAME_SPEC.md` e `PROJECT_LOG.md` para decisões, fórmulas, fontes e limites.
+Versão experimental 0.3.11: estudos de Ronaldinho, Kaká, Romário, Diego Souza, Rivaldo, Lulinha e Somália aplicados a origem familiar, escola, descoberta, reconversão, transição, afastamentos e longevidade. Ver `docs/CAREER_CASE_STUDIES.md`, `docs/GAME_SPEC.md` e `PROJECT_LOG.md` para decisões, fórmulas, fontes e limites.
 
 ```bash
 npm ci
@@ -94,3 +94,13 @@ Após o balanço anual, um ano ruim documentado na escolinha/base abre uma propo
 Você pode aceitar a proposta, testar outra posição ou insistir. Aceitar aplica a adaptação já existente; insistir reduz a chance de começar como titular naquele projeto em8p.p. até13anos,12até15,16até18. A evidência atual pode recuperar espaço com5jogos/240minutos e rendimento suficiente; uma piora posterior pode reabrir a cobrança. Clube/posição/categoria/temporada diferentes encerram essa consequência. Não congela aprendizagem ou potencial. O custo é informado antes do clique e aparece no recibo.
 
 Histórico ausente ou misturado não gera veredito. Eventos legados mantêmIDs/corpo e não recebem custo retroativo. Plano novo é opcional e validado no save; chave/schema mantidos. Testes11grupospuros+4integração, suíte e gates completos. Evidência mobile em fixture isolada; sem Safari físico/playtest4h.
+
+
+## 0.3.11 — formação, condição e recomeço
+
+Jogar mostra diretamente condição física, fadiga mental, pressão, confiança e moral, com valores atuais /100. Fadiga menor é melhor. Os novos dilemas usam o mesmo termo, evitando uma energia mental sem indicador próprio. Recomeçar carreira fica visível nessa tela e requer confirmação; cancelar ou falhar ao apagar mantém a carreira.
+
+Atributos usam referência adulta: partida aos12 reduzida19,2 pontos, aprendizagem1,4× até13,2,75× entre14–17 e1,25× entre18–21. Base inicial menor não define potencial máximo. Descoberta é comparada com pares; avaliaçãoSub-20 já aproxima exigência adulta. Saves anteriores recebem conversão única dos atributos antes18; histórico/DNA/evento pendente preservados, adultos não recebem desconto. Dados originais não são escritos na simples leitura. Testes500DNAs: máximo inicial36,3 e máximo durante13anos47,56; não são limites científicos nem hard caps. Verlog/revisão e gates para efeitos nas trajetórias.
+
+
+Correção final deUX0.3.11: HUD compacto persistente durante a rolagem (no celular acima da navegação), uma coluna e faixa de temporada substituem os dois cartões grandes. Balanço anual mostra os números do ano encerrado, partidas mostram o ano em andamento. Capítulos ficam depois das decisões; reações/contexto/próximos passos continuam diretos.

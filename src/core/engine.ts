@@ -1,3 +1,4 @@
+import {formationOffset,migrateAttributeScale} from './attribute-scale.js';
 import {reviewYouthPosition} from './youth-position-review.js';
 import {recordRecentMatchForm,evaluateRecentMatchForm,type FormEvaluation} from './form.js';
 import {evaluateFanMatch} from './fans.js';
@@ -34,7 +35,7 @@ export function createCareerWithSeed(name:string,seed:number,heartClubId?:string
   const rng=new RNG(seed);const dna=generateDNA(rng);const life=generateLife(seed,hometown,heartClubId,hometownState);
   const startHeight=Number(clamp(dna.adultHeightCm-rng.float(24,39)-(dna.physicalMaturationAge-16)*1.8,132,166).toFixed(1));
   const p:PlayerState={
-    id:`p-${seed.toString(16)}`,name,birthYear:2014,age:12,season:2026,seasonTurn:0,careerTurn:0,phase:'ESCOLINHA',professionalStatus:'YOUTH',hometown:life.residence,life,
+    id:`p-${seed.toString(16)}`,name,birthYear:2014,age:12,season:2026,seasonTurn:0,careerTurn:0,phase:'ESCOLINHA',professionalStatus:'YOUTH',attributeScale:'ADULT_REFERENCE_1',hometown:life.residence,life,
     heartClubId:life.heartClubId,currentClubId:null,position:'IND',secondaryPositions:[],positionProficiency:initialProficiency(),positionHistory:[],positionSeasonChosenFor:null,adaptationDebt:0,positionChanges:0,
     heightCm:startHeight,weightKg:Number(((startHeight-100)*.70).toFixed(1)),dna,attributes:initialAttributes(rng,dna),attributeKnowledge:blankKnowledge(),
     morale:68,confidence:55,pressure:12,mentalFatigue:8,physicalCondition:97,reputation:2,marketValue:0,contractYearsLeft:0,transferIntent:'STAY',
@@ -155,19 +156,21 @@ function applyFormConsequences(p:PlayerState,form:FormEvaluation,professional:bo
 }
 
 function roleBaseline(p:PlayerState,pos:PlayablePosition):number{
-  const a=p.attributes;const vals=Object.values(a) as number[];const avg=vals.reduce((s,v)=>s+v,0)/vals.length;return Math.max(34,avg*.95);
+  const a=p.attributes;const vals=Object.values(a) as number[];const avg=vals.reduce((s,v)=>s+v,0)/vals.length;return Math.max(34-formationOffset(p.age),avg*.95);
 }
 
 function simulateYouthBlock(p:PlayerState,rng:RNG):CareerEvent{
   observeLocally(p);
   const recent=matchForm(p);
-  const games=1;const pos=(p.position==='IND'?'CM':p.position) as PlayablePosition;const rawComp=clamp(effectivePositionRating(p,pos)/Math.max(35,roleBaseline(p,pos)),.72,1.18);const youthPressure=p.age<=12?.08:p.age===13?.14:p.age===14?.30:.55;const comp=1+(rawComp-1)*youthPressure;let goals=0,assists=0,good=0;const youthMatches:MatchResult[]=[];
+  const games=1;const pos=(p.position==='IND'?'CM':p.position) as PlayablePosition;const rawComp=clamp(effectivePositionRating(p,pos)/Math.max(35-formationOffset(p.age),roleBaseline(p,pos)),.72,1.18);const youthPressure=p.age<=12?.08:p.age===13?.14:p.age===14?.30:.55;const comp=1+(rawComp-1)*youthPressure;let goals=0,assists=0,good=0;const youthMatches:MatchResult[]=[];
   for(let i=0;i<games;i++){
     const attacking=pos==='ST' ? .24 : pos==='WG' ? .19 : pos==='AM' ? .16 : pos==='CM' ? .10 : pos==='FB' ? .07 : pos==='DM' ? .06 : pos==='CB' ? .045 : .008;
     const creating=pos==='AM' ? .22 : pos==='CM' ? .17 : pos==='WG' ? .17 : pos==='FB' ? .14 : pos==='DM' ? .10 : pos==='ST' ? .08 : pos==='CB' ? .035 : .01;
-    const g=rng.chance(clamp(attacking*comp*(.65+p.attributes.finishing/120),.002,.48))?1:0;
-    const a=rng.chance(clamp(creating*comp*(.65+p.attributes.passing/120),.003,.45))?1:0;
-    const stageStandard=32+(p.age-12)*2.5+(p.currentClubId?CLUB_BY_ID[p.currentClubId]!.youth*.07:0);
+    const g=rng.chance(clamp(attacking*comp*(.65+(p.attributes.finishing+formationOffset(p.age))/120),.002,.48))?1:0;
+    const a=rng.chance(clamp(creating*comp*(.65+(p.attributes.passing+formationOffset(p.age))/120),.003,.45))?1:0;
+    // Peer standards apply in discovery; the Sub-20 evaluation already approaches adult demands.
+    const peerOffset=p.age<=14?formationOffset(p.age):p.age===15?formationOffset(p.age)/2:0;
+    const stageStandard=32-peerOffset+(p.age-12)*2.5+(p.currentClubId?CLUB_BY_ID[p.currentClubId]!.youth*.07:0);
     const learned=roleRating(p,pos);
     const rating=clamp(6.05+(learned-stageStandard)/14+(g*.8+a*.55)+(comp-1)*1.8-(p.decisionMemory?.extraLoad??0)*.2+rng.normal(0,.42),4.7,9.6);
     const dummy:MatchResult={opponentId:'youth',home:true,started:rng.chance(clamp(.72-recent.startPenalty-youthPositionOpportunityPenalty(p),.25,.85)),teamGoals:g+a+rng.int(0,2),oppGoals:rng.int(0,2),minutes:rng.int(42,80),goals:g,assists:a,motm:rating>=8.2,yellow:rng.chance(['CB','DM','FB'].includes(pos) ? .08 : .035),red:false,rating:Number(rating.toFixed(1)),xg:Number((g*.55+rng.float(.01,.18)).toFixed(2)),xa:Number((a*.45+rng.float(.01,.16)).toFixed(2)),saves:pos==='GK'?rng.int(1,5):0,cleanSheet:pos==='GK'&&rng.chance(.34),headline:''};
@@ -441,6 +444,7 @@ function advanceCareerInternal(save:SaveGame):SaveGame{
 }
 
 export function resolveChoice(save:SaveGame,choiceId:string):SaveGame {
+  migrateAttributeScale(save.player);
   const event=save.pendingEvent;
   if(!event?.choices?.some(c=>c.id===choiceId)||choiceId==='career:explore'&&!evaluationSearchPreview(save.player).available)return save;
   ensureStories(save.player);const before=choiceSnapshot(save.player),previousLog=save.player.history[0];
@@ -451,6 +455,7 @@ export function resolveChoice(save:SaveGame,choiceId:string):SaveGame {
   save.updatedAt=new Date().toISOString();return save;
 }
 export function advanceCareer(save:SaveGame):SaveGame {
+  migrateAttributeScale(save.player);
   if(save.pendingEvent?.choices?.length)return save;
   const p=save.player;ensureStories(p);
   const season=p.season,category=competitionCategory(p),before={...p.currentSeason};

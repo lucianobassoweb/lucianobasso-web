@@ -1,3 +1,4 @@
+import { formationOffset } from './attribute-scale.js';
 import { RNG, clamp, hashSeed } from './random.js';
 import { BRAZIL_CLUBS_2026, CLUB_BY_ID } from '../data/clubs-br-2026.js';
 import { roleRating } from './positions.js';
@@ -55,8 +56,8 @@ export function scoutingCandidates(p:PlayerState,rng:RNG):Club[]{
   const modest=local.filter(c=>c.prestige<=60);
   const pool=(modest.length?modest:local).length? (modest.length?modest:local):BRAZIL_CLUBS_2026.filter(c=>c.city!=='A DEFINIR'&&c.division!=='A');
   const chosen=[rng.pick(pool)];
-  const observed=p.position==='IND'?45:roleRating(p,p.position);
-  const broaderChance=clamp(clamp((observed-35)/65,.12,.65)+(priority?.12:0),.12,.77);
+  const observed=p.position==='IND'?45-formationOffset(p.age):roleRating(p,p.position);
+  const broaderChance=clamp(clamp((observed-(35-formationOffset(p.age)))/65,.12,.65)+(priority?.12:0),.12,.77);
   if((life.scouting.observations>=6||priority)&&rng.chance(broaderChance)){
     const wider=BRAZIL_CLUBS_2026.filter(c=>c.id!==chosen[0]!.id&&c.id!==p.currentClubId&&c.city!=='A DEFINIR'&&(c.state===life.originState||rng.chance(.12)));
     if(wider.length)chosen.push(rng.pick(wider));
@@ -65,11 +66,11 @@ export function scoutingCandidates(p:PlayerState,rng:RNG):Club[]{
 }
 /** No compatibility/DNA lookup: evaluators see current performance and can make mistakes. */
 export function trialProbability(p:PlayerState,club:Club,transportSupport:boolean):number{
-  const life=ensureLife(p);const ability=p.position==='IND'?45:roleRating(p,p.position);
+  const life=ensureLife(p);const ability=p.position==='IND'?45-formationOffset(p.age):roleRating(p,p.position);
   const physicalNow=(p.attributes.pace+p.attributes.stamina+p.attributes.strength)/3;
   const assessment=ability*.75+physicalNow*.25;
   const logistics=transportSupport?0:Math.max(0,45-life.family.resources)/200;
-  return clamp(.53+(assessment-(34+club.youth*.22))/60-logistics,.12,.86);
+  return clamp(.53+(assessment-(34-formationOffset(p.age)+club.youth*.22))/60-logistics,.12,.86);
 }
 
 export function accrueEducation(p:PlayerState,calendarFraction:number):void{

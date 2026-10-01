@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
+import {migrateAttributeScale} from '../dist/core/attribute-scale.js';
 import {createCareerWithSeed,advanceCareer,resolveChoice} from '../dist/core/engine.js';
 import {ensureStories,updateStories,choiceSnapshot} from '../dist/core/stories.js';
 import {ensureCoaching,syncCoachContext} from '../dist/core/coaches.js';
@@ -37,8 +38,8 @@ const pairedA=ready(387),pairedB=structuredClone(pairedA);pairedB.player.story.a
 for(let i=0;i<30;i++){for(const s of [pairedA,pairedB]){if(s.pendingEvent?.choices?.length)resolveChoice(s,s.pendingEvent.choices[0].id);else advanceCareer(s);}assert.equal(pairedA.player.rngState,pairedB.player.rngState);assert.deepEqual(pairedA.player.attributes,pairedB.player.attributes);assert.deepEqual(pairedA.player.currentSeason,pairedB.player.currentSeason);assert.deepEqual(pairedA.player.careerStats,pairedB.player.careerStats);}
 // Modern malformed optional fields are rejected while absent legacy fields remain valid.
 const source=fs.readFileSync(new URL('../src/core/persistence.ts',import.meta.url),'utf8');
-const compiled=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ES2022}}).outputText.replace(/^export /gm,'')+'\nglobalThis.api={loadSave,storeSave};';
-function load(s){const context=vm.createContext({localStorage:{getItem:()=>JSON.stringify(s)}});vm.runInContext(compiled,context);return context.api.loadSave();}
+const compiled=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ES2022}}).outputText.replace(/^import .*$/gm,'').replace(/^export /gm,'')+'\nglobalThis.api={loadSave,storeSave};';
+function load(s){const context=vm.createContext({migrateAttributeScale,localStorage:{getItem:()=>JSON.stringify(s)}});vm.runInContext(compiled,context);return context.api.loadSave();}
 const valid=ready(389);advanceCareer(valid);resolveChoice(valid,valid.pendingEvent.choices[0].id);assert.ok(load(played));const legacy=structuredClone(played);delete legacy.player.story;delete legacy.player.lastChoiceResult;assert.ok(load(legacy));
 for(const mutate of [s=>s.player.story.active.appearances=-1,s=>s.player.story.active.deadlineTurn=s.player.story.active.startedTurn,s=>s.player.story.active.kind='SOCIAL',s=>s.player.story.archive[0].outcome='FAKE',s=>s.player.lastChoiceResult.effects=[42],s=>s.player.story.sequence=.2]){const bad=structuredClone(valid);bad.player.story.archive=structuredClone(played.player.story.archive);mutate(bad);assert.equal(load(bad),null);}
 const receipt=structuredClone(played.player.lastChoiceResult);advanceCareer(played);assert.deepEqual(played.player.lastChoiceResult,receipt);
