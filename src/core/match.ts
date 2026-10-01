@@ -26,11 +26,11 @@ export interface MatchResult {
 /** Offensive notes describe observed output, not the player's underlying skill. */
 export function observedAttackRating(position:PlayerState['position'],m:Pick<MatchResult,'rating'|'minutes'|'goals'|'assists'|'xg'|'xa'>):{rating:number;ratingReason?:string}{
   if(position!=='ST'&&position!=='WG')return {rating:m.rating};
-  if(m.goals>0)return {rating:m.rating,ratingReason:`${m.goals} gol${m.goals===1?'':'s'} e ${m.assists} assistência${m.assists===1?'':'s'} entram na avaliação ofensiva.`};
+  if(m.goals>0)return {rating:Number(Math.min(m.rating,Math.min(10,7.6+m.goals*.6+m.assists*.3)).toFixed(1)),ratingReason:`${m.goals} gol${m.goals===1?'':'s'} e ${m.assists} assistência${m.assists===1?'':'s'} entram na avaliação ofensiva.`};
   if(m.assists>0)return {rating:Math.min(m.rating,7.8+m.assists*.3),ratingReason:`Sem gol, mas ${m.assists} assistência${m.assists===1?'':'s'} registra${m.assists===1?'':'m'} contribuição direta ao ataque.`};
   if(m.xa>=.5)return {rating:Math.min(m.rating,m.xa>=1?7.8:7.2),ratingReason:`Sem participação direta em gol; xA ${m.xa.toFixed(2)} registra criação de oportunidades.`};
   const waste=m.minutes>=30&&m.xg>=.6;
-  const cap=m.minutes<30?6.8:waste?6.4:6.6;
+  const cap=m.minutes<30?6.5:waste?6.0:6.3;
   return {rating:Number(Math.min(m.rating,cap).toFixed(1)),ratingReason:`Sem gol ou assistência, com xA ${m.xa.toFixed(2)}${waste?` e xG ${m.xg.toFixed(2)} sem conversão`:''}. ${m.minutes<30?'A participação curta limita a avaliação.':'A nota reflete pouca produção ofensiva registrada.'}`};
 }
 

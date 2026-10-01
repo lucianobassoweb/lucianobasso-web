@@ -35,7 +35,7 @@ check('bench and brief cameos cannot create or erase substantial exposure',()=>{
 check('assists and creation mitigate rather than erase a long striker drought',()=>{
  const c=context(),plain=evaluate(sequence(),c,24),assisted=evaluate(sequence(6,c,{assists:1}),c,24),created=evaluate(sequence(6,c,{xa:1}),c,24);
  assert(assisted.startPenalty>0&&assisted.startPenalty<plain.startPenalty);assert(created.startPenalty>0&&created.startPenalty<plain.startPenalty);
- assert(assisted.startPenalty>=0.13);assert.match(created.coachText,/criação atenua/);
+ assert(assisted.startPenalty>=0.13);assert.match(created.coachText,/criação(?: registrada)? atenua/);
 });
 check('winger pressure is milder and midfield or defense never receives striker penalties',()=>{
  const st=evaluate(sequence(),context(),24);const wg=context({position:'WG'});assert(evaluate(sequence(6,wg),wg,24).startPenalty<st.startPenalty);
@@ -58,7 +58,9 @@ check('recording is idempotent and rejects older replayed turns',()=>{
  const bench=record(f,c,match(7,{minutes:0}));assert.strictEqual(record(bench,c,match(7)),bench);
 });
 check('a real goal resets the sequence and recent contributions restore part of the opportunity',()=>{
- const c=context(),f=sequence(),before=evaluate(f,c,24);const goal=record(f,c,match(7,{minutes:12,goals:1}));assert.equal(evaluate(goal,c,24).startPenalty,0);
+ const c=context(),f=sequence(),before=evaluate(f,c,24);const goal=record(f,c,match(7,{minutes:12,goals:1}));const after=evaluate(goal,c,24);
+ assert.equal(after.dryMatches,0);assert.equal(after.dryMinutes,0);assert(after.startPenalty>0&&after.startPenalty<before.startPenalty);
+ assert.equal(after.rollingGoals,1);assert.equal(after.rollingMinutes,552);assert.match(after.coachText,/7 participações, 552 minutos, 1 gol e 0 assistências/);
  const assist=record(f,c,match(7,{assists:1,xa:0.7}));assert(evaluate(assist,c,24).startPenalty<before.startPenalty);
  assert.equal(evaluate(record(goal,c,match(8)),c,24).dryMatches,1);
 });
@@ -78,6 +80,37 @@ check('eight scoreless cameos do not wash away six substantial dry appearances',
  const before=evaluate(f,c,24);
  for(let turn=7;turn<=14;turn++)f=record(f,c,{turn,minutes:18,goals:0,assists:0,rating:6.3,xg:.1,xa:0});
  assert.equal(evaluate(f,c,24).startPenalty,before.startPenalty);assert.equal(f.lastObservedTurn,14);
- f=record(f,c,{turn:15,minutes:12,goals:1,assists:0,rating:7.5,xg:.6,xa:0});assert.equal(evaluate(f,c,24).startPenalty,0);
+ f=record(f,c,{turn:15,minutes:12,goals:1,assists:0,rating:7.5,xg:.6,xa:0});const recovered=evaluate(f,c,24);
+ assert.equal(recovered.dryMatches,0);assert(recovered.startPenalty>0&&recovered.startPenalty<before.startPenalty);
+});
+check('eight matches with one recent goal retain rolling production consequences',()=>{
+ const c=context();let f=sequence(7);f=record(f,c,match(8,{goals:1}));const low=evaluate(f,c,24);
+ assert.equal(low.dryMatches,0);assert.equal(low.rollingMatches,8);assert.equal(low.rollingMinutes,720);assert.equal(low.rollingGoals,1);
+ assert.equal(low.productionPer90,0.125);assert.equal(low.startPenalty,0.15);assert.match(low.fanText,/janela recente observada/);
+ assert.doesNotMatch(low.fanText,/17|temporada|sem gol/);
+ const prolific=evaluate(sequence(8,c,{goals:1}),c,24);assert.equal(prolific.startPenalty,0);
+ const assisting=record(sequence(7,c,{assists:1}),c,match(8,{goals:1,assists:1}));assert.equal(evaluate(assisting,c,24).startPenalty,0);
+});
+check('rolling production requires six substantial matches and 360 substantial minutes',()=>{
+ const c=context();let five=record(sequence(5),c,match(6,{minutes:12,goals:1}));assert.equal(evaluate(five,c,24).startPenalty,0);
+ let short=sequence(5,c,{minutes:45});short=record(short,c,match(6,{minutes:45,goals:1}));assert.equal(evaluate(short,c,24).startPenalty,0);
+ const wg=context({position:'WG'});let threshold=sequence(5,wg,{minutes:60});threshold=record(threshold,wg,match(6,{minutes:60,goals:1}));
+ assert(evaluate(threshold,wg,24).startPenalty>0);
+});
+check('role production thresholds, creation relief and maximum combination are bounded',()=>{
+ const st=context(),wg=context({position:'WG'});
+ for(const [c,threshold] of [[st,0.25],[wg,0.4]]){
+  let f=sequence(7,c);f=record(f,c,match(8,{goals:1}));const base=evaluate(f,c,24);
+  let created=sequence(7,c,{xa:1});created=record(created,c,match(8,{goals:1,xa:1}));const relieved=evaluate(created,c,24);
+  assert(relieved.startPenalty>0&&relieved.startPenalty<base.startPenalty);assert.match(relieved.coachText,/criação registrada/);
+  const roleWeight=c.position==='ST'?1:0.5;assert.equal(base.startPenalty,0.3*(1-0.125/threshold)*roleWeight);
+  const dry=evaluate(sequence(8,c),c,24);assert.equal(dry.startPenalty,0.3*roleWeight);
+ }
+ const young=context({category:'U15'});let yf=sequence(7,young);yf=record(yf,young,match(8,{goals:1}));assert(evaluate(yf,young,13).startPenalty<0.18);
+});
+check('repeated productive performances progressively restore opportunity within the bounded window',()=>{
+ const c=context();let f=record(sequence(7),c,match(8,{goals:1}));const before=evaluate(f,c,24).startPenalty;
+ f=record(f,c,match(9,{goals:1}));const twice=evaluate(f,c,24);assert(twice.startPenalty<before);assert.equal(twice.startPenalty,0);
+ for(let turn=10;turn<=20;turn++)f=record(f,c,match(turn,{goals:1}));assert.equal(evaluate(f,c,24).startPenalty,0);assert.equal(f.observations.length,8);
 });
 console.log(`${checks} recent form groups passed`);

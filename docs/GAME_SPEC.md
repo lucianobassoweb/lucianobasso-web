@@ -188,3 +188,12 @@ A procura é uma decisão de esforço: fadiga mental +3 e pressão +2, respeitan
 Na próxima geração de candidatos, a prioridade habilita a possibilidade de ampliar a lista mesmo abaixo de6 observações e soma0,12 à probabilidade ordinária (máximo0,77). Com >=6observações isso representa12p.p.; abaixo desse limiar o ganho total pode ser maior, porque a lista ordinária não faria esse sorteio. Continua possível receber uma única opção. Prioridade consumida na geração, sem garantir teste, aprovação ou promoção e sem mudar trialProbability. Não há custo financeiro sem saldo nem dano automático de reputação por procurar.
 
 Pressão e fadiga são estados persistentes usados na rotina/carga e no profissional; a nota juvenil e a aprovação não consultam esses estados hoje. Evento legado conserva IDs/corpo/opções; hint de busca vem do preview atual e motor bloqueia escolha indisponível antes de qualquer mutação. Campos opcionais searchPriority/lastSearchSeason preservam compatibilidade; corrupção ou cursor futuro acionam recuperação com os bytes originais.
+
+
+## 0.3.9 — revisão da produção ofensiva
+
+Esta revisão atualiza os tetos da0.3.7: semG/A/xA>=0,5, nota máxima6,3 em>=30min,6,5 em<30min e6,0 quando>=30min/xG>=0,6 sem conversão. Gol tem teto min(10,7,6+0,6G+0,3A); assistência/criação mantêm evidência e regrasanteriores. Não usar nota juvenil bruta dos atributos como atuação comprovada. Notas/eventos antigos permanecem no histórico.
+
+Gol encerra seca, mas não elimina avaliação de produção insuficiente na janela realmente observada de até8registros. Pelo menos6partidas>=45min/360minsubstanciais; cameo comgol conta numerador/minutos mas não estabelece amostra. ST referência(G+0,45A)/90=0,25; WG(G+A)/90=0,40. Deficit clamp(1−produção/referência,0,1), alívio de xA min0,35×somaobservadaxA×0,06; máximo com intensidade da seca existente, peso posição/idade e caps anteriores (.30prof,.24amador,.18base). Não somar duaspenalidades oulerDNA. Amostra/estado são derivados dohistórico jápersistido, semnovo schema. Duasproduçõespositivas podem recuperar espaço, semgarantia de titularidade.
+
+No profissional, primeiro limitar chance esportiva em0,08–0,92, depois subtrair forma e limitar novamente. Evita absorção de penalidade por atributos acima do teto. Rampa de estreia/retorno preservada. Banco não gera novo custo individual; feedback pode explicar cobrança anterior. Calendário, ausência de elenco detalhado e ações individuais ainda simplificados.

@@ -2349,6 +2349,7 @@ function recordRecentMatchForm(previous, context, observation) {
 function evaluateRecentMatchForm(form, context, age) {
     const empty = {
         known: false, dryMatches: 0, dryMinutes: 0, assists: 0, xa: 0,
+        rollingMatches: 0, rollingMinutes: 0, rollingGoals: 0, rollingAssists: 0, productionPer90: 0,
         severity: 0, startPenalty: 0, coachText: '', fanText: '',
     };
     if (!form || !sameContext(form.context, context))
@@ -2371,21 +2372,45 @@ function evaluateRecentMatchForm(form, context, age) {
         result.assists += match.assists;
         result.xa += match.xa;
     }
-    if (result.dryMatches < 3 || result.dryMinutes < 180)
-        return result;
     // Three substantial matches/180 minutes begin the consequence; six/360 reach full exposure.
     const exposure = Math.min(1, result.dryMatches / 6, result.dryMinutes / 360);
-    const progression = clamp((exposure - 0.25) / 0.75, 0, 1);
+    const progression = result.dryMatches >= 3 && result.dryMinutes >= 180
+        ? clamp((exposure - 0.25) / 0.75, 0, 1) : 0;
     // Creation is valuable, but six long appearances without a striker goal still cost space.
     const contributionRelief = Math.min(0.55, result.assists * 0.12 + result.xa * 0.06);
+    const droughtSeverity = progression * (1 - contributionRelief);
+    // A goal ends the drought, but one goal does not erase the rest of the observed production.
+    // Count a scored cameo in both numerator and minutes; it cannot establish the sample itself.
+    const sample = observations.filter(match => match.minutes > 0);
+    const substantial = sample.filter(match => match.minutes >= 45);
+    const substantialMinutes = substantial.reduce((sum, match) => sum + match.minutes, 0);
+    result.rollingMatches = sample.length;
+    result.rollingMinutes = sample.reduce((sum, match) => sum + match.minutes, 0);
+    result.rollingGoals = sample.reduce((sum, match) => sum + match.goals, 0);
+    result.rollingAssists = sample.reduce((sum, match) => sum + match.assists, 0);
+    const assistWeight = context.position === 'ST' ? 0.45 : 1;
+    result.productionPer90 = result.rollingMinutes > 0
+        ? (result.rollingGoals + assistWeight * result.rollingAssists) * 90 / result.rollingMinutes : 0;
+    const expectedProduction = context.position === 'ST' ? 0.25 : 0.40;
+    // Assists already contribute to the production rate; only recorded xA provides extra relief.
+    const rollingXa = sample.reduce((sum, match) => sum + match.xa, 0);
+    const rollingSeverity = substantial.length >= 6 && substantialMinutes >= 360
+        ? clamp(1 - result.productionPer90 / expectedProduction, 0, 1) * (1 - Math.min(0.35, rollingXa * 0.06)) : 0;
     const roleWeight = context.position === 'ST' ? 1 : 0.5;
     const ageWeight = age <= 12 ? 0.5 : age <= 13 ? 0.7 : age <= 15 ? 0.85 : 1;
     const cap = context.category === 'SENIOR' ? 0.30 : context.category === 'AMATEUR' ? 0.24 : 0.18;
-    result.severity = progression * (1 - contributionRelief) * roleWeight;
+    result.severity = Math.max(droughtSeverity, rollingSeverity) * roleWeight;
     result.startPenalty = cap * ageWeight * result.severity;
-    const evidence = `${result.dryMatches} atuações de pelo menos 45 minutos e ${Math.round(result.dryMinutes)} minutos sem gol`;
-    const creation = result.assists > 0 || result.xa >= 0.5
-        ? ' A participação na criação atenua a cobrança, mas a sequência sem gol ainda pesa.' : '';
+    if (result.startPenalty <= 0)
+        return result;
+    const rollingDominates = rollingSeverity > droughtSeverity;
+    const evidence = rollingDominates
+        ? `a janela recente observada: ${result.rollingMatches} participações, ${Math.round(result.rollingMinutes)} minutos, ${result.rollingGoals} ${result.rollingGoals === 1 ? 'gol' : 'gols'} e ${result.rollingAssists} ${result.rollingAssists === 1 ? 'assistência' : 'assistências'} (${substantial.length} atuações de pelo menos 45 minutos)`
+        : `${result.dryMatches} atuações de pelo menos 45 minutos e ${Math.round(result.dryMinutes)} minutos sem gol`;
+    const creation = rollingDominates
+        ? rollingXa >= 0.5 ? ' A criação registrada atenua a cobrança por produção recente.' : ''
+        : result.assists > 0 || result.xa >= 0.5
+            ? ' A participação na criação atenua a cobrança, mas a sequência sem gol ainda pesa.' : '';
     const formative = context.category !== 'SENIOR' && context.category !== 'AMATEUR';
     result.coachText = formative
         ? `Na formação, o treinador acompanha ${evidence} e passa a considerar rodar a titularidade.${creation}`
@@ -3051,13 +3076,13 @@ function observedAttackRating(position, m) {
     if (position !== 'ST' && position !== 'WG')
         return { rating: m.rating };
     if (m.goals > 0)
-        return { rating: m.rating, ratingReason: `${m.goals} gol${m.goals === 1 ? '' : 's'} e ${m.assists} assistência${m.assists === 1 ? '' : 's'} entram na avaliação ofensiva.` };
+        return { rating: Number(Math.min(m.rating, Math.min(10, 7.6 + m.goals * .6 + m.assists * .3)).toFixed(1)), ratingReason: `${m.goals} gol${m.goals === 1 ? '' : 's'} e ${m.assists} assistência${m.assists === 1 ? '' : 's'} entram na avaliação ofensiva.` };
     if (m.assists > 0)
         return { rating: Math.min(m.rating, 7.8 + m.assists * .3), ratingReason: `Sem gol, mas ${m.assists} assistência${m.assists === 1 ? '' : 's'} registra${m.assists === 1 ? '' : 'm'} contribuição direta ao ataque.` };
     if (m.xa >= .5)
         return { rating: Math.min(m.rating, m.xa >= 1 ? 7.8 : 7.2), ratingReason: `Sem participação direta em gol; xA ${m.xa.toFixed(2)} registra criação de oportunidades.` };
     const waste = m.minutes >= 30 && m.xg >= .6;
-    const cap = m.minutes < 30 ? 6.8 : waste ? 6.4 : 6.6;
+    const cap = m.minutes < 30 ? 6.5 : waste ? 6.0 : 6.3;
     return { rating: Number(Math.min(m.rating, cap).toFixed(1)), ratingReason: `Sem gol ou assistência, com xA ${m.xa.toFixed(2)}${waste ? ` e xG ${m.xg.toFixed(2)} sem conversão` : ''}. ${m.minutes < 30 ? 'A participação curta limita a avaliação.' : 'A nota reflete pouca produção ofensiva registrada.'}` };
 }
 function poisson(rng, lambda) {
@@ -3424,7 +3449,9 @@ function simulateProfessionalBlock(p, rng, fixtures) {
     const transition = transitionLoad(p);
     p.pressure = clamp(p.pressure + transition.pressure * calendarScale(p));
     const recent = matchForm(p);
-    const baseStart = clamp((.35 + (level - standard) / 35 + (p.confidence - 50) / 180 + opportunityAdjustment(p) + (p.careerApproach === 'RESPONSIBILITY' ? .06 : 0)) * transition.starts - (p.comebackBlocks && p.comebackPlan === 'GRADUAL' ? .15 : 0) - recent.startPenalty, .08, .92);
+    // Apply observed form after bounding ability: high skill cannot absorb the consequence above the ceiling.
+    const sportingStart = clamp((.35 + (level - standard) / 35 + (p.confidence - 50) / 180 + opportunityAdjustment(p) + (p.careerApproach === 'RESPONSIBILITY' ? .06 : 0)) * transition.starts - (p.comebackBlocks && p.comebackPlan === 'GRADUAL' ? .15 : 0), .08, .92);
+    const baseStart = clamp(sportingStart - recent.startPenalty, .08, .92);
     if (p.comebackBlocks)
         p.comebackBlocks = Math.max(0, p.comebackBlocks - 1);
     const firstAppearance = !p.debut && p.careerStats.appearances === 0;
@@ -3460,7 +3487,7 @@ function simulateProfessionalBlock(p, rng, fixtures) {
         p.confidence = clamp(p.confidence - .5);
         const fixture = fixtures[0], opponent = fixture ? CLUB_BY_ID[fixture.homeId === own.id ? fixture.awayId : fixture.homeId] : null;
         const gf = fixture ? (fixture.homeId === own.id ? fixture.homeGoals : fixture.awayGoals) : 0, ga = fixture ? (fixture.homeId === own.id ? fixture.awayGoals : fixture.homeGoals) : 0;
-        return { id: `bench-${p.careerTurn}`, kind: 'INFO', title: fixture ? `${own.shortName} ${gf} × ${ga} ${opponent.shortName} · você ficou no banco` : 'Sem partida profissional nesta rodada', body: `Você acompanhou esta partida sem entrar. A disputa por espaço pesa mais do que qualquer treino.`, matchFeedback: { category: 'SENIOR', showScore: !!fixture, opponent: opponent?.shortName ?? 'Profissional · banco de reservas', coachName: coachName(p.tactical.coachId), started: false, minutes: 0, goals: 0, assists: 0, rating: 0, saves: 0, cleanSheet: false, teamGoals: gf, oppGoals: ga, fanReaction: 'Sem atuação para uma nova avaliação individual.', coachReaction: 'Seu espaço segue em disputa; não houve avaliação em campo.', blockGames: 0, blockStarts: 0, blockGoals: 0, blockAssists: 0, blockMinutes: 0 }, tags: ['BANCO', POSITION_LABEL[p.position].toUpperCase()] };
+        return { id: `bench-${p.careerTurn}`, kind: 'INFO', title: fixture ? `${own.shortName} ${gf} × ${ga} ${opponent.shortName} · você ficou no banco` : 'Sem partida profissional nesta rodada', body: `Você acompanhou esta partida sem entrar. A disputa por espaço pesa mais do que qualquer treino.`, matchFeedback: { category: 'SENIOR', showScore: !!fixture, opponent: opponent?.shortName ?? 'Profissional · banco de reservas', coachName: coachName(p.tactical.coachId), started: false, minutes: 0, goals: 0, assists: 0, rating: 0, saves: 0, cleanSheet: false, teamGoals: gf, oppGoals: ga, fanReaction: 'Sem atuação para uma nova avaliação individual.', coachReaction: (recent.coachText ? recent.coachText + ' ' : '') + 'Seu espaço segue em disputa; não houve avaliação em campo.', blockGames: 0, blockStarts: 0, blockGoals: 0, blockAssists: 0, blockMinutes: 0 }, tags: ['BANCO', POSITION_LABEL[p.position].toUpperCase()] };
     }
     const highlight = [...results].sort((a, b) => (b.m.goals * 2 + b.m.assists + (b.m.motm ? 1.5 : 0) + b.m.rating / 10) - (a.m.goals * 2 + a.m.assists + (a.m.motm ? 1.5 : 0) + a.m.rating / 10))[0];
     const goals = results.reduce((s, x) => s + x.m.goals, 0), assists = results.reduce((s, x) => s + x.m.assists, 0), starts = results.filter(x => x.m.started).length;
@@ -4261,7 +4288,7 @@ function theme() {
     const colors = c?.colors ?? ['#7bbcff', '#e8eef4'];
     return `style="--club:${colors[0]};--club2:${colors[1]};"`;
 }
-function appShell(content) { return `<main class="shell ${save ? 'playing' : 'creating'}" ${theme()}><div class="brand"><div><h1>1903</h1><span class="subbrand">CARREIRA</span></div><span class="build">0.3.8 · EXPERIMENTAL</span></div>${save ? nav() : ''}${persistenceNotice()}<div class="page-content">${content}</div></main>`; }
+function appShell(content) { return `<main class="shell ${save ? 'playing' : 'creating'}" ${theme()}><div class="brand"><div><h1>1903</h1><span class="subbrand">CARREIRA</span></div><span class="build">0.3.9 · EXPERIMENTAL</span></div>${save ? nav() : ''}${persistenceNotice()}<div class="page-content">${content}</div></main>`; }
 const navPaths = { career: 'M8 5l10 7-10 7V5Z', player: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM5 21v-2a7 7 0 0 1 14 0v2', stats: 'M5 20V10m7 10V4m7 16v-7', world: 'M4 7h16v13H4V7Zm4 0V4h8v3M4 12h16m-8-2v4' };
 function nav() { return `<nav class="bottom-nav" aria-label="Navegação da carreira"><div class="bottom-nav-inner">${[['career', 'Jogar', 'Jogar'], ['player', 'Jogador', 'Meu jogador'], ['stats', 'Histórico', 'Histórico'], ['world', 'Clube', 'Clube e mercado']].map(([id, label, full]) => `<button class="nav ${tab === id ? 'active' : ''}" data-tab="${id}" aria-label="${full}" aria-current="${tab === id ? 'page' : 'false'}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${navPaths[id]}"/></svg><span>${label}</span></button>`).join('')}</div></nav>`; }
 function persistenceNotice() {

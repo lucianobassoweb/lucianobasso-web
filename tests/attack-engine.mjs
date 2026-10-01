@@ -10,11 +10,11 @@ const adult=(seed=9)=>{const s=youth(seed),p=s.player;Object.assign(p,{age:25,pr
 const addDrought=(s,category)=>{const p=s.player;p.careerTurn=8;p.seasonTurn=6;const context={clubId:p.currentClubId,category,position:p.position,season:p.season};for(let turn=1;turn<=6;turn++)p.recentForm=recordRecentMatchForm(p.recentForm,context,{turn,minutes:69,goals:0,assists:0,rating:7.1,xg:.2,xa:.03});return s;};
 let checks=0;const check=(name,fn)=>{fn();checks++;console.log('PASS',name);};
 check('reproduced youth high note without output now has evidence-based note, no phantom MOTM',()=>{
- const s=youth();advanceCareer(s);const f=s.pendingEvent.matchFeedback;assert.deepEqual([f.minutes,f.goals,f.assists,f.rating],[78,0,0,6.6]);assert.match(f.ratingReason,/pouca produção/);assert.equal(s.player.currentSeason.motm,0);
+ const s=youth();advanceCareer(s);const f=s.pendingEvent.matchFeedback;assert.deepEqual([f.minutes,f.goals,f.assists,f.rating],[78,0,0,6.3]);assert.match(f.ratingReason,/pouca produção/);assert.equal(s.player.currentSeason.motm,0);
  for(let seed=1;seed<=100;seed++){const t=youth(seed);for(const k in t.player.attributes)t.player.attributes[k]=95;advanceCareer(t);if(t.pendingEvent.matchFeedback.goals===0&&t.pendingEvent.matchFeedback.assists===0)assert.equal(t.player.currentSeason.motm,0);}
 });
 check('striker no-goal 7+ needs recorded contribution; defense not judged by striker production',()=>{
- const m={rating:7.1,minutes:69,goals:0,assists:0,xg:.1,xa:.1};assert.equal(observedAttackRating('ST',m).rating,6.6);assert.equal(observedAttackRating('ST',{...m,assists:1}).rating,7.1);assert.match(observedAttackRating('ST',{...m,assists:1}).ratingReason,/assistência/);assert.equal(observedAttackRating('CB',m).rating,7.1);assert(observedAttackRating('ST',{...m,xg:1}).rating<6.6);
+ const m={rating:7.1,minutes:69,goals:0,assists:0,xg:.1,xa:.1};assert.equal(observedAttackRating('ST',m).rating,6.3);assert.equal(observedAttackRating('ST',{...m,assists:1}).rating,7.1);assert.match(observedAttackRating('ST',{...m,assists:1}).ratingReason,/assistência/);assert.equal(observedAttackRating('CB',m).rating,7.1);assert(observedAttackRating('ST',{...m,xg:1}).rating<6.3);
 });
 check('same players and RNG seeds have fewer starts after six substantial sterile appearances',()=>{
  for(const [make,category] of [[youth,'U15'],[adult,'SENIOR']]){
@@ -43,5 +43,21 @@ check('productive attackers can reach promotion under observed ratings; high emp
  Object.assign(p.currentSeason.categories.U20,{goals:4,avgRating:6.8});assert.equal(promotionEvidence(p).eligible,true);
  p.position='WG';Object.assign(p.currentSeason.categories.U20,{goals:0,assists:5});assert.equal(promotionEvidence(p).eligible,true);
  p.age=14;assert.equal(promotionEvidence(p).eligible,false);
+});
+check('high ability does not absorb form penalty at the probability ceiling',()=>{
+ let freshStarts=0,dryStarts=0;
+ for(let seed=1;seed<=120;seed++){
+  const fresh=adult(seed),p=fresh.player;p.careerTurn=8;p.seasonTurn=6;p.confidence=100;p.positionProficiency.ST=100;for(const k in p.attributes)p.attributes[k]=99;
+  const dry=addDrought(structuredClone(fresh),'SENIOR');advanceCareer(fresh);advanceCareer(dry);
+  freshStarts+=fresh.pendingEvent.matchFeedback.started?1:0;dryStarts+=dry.pendingEvent.matchFeedback.started?1:0;
+ }
+ assert(freshStarts-dryStarts>=20);console.log('Saturated ability120',{freshStarts,dryStarts});
+});
+check('one goal cannot manufacture a near-perfect note and one in seventeen is no longer rewarded by empty notes',()=>{
+ const empty={rating:9.6,minutes:69,goals:0,assists:0,xg:.1,xa:.1};
+ const ordinary=observedAttackRating('ST',empty),goal=observedAttackRating('ST',{...empty,goals:1});
+ assert.equal(ordinary.rating,6.3);assert.equal(goal.rating,8.2);assert((ordinary.rating*16+goal.rating)/17<6.5);
+ assert.equal(observedAttackRating('ST',{...empty,goals:3}).rating,9.4);
+ assert.equal(observedAttackRating('ST',{...empty,assists:1}).rating,8.1);
 });
 console.log(`${checks} attacking engine groups passed`);

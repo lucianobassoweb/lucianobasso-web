@@ -28,6 +28,11 @@ export interface FormEvaluation {
   dryMinutes: number;
   assists: number;
   xa: number;
+  rollingMatches: number;
+  rollingMinutes: number;
+  rollingGoals: number;
+  rollingAssists: number;
+  productionPer90: number;
   severity: number;
   /** Subtract from the next start probability, then retain the engine's probability clamps. */
   startPenalty: number;
@@ -76,6 +81,7 @@ export function evaluateRecentMatchForm(
 ): FormEvaluation {
   const empty: FormEvaluation = {
     known: false, dryMatches: 0, dryMinutes: 0, assists: 0, xa: 0,
+    rollingMatches: 0, rollingMinutes: 0, rollingGoals: 0, rollingAssists: 0, productionPer90: 0,
     severity: 0, startPenalty: 0, coachText: '', fanText: '',
   };
   if (!form || !sameContext(form.context, context)) return empty;
@@ -93,19 +99,43 @@ export function evaluateRecentMatchForm(
     result.assists += match.assists;
     result.xa += match.xa;
   }
-  if (result.dryMatches < 3 || result.dryMinutes < 180) return result;
   // Three substantial matches/180 minutes begin the consequence; six/360 reach full exposure.
   const exposure = Math.min(1, result.dryMatches / 6, result.dryMinutes / 360);
-  const progression = clamp((exposure - 0.25) / 0.75, 0, 1);
+  const progression = result.dryMatches >= 3 && result.dryMinutes >= 180
+    ? clamp((exposure - 0.25) / 0.75, 0, 1) : 0;
   // Creation is valuable, but six long appearances without a striker goal still cost space.
   const contributionRelief = Math.min(0.55, result.assists * 0.12 + result.xa * 0.06);
+  const droughtSeverity = progression * (1 - contributionRelief);
+  // A goal ends the drought, but one goal does not erase the rest of the observed production.
+  // Count a scored cameo in both numerator and minutes; it cannot establish the sample itself.
+  const sample = observations.filter(match => match.minutes > 0);
+  const substantial = sample.filter(match => match.minutes >= 45);
+  const substantialMinutes = substantial.reduce((sum, match) => sum + match.minutes, 0);
+  result.rollingMatches = sample.length;
+  result.rollingMinutes = sample.reduce((sum, match) => sum + match.minutes, 0);
+  result.rollingGoals = sample.reduce((sum, match) => sum + match.goals, 0);
+  result.rollingAssists = sample.reduce((sum, match) => sum + match.assists, 0);
+  const assistWeight = context.position === 'ST' ? 0.45 : 1;
+  result.productionPer90 = result.rollingMinutes > 0
+    ? (result.rollingGoals + assistWeight * result.rollingAssists) * 90 / result.rollingMinutes : 0;
+  const expectedProduction = context.position === 'ST' ? 0.25 : 0.40;
+  // Assists already contribute to the production rate; only recorded xA provides extra relief.
+  const rollingXa = sample.reduce((sum, match) => sum + match.xa, 0);
+  const rollingSeverity = substantial.length >= 6 && substantialMinutes >= 360
+    ? clamp(1 - result.productionPer90 / expectedProduction, 0, 1) * (1 - Math.min(0.35, rollingXa * 0.06)) : 0;
   const roleWeight = context.position === 'ST' ? 1 : 0.5;
   const ageWeight = age <= 12 ? 0.5 : age <= 13 ? 0.7 : age <= 15 ? 0.85 : 1;
   const cap = context.category === 'SENIOR' ? 0.30 : context.category === 'AMATEUR' ? 0.24 : 0.18;
-  result.severity = progression * (1 - contributionRelief) * roleWeight;
+  result.severity = Math.max(droughtSeverity, rollingSeverity) * roleWeight;
   result.startPenalty = cap * ageWeight * result.severity;
-  const evidence = `${result.dryMatches} atuações de pelo menos 45 minutos e ${Math.round(result.dryMinutes)} minutos sem gol`;
-  const creation = result.assists > 0 || result.xa >= 0.5
+  if (result.startPenalty <= 0) return result;
+  const rollingDominates = rollingSeverity > droughtSeverity;
+  const evidence = rollingDominates
+    ? `a janela recente observada: ${result.rollingMatches} participações, ${Math.round(result.rollingMinutes)} minutos, ${result.rollingGoals} ${result.rollingGoals === 1 ? 'gol' : 'gols'} e ${result.rollingAssists} ${result.rollingAssists === 1 ? 'assistência' : 'assistências'} (${substantial.length} atuações de pelo menos 45 minutos)`
+    : `${result.dryMatches} atuações de pelo menos 45 minutos e ${Math.round(result.dryMinutes)} minutos sem gol`;
+  const creation = rollingDominates
+    ? rollingXa >= 0.5 ? ' A criação registrada atenua a cobrança por produção recente.' : ''
+    : result.assists > 0 || result.xa >= 0.5
     ? ' A participação na criação atenua a cobrança, mas a sequência sem gol ainda pesa.' : '';
   const formative = context.category !== 'SENIOR' && context.category !== 'AMATEUR';
   result.coachText = formative

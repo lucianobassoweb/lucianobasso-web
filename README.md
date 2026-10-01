@@ -2,7 +2,7 @@
 
 Jogo de carreira individual no futebol, responsivo para celular e desktop, com funcionamento offline. Começa aos 12 numa escolinha local. As decisões profissionais e de vida conduzem uma biografia sorteada.
 
-Versão experimental 0.3.8: estudos de Ronaldinho, Kaká, Romário, Diego Souza, Rivaldo, Lulinha e Somália aplicados a origem familiar, escola, descoberta, reconversão, transição, afastamentos e longevidade. Ver `docs/CAREER_CASE_STUDIES.md`, `docs/GAME_SPEC.md` e `PROJECT_LOG.md` para decisões, fórmulas, fontes e limites.
+Versão experimental 0.3.9: estudos de Ronaldinho, Kaká, Romário, Diego Souza, Rivaldo, Lulinha e Somália aplicados a origem familiar, escola, descoberta, reconversão, transição, afastamentos e longevidade. Ver `docs/CAREER_CASE_STUDIES.md`, `docs/GAME_SPEC.md` e `PROJECT_LOG.md` para decisões, fórmulas, fontes e limites.
 
 ```bash
 npm ci
@@ -76,3 +76,12 @@ Nota de ST/WG passa a exigir produção observada: assistência permite boa aval
 Buscar outras avaliações custa 3 de fadiga mental e até 2 de pressão, informados antes do clique e registrados no recibo. Uma busca por temporada, sem acumular enquanto aguarda a próxima lista; só sem vínculo com clube e fora do profissional, com fadiga abaixo de 80. A prioridade favorece um segundo candidato na próxima lista e é consumida nessa geração, mesmo sem segunda opção. Não altera a probabilidade de aprovação. Eventos/saves antigos mantêm o conteúdo e recebem o hint atual. Pressão/fadiga ainda não reduzem diretamente nota juvenil ou aprovação; não confundir busca, convite e teste.
 
 Teste repetível: `tests/search-evaluation.mjs`, 8 grupos, além da suíte e gates do protocolo. Revisão independente: 7 grupos. Validação de interface em 390×844 e 320×740 com save fictício isolado; sem teste Safari físico.
+
+
+## 0.3.9 — produção recente e escalação
+
+No ataque, partidas sem gol/assistência/criação suficiente têm teto de nota6,3 (6,5 em menos30min;6,0 com xG>=0,6 não convertido). Um gol não libera nota quase perfeita: teto7,6+0,6G+0,3A, limitado10. Assistências e criação registradas continuam positivas. Nenhuma nota antiga recalculada.
+
+Um gol encerra a seca, mas a produção da janela recente ainda pode custar espaço. Amostra até8 registros, pelo menos6atuações substanciais/360min; ST(G+0,45A)/90>=0,25 e WG(G+A)/90>=0,40 são referências experimentais. Cobranças combinadas pelo maior valor, com criação e intensidade por idade. Chance profissional recebe a penalidade depois do limite esportivo, impedindo que atributos altos absorvam o custo. Não há titularidade ou banco automático, nem concorrente de elenco inventado. Saves mantidos sem novo campo obrigatório; histórico desconhecido não reconstruído.
+
+Verificação: suíte completa,17gruposforma/7integração; gates200carreiras e100DNAs×4políticas. UI isolada390×844/320×740. Diagnóstico exato do relato17j1G0A6,8 não fornecido; fixture equivalente não é o save do usuário.
