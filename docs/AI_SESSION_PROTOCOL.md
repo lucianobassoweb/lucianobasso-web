@@ -55,3 +55,7 @@ Rodar `npm ci` antes da primeira verificação num ambiente novo. `npm test` inc
 Esta decisão substitui a regra anterior de sorteio de cidade e clube do coração: o usuário escolhe cidade de nascimento, UF e clube do coração na criação. Família, condições sociais, infância e características continuam sorteadas. A residência aos 12 anos e a escolinha local usam a cidade escolhida. Não há ingresso automático no clube do coração. O campo cidade admite municípios fora das sugestões; os metadados incompletos dos clubes continuam limitando a precisão geográfica dos convites.
 
 A UX prioriza evento e decisões: duas colunas no desktop, resumo e memória expansíveis no celular, navegação com nomes claros, textos legíveis, reações e contexto da partida expansíveis, confirmação visual da última escolha. Saves existentes mantêm suas origens.
+
+## Atualização aprovada — informações diretas na partida (0.3.3)
+
+A pedido do usuário, reações da torcida e do treinador, contexto e próximos passos devem estar sempre visíveis, sem clique para abrir. Esta decisão substitui a descrição anterior que os tornava expansíveis. São seções estáticas antes das decisões, com leitura por rolagem no celular.

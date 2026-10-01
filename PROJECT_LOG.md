@@ -471,3 +471,17 @@ Verificação: build TypeScript; browser-smoke (48 transições, save e offline)
 **Fluxo real:** navegadorCodex em8766 independente do save do usuário8765. Save antigo de teste13anos/GK começou0participações após ação, sem retrospectiva; convite/continuidade e3partidas somaram184min/progresso0→1→2→3; payoff e biografia, recarga preservou registro.390/320/1440px sem overflow/aviso save/erroJS observado. Capturas e HTML em outputs. Save real não avançado/gravadopelos testes.
 
 **Interpretação/decisão:** manter0.3.2experimental. A camada tornou expectativa e consequência legíveis; não comprova que o jogo ficou mais divertido. Não resolve todos os menus genéricos de partidas. Promessas negociadas, arcos paralelos e eventos que relembram rivalidades estão planejados, não entregues. Próximo experimento: dilemas raros condicionados a fatos e playtest humano de leitura/expectativa. Safari/iPhone físico, offline físico, leitor de tela e alvo4h permanecem pendentes. Nenhuma ação em GitHubPages.
+
+## 2026-09-30 — D0026 / A0010 — 0.3.3: informações da partida sem clique
+
+**Pedido/causa:** o usuário quer ler reação da torcida, reação do treinador, contexto e próximos passos diretamente. Na 0.3.2 estes textos estavam dentro de details fechados; reduzir a altura do quadro havia escondido retorno necessário para entender a carreira. Esta decisão substitui a UI expansível descrita em D0022.
+
+**Implementação:** substituídos os dois disclosures por seções estáticas em feedbackCard/eventCard. Torcida e treinador identificados separadamente; contexto/próximos passos com título, antes das escolhas. Nenhum controle permite recolher essas informações. Ajustadas margens e quebra de texto; leitura por rolagem no celular. Eventos sem feedback continuam com corpo diretamente visível. Nenhuma fórmula, evento, estado ou chave/schema de save alterado.
+
+**Build/cache:** 0.3.3 experimental em fonte, pacote, build modular e standalone. HTML regenerado com 14 módulos e cache derivado do conteúdo. Distribuição independente copiada para outputs/1903-playable-0.3.3.html. Leitura de AGENTS/spec/log/protocolo e typecheck anterior às mudanças PASS. Trabalho delimitado feito pelo principal, sem overhead de delegação.
+
+**Verificação:** typecheck após mudança e standalone/build PASS. Gates obrigatórios do protocolo: simulate200 e position-audit100 concluídos, relatórios nos outputs; estatísticas coincidem com a 0.3.2 (OVR30 natural81,5/exploração78,8/piorposição63,9/trocatardia61,8). Não houve recalibração. Não criados testes que espelham markup nem repetido npm test completo, pois motor/persistência não foram alterados.
+
+**UI real:** carreira descartável na origem8766, goleiro Sub-15, com três escolhas. Em390×844 e320×740, textos de torcida/treinador/contexto presentes e com altura positiva, fora de qualquer details; nenhum overflow horizontal. Após recarga continuaram visíveis; três escolhas habilitadas, sem errosJS capturados. Captura em outputs/UI_0.3.3_REACTIONS_MOBILE.png. Viewport temporário restaurado e aba de teste fechada.
+
+**Entrega local/save:** aba do usuário8765 aberta com query0.3.3. Mesma carreira LucianoBasso/Grêmio/23anos/OVR83 e balanço2036,36jogos/5gols/7assistências/CopaBrasil, opções permanecer ou Vasco106mi. Nenhuma decisão/avanço/gravação efetuada neste save. Mudança observável na próxima situação com quadro de atuação. Limites: Safari/iPhone físico e leitor de tela real não testados. Próximo passo continua core/playtest; hospedagem e descoberta de posição não entraram neste ajuste.

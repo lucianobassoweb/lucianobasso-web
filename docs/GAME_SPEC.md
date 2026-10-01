@@ -140,3 +140,7 @@ Adaptação inicial de referências de jogos descritas em `GAMEPLAY_CASE_STUDIES
 Um capítulo regular por contexto temporada/clube/categoria, além de retorno após afastamento. Arquivo biográfico limitado aos 60 registros mais recentes. Meta não cumprida não altera potencial nem condena a trajetória. Uma partida por turno e decisões conforme D0021 continuam vigentes. O registro da última escolha é capturado antes da próxima simulação e explica apenas efeitos já aplicados; conversas e prioridades que abrem outra decisão também geram registro.
 
 Saves existentes sem narrativa iniciam o registro daqui em diante. Não reconstruir marcos retroativos. Campo opcional, mesma chave e versão estrutural do save. Este ciclo não implementa toda a pesquisa: promessas negociadas, arcos paralelos de mercado/torcida e eventos que retornam memórias específicas permanecem planejados.
+
+## Atualização aprovada — informações diretas na partida (0.3.3)
+
+A pedido do usuário, reações da torcida e do treinador, contexto e próximos passos devem estar sempre visíveis, sem clique para abrir. Esta decisão substitui a descrição anterior que os tornava expansíveis. São seções estáticas antes das decisões, com leitura por rolagem no celular.
