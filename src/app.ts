@@ -20,7 +20,7 @@ function theme(){
   const c=save?getClub(save.player.currentClubId):null;const colors=c?.colors??['#7bbcff','#e8eef4'];
   return `style="--club:${colors[0]};--club2:${colors[1]};"`;
 }
-function appShell(content:string){return `<main class="shell ${save?'playing':'creating'}" ${theme()}><div class="brand"><div><h1>1903</h1><span class="subbrand">CARREIRA</span></div><span class="build">0.3.4 · EXPERIMENTAL</span></div>${save?nav():''}${persistenceNotice()}<div class="page-content">${content}</div></main>`;}
+function appShell(content:string){return `<main class="shell ${save?'playing':'creating'}" ${theme()}><div class="brand"><div><h1>1903</h1><span class="subbrand">CARREIRA</span></div><span class="build">0.3.5 · EXPERIMENTAL</span></div>${save?nav():''}${persistenceNotice()}<div class="page-content">${content}</div></main>`;}
 const navPaths:Record<string,string>={career:'M8 5l10 7-10 7V5Z',player:'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM5 21v-2a7 7 0 0 1 14 0v2',stats:'M5 20V10m7 10V4m7 16v-7',world:'M4 7h16v13H4V7Zm4 0V4h8v3M4 12h16m-8-2v4'};
 function nav(){return `<nav class="bottom-nav" aria-label="Navegação da carreira"><div class="bottom-nav-inner">${[['career','Jogar','Jogar'],['player','Jogador','Meu jogador'],['stats','Histórico','Histórico'],['world','Clube','Clube e mercado']].map(([id,label,full])=>`<button class="nav ${tab===id?'active':''}" data-tab="${id}" aria-label="${full}" aria-current="${tab===id?'page':'false'}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${navPaths[id!]}"/></svg><span>${label}</span></button>`).join('')}</div></nav>`;}
 function persistenceNotice(){

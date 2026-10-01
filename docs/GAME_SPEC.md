@@ -148,3 +148,7 @@ A pedido do usuário, reações da torcida e do treinador, contexto e próximos 
 ## 0.3.4 — contexto baseado na carreira
 
 O contexto deve interpretar fatos observados, selecionar as tensões relevantes e explicar o próximo passo vinculado às escolhas disponíveis. A variedade vem da situação e da trajetória: participação, fase de formação/transição, adaptação de posição, relação profissional, campanha, escola ou propostas. Não preencher espaço com frases genéricas nem apenas repetir o quadro estatístico. Não revelar DNA, inventar acontecimentos ou prometer resultados futuros. Informações ausentes devem reduzir o texto. Esta camada de leitura não altera a simulação nem grava campos novos no save.
+
+## 0.3.5 — dilemas entre partidas
+
+O pedido de variar decisões autoriza esforço pontual fora do horário, aproximação da comissão e disputa desleal não violenta entre concorrentes abstratos. São acontecimentos ligados a participação, condição/carga, pressão, adaptação, escola/projeto e relações no grupo. Três respostas com benefícios/custos distintos; famílias têm intervalo de reaparição. Isso não é um menu de treino semanal nem um simulador social. Dilemas não substituem marcos, mercado, posição ou aposentadoria. Favores podem melhorar abertura ao diálogo sem comprar confiança técnica; rumores podem deixar rivalidade/ressentimento e afetar confiança se descobertos. Nenhum caminho garante titularidade ou contratação. Saves existentes mantêm o evento já oferecido; campos novos opcionais.

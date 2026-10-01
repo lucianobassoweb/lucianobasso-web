@@ -52,7 +52,8 @@ const coaching=fields({...numeric('season completedBlocks seed'),progress:option
 const feedback=fields({opponent:text,coachName:text,fanReaction:text,coachReaction:text,started:boolean,cleanSheet:boolean,
   ...numeric('minutes goals assists rating saves teamGoals oppGoals blockGames blockStarts blockGoals blockAssists blockMinutes'),
   category:optional(category),showScore:optional(boolean)});
-const event=fields({id:text,kind:oneOf('INFO','CHOICE','MATCH','SEASON_END','MARKET','MILESTONE'),title:text,body:text,tags:array(text),
+const decisionFamily=oneOf('LOAD','SPACE','SERVICE','RIVALRY','PRESSURE','ADAPTATION','PATH');
+const event=fields({decisionContext:optional(text),decisionFamily:optional(decisionFamily),id:text,kind:oneOf('INFO','CHOICE','MATCH','SEASON_END','MARKET','MILESTONE'),title:text,body:text,tags:array(text),
   choices:optional(array(fields({id:text,label:text,hint:optional(text)}))),payload:optional(object),matchFeedback:optional(feedback)});
 const natural:Guard=v=>number(v)&&Number.isSafeInteger(v)&&Number(v)>=0;
 const chapterShape={id:text,kind:oneOf('FORMATION','REGULARITY','COMEBACK'),title:text,objective:text,
@@ -62,7 +63,8 @@ const chapter:Guard=v=>fields(chapterShape)(v)&&object(v)&&Number(v.deadlineTurn
 const archivedChapter:Guard=v=>chapter(v)&&fields({endedSeason:natural,endedTurn:natural,outcome:oneOf('ACHIEVED','PARTIAL','UNMET'),payoff:text})(v)&&object(v)&&Number(v.endedTurn)>=Number(v.startedTurn);
 const story=fields({active:nullable(chapter),archive:array(archivedChapter),lastObservedTurn:natural,sequence:natural});
 const choiceResult=fields({eventId:text,choiceId:text,label:text,season:natural,turn:natural,summary:text,effects:array(text)});
-const player=fields({story:optional(story),lastChoiceResult:optional(choiceResult),id:text,name:text,hometown:text,heartClubId:text,currentClubId:nullable(text),
+const decisionMemory=fields({recent:v=>Array.isArray(v)&&v.length<=3&&v.every(fields({family:decisionFamily,turn:natural})),lastOffered:v=>object(v)&&Object.keys(v).length<=7&&Object.entries(v).every(([key,value])=>decisionFamily(key)&&natural(value)),lastExtraTurn:optional(natural),lastResolvedEvent:optional(text),extraLoad:optional(v=>natural(v)&&Number(v)<=2)});
+const player=fields({decisionMemory:optional(decisionMemory),story:optional(story),lastChoiceResult:optional(choiceResult),id:text,name:text,hometown:text,heartClubId:text,currentClubId:nullable(text),
   ...numeric('birthYear age season seasonTurn careerTurn adaptationDebt positionChanges heightCm weightKg morale confidence pressure mentalFatigue physicalCondition reputation marketValue contractYearsLeft rngState'),
   phase:oneOf('ESCOLINHA','BASE','PROFISSIONAL','AUGE','VETERANO','APOSENTADO'),position:oneOf('IND','GK','CB','FB','DM','CM','AM','WG','ST'),
   transferIntent:oneOf('STAY','OPEN','LEAVE','FORCE'),secondaryPositions:array(position),

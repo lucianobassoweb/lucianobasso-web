@@ -1,3 +1,4 @@
+import {buildRoutineDecision, resolveRoutineChoice} from './decisions.js';
 import {ensureStories, updateStories, choiceSnapshot, recordChoice} from './stories.js';
 import { ensureProfessionalStatus, competitionCategory, CATEGORY_LABEL, seasonGames, calendarScale, promotionEvidence } from './calendar.js';
 import { ensureCoaching, syncCoachContext, simulateWorldBlock, reviewWorldCoaches, coachChangeEvent, resolveCoachChoice, coachDossier, roleProspect, opportunityAdjustment, performanceFeedback, rememberCoach, coachProfile, leagueTitle, coachDiscussionEvent, coachName, coachBond } from './coaches.js';
@@ -123,17 +124,18 @@ function simulateYouthBlock(p:PlayerState,rng:RNG):CareerEvent{
     const a=rng.chance(clamp(creating*comp*(.65+p.attributes.passing/120),.003,.45))?1:0;
     const stageStandard=32+(p.age-12)*2.5+(p.currentClubId?CLUB_BY_ID[p.currentClubId]!.youth*.07:0);
     const learned=roleRating(p,pos);
-    const rating=clamp(6.05+(learned-stageStandard)/14+(g*.8+a*.55)+(comp-1)*1.8+rng.normal(0,.42),4.7,9.6);
+    const rating=clamp(6.05+(learned-stageStandard)/14+(g*.8+a*.55)+(comp-1)*1.8-(p.decisionMemory?.extraLoad??0)*.2+rng.normal(0,.42),4.7,9.6);
     const dummy:MatchResult={opponentId:'youth',home:true,started:rng.chance(.72),teamGoals:g+a+rng.int(0,2),oppGoals:rng.int(0,2),minutes:rng.int(42,80),goals:g,assists:a,motm:rating>=8.2,yellow:rng.chance(['CB','DM','FB'].includes(pos) ? .08 : .035),red:false,rating:Number(rating.toFixed(1)),xg:Number((g*.55+rng.float(.01,.18)).toFixed(2)),xa:Number((a*.45+rng.float(.01,.16)).toFixed(2)),saves:pos==='GK'?rng.int(1,5):0,cleanSheet:pos==='GK'&&rng.chance(.34),headline:''};
     dummy.cleanSheet=pos==='GK'&&dummy.oppGoals===0;
     if(pos==='GK')dummy.rating=Number(clamp(dummy.rating+dummy.saves*.075+(dummy.cleanSheet?.25:0),4.7,9.6).toFixed(1));else if(['CB','FB','DM'].includes(pos)&&dummy.oppGoals===0)dummy.rating=Number(clamp(dummy.rating+.2,4.7,9.6).toFixed(1));
     youthMatches.push(dummy);addMatchStats(p,dummy,false);goals+=g;assists+=a;if(rating>=7.4)good++;
   }
+  if(p.decisionMemory?.extraLoad)p.decisionMemory.extraLoad=Math.max(0,p.decisionMemory.extraLoad-1);
   trainPositionExperience(p,calendarScale(p));const key=revealAttribute(p,rng);
   p.morale=clamp(p.morale+(good>=2?2:0)+rng.int(-1,2));p.confidence=clamp(p.confidence+goals*2+assists+good*.5);
   const signal=goals+assists?`${goals} gol${goals===1?'':'s'} e ${assists} assistência${assists===1?'':'s'} nesta partida.`:good?`${good} boas atuações nesta partida.`:'Partida sem destaque estatístico.';
   const featured=[...youthMatches].sort((a,b)=>b.rating-a.rating)[0]!;
-  return {matchFeedback:{category:competitionCategory(p),opponent:p.currentClubId?'Adversário da base':'Equipe local de formação',coachName:'Treinador da formação',started:featured.started,minutes:featured.minutes,goals:featured.goals,assists:featured.assists,rating:featured.rating,saves:featured.saves,cleanSheet:featured.cleanSheet,teamGoals:featured.teamGoals,oppGoals:featured.oppGoals,fanReaction:featured.goals||featured.assists?'Quem acompanha seus jogos reconhece sua participação.':'Acompanhantes observam sua evolução; vínculo profissional ainda em formação.',coachReaction:featured.rating>=7.4?'A atuação chamou atenção para seu repertório.':'O treinador observa sua evolução sem concluir seu potencial.',blockGames:games,blockStarts:youthMatches.filter(m=>m.started).length,blockGoals:goals,blockAssists:assists,blockMinutes:youthMatches.reduce((sum,m)=>sum+m.minutes,0)},id:`y-${p.careerTurn}`,kind:'INFO',title:`${CATEGORY_LABEL[competitionCategory(p)]} · ${featured.teamGoals} × ${featured.oppGoals}`,body:`${CATEGORY_LABEL[competitionCategory(p)]}: ${featured.minutes} minutos nesta partida. ${signal} Os treinadores agora observam melhor: ${ATTRIBUTE_LABELS[key]}.`,tags:['FORMAÇÃO',POSITION_LABEL[pos].toUpperCase()]};
+  return {matchFeedback:{category:competitionCategory(p),opponent:p.age>20?'Equipe do futebol local':p.currentClubId?'Adversário da base':'Equipe local de formação',coachName:p.age>20?'Treinador do futebol local':'Treinador da formação',started:featured.started,minutes:featured.minutes,goals:featured.goals,assists:featured.assists,rating:featured.rating,saves:featured.saves,cleanSheet:featured.cleanSheet,teamGoals:featured.teamGoals,oppGoals:featured.oppGoals,fanReaction:featured.goals||featured.assists?'Quem acompanha seus jogos reconhece sua participação.':'Acompanhantes observam sua evolução; vínculo profissional ainda em formação.',coachReaction:featured.rating>=7.4?'A atuação chamou atenção para seu repertório.':'O treinador observa sua evolução sem concluir seu potencial.',blockGames:games,blockStarts:youthMatches.filter(m=>m.started).length,blockGoals:goals,blockAssists:assists,blockMinutes:youthMatches.reduce((sum,m)=>sum+m.minutes,0)},id:`y-${p.careerTurn}`,kind:'INFO',title:`${CATEGORY_LABEL[competitionCategory(p)]} · ${featured.teamGoals} × ${featured.oppGoals}`,body:`${CATEGORY_LABEL[competitionCategory(p)]}: ${featured.minutes} minutos nesta partida. ${signal} Os treinadores agora observam melhor: ${ATTRIBUTE_LABELS[key]}.`,tags:[p.age>20?'FUTEBOL LOCAL':'FORMAÇÃO',POSITION_LABEL[pos].toUpperCase()]};
 }
 
 function opponentPool(own:Club):Club[]{
@@ -245,6 +247,7 @@ function transferTo(p:PlayerState,toId:string,fee:number,fromSeason:number):void
 
 function contextualDecision(p:PlayerState,event:CareerEvent):CareerEvent{
   if(event.choices?.length)return event;
+  if(event.matchFeedback&&event.kind!=='MILESTONE')return buildRoutineDecision(p,event);
   if(p.currentClubId&&competitionCategory(p)==='SENIOR'){
     const lowMinutes=event.id.startsWith('bench-')||p.injury?.remainingBlocks;
     const campaign=ensureCoaching(p).campaigns[p.currentClubId]!;
@@ -255,7 +258,7 @@ function contextualDecision(p:PlayerState,event:CareerEvent):CareerEvent{
       {id:'career:discuss',label:'Conversar com o treinador sobre meu papel',hint:'Negociar expectativas; relação pessoal e confiança profissional são distintas'},
       {id:'career:market',label:'Pedir ao empresário para ouvir outros projetos',hint:'Abrir-se a propostas; sem saída automática'}];
   }else{
-    event.body+=' Você e sua família avaliam a continuidade deste caminho.';
+    event.body+=p.age<=18?' Você e sua família avaliam a continuidade deste caminho.':' Você avalia a continuidade do seu percurso e o rendimento que vem construindo.';
     event.choices=[{id:'career:local',label:'Sustentar o caminho atual',hint:'Preservar o vínculo e seguir competindo'},
       ...(ensureLife(p).scouting.observations<30?[{id:'career:explore',label:'Buscar outras oportunidades de avaliação',hint:'Ampliar observação para convites futuros; não garante vaga'}]:[]),
       ...(p.age<=18?[{id:'career:education',label:'Rever com a família o equilíbrio com a escola',hint:'Reabrir a prioridade escolar deste ano'}]:[])];
@@ -266,7 +269,9 @@ function endCareerEvent(p:PlayerState):CareerEvent{p.phase='APOSENTADO';return {
 
 function resolveChoiceInternal(save:SaveGame,choiceId:string):SaveGame{
   const p=save.player;const rng=new RNG(p.rngState);if(!save.pendingEvent||!save.pendingEvent.choices?.some(c=>c.id===choiceId))return save;
-  if(choiceId.startsWith('career:')){
+  if(choiceId.startsWith('routine:')){
+    if(!resolveRoutineChoice(p,save.pendingEvent,choiceId,rng))return save;
+  }else if(choiceId.startsWith('career:')){
     if(choiceId==='career:discuss'){p.coachTalkFor=`${p.season}:${p.seasonTurn}`;save.pendingEvent=coachDiscussionEvent(p);return save;}
     if(choiceId==='career:stable'){p.careerApproach='STABILITY';p.transferIntent='STAY';log(p,'PROJETO','Estabilidade escolhida','Você decidiu sustentar o projeto atual.');}
     if(choiceId==='career:market'){p.transferIntent='OPEN';log(p,'MERCADO','Ouvir outros projetos','O empresário pode buscar oportunidades; nenhuma transferência é garantida.');}
@@ -277,7 +282,7 @@ function resolveChoiceInternal(save:SaveGame,choiceId:string):SaveGame{
       rememberCoach(p,accepted?'Aceitou disputa por maior responsabilidade':'Pediu responsabilidade antes de sustentar confiança',accepted?1:-1,0,accepted?0:2);
       log(p,'PROJETO',accepted?'Maior responsabilidade negociada':'O treinador pede evidências antes de ampliar seu papel',accepted?'Mais disputa por titularidade, acompanhada de maior cobrança.':'O pedido não assegurou mais espaço. Você pode insistir em campo ou ouvir outros clubes.');
     }
-    if(choiceId==='career:local'){p.transferIntent='STAY';log(p,'FORMAÇÃO','Continuidade escolhida','A família sustenta a trajetória atual.');}
+    if(choiceId==='career:local'){p.transferIntent='STAY';log(p,p.age<=18?'FORMAÇÃO':'CAMINHO','Continuidade escolhida',p.age<=18?'A família sustenta a trajetória atual.':'Você decidiu seguir competindo no caminho atual.');}
     if(choiceId==='career:explore'){const scouting=ensureLife(p).scouting;scouting.observations=Math.min(30,scouting.observations+1);log(p,'OBSERVAÇÃO','Família procura outras portas','Mais observação pode ampliar os convites futuros.');}
     if(choiceId==='career:education'){if(p.age<=18){save.pendingEvent=educationEvent(p);return save;}else log(p,'EDUCAÇÃO','Você considera retomar os estudos','Seu percurso escolar permanece registrado; uma nova formação exige um projeto próprio.');}
   }else if(choiceId.startsWith('coach:')||choiceId.startsWith('coach-talk:')){
@@ -382,6 +387,7 @@ export function resolveChoice(save:SaveGame,choiceId:string):SaveGame {
   if(!event?.choices?.some(c=>c.id===choiceId))return save;
   ensureStories(save.player);const before=choiceSnapshot(save.player),previousLog=save.player.history[0];
   resolveChoiceInternal(save,choiceId);
+  if(choiceId.startsWith('routine:')&&save.pendingEvent===event)return save;
   recordChoice(save.player,event,choiceId,before,save.pendingEvent,previousLog);
   updateStories(save.player,undefined,choiceId.startsWith('comeback:'));
   save.updatedAt=new Date().toISOString();return save;

@@ -182,7 +182,11 @@ export function resolveCoachChoice(p:PlayerState,id:string):CareerEvent|null{
   }
   syncCoachContext(p);const profile=coachProfile(p.tactical!.coachId);
   if(id==='coach-talk:patient')rememberCoach(p,'Alinhou uma adaptação gradual',4,2,-3);
-  if(id==='coach-talk:ask')rememberCoach(p,profile.dialogue>=55?'Conversa esclareceu o papel':'Pedido de clareza encontrou resistência',profile.dialogue>=55?3:-2,0,profile.dialogue>=55?-2:3);
+  if(id==='coach-talk:ask'){
+    const bond=coachBond(p,p.tactical!.coachId);
+    const open=profile.dialogue+(bond.affinity-50)*.12-bond.conflict*.08>=55;
+    rememberCoach(p,open?'Conversa esclareceu o papel':'Pedido de clareza encontrou resistência',open?3:-2,0,open?-2:3);
+  }
   if(id==='coach-talk:challenge')rememberCoach(p,'Contestou o papel proposto',-4,0,profile.dialogue<55?12:6);
   return null;
 }

@@ -37,7 +37,7 @@ function run(i:number,policy:Policy):Result{
    else advanceCareer(save);
    if(save.player.age===18&&!o18)o18=overall(save.player);if(save.player.age===24&&!o24)o24=overall(save.player);if(save.player.age===30&&!o30)o30=overall(save.player);
  }
- const p=save.player;const pos=p.position==='IND'?'CM':p.position;const fit=rankedNaturalPositions(p).find(x=>x.position===pos)?.compatibility??0;const profSeasons=p.seasonHistory.filter(x=>x.age>=16);const rating=mean(profSeasons.filter(x=>x.avgRating>0).map(x=>x.avgRating));
+ const p=save.player;if(p.phase!=='APOSENTADO')throw new Error(`Position audit ${policy}/${i} did not retire within ${guard} transitions`);const pos=p.position==='IND'?'CM':p.position;const fit=rankedNaturalPositions(p).find(x=>x.position===pos)?.compatibility??0;const profSeasons=p.seasonHistory.filter(x=>x.age>=16);const rating=mean(profSeasons.filter(x=>x.avgRating>0).map(x=>x.avgRating));
  return {policy,ovr18:o18,ovr24:o24,ovr30:o30,apps:p.careerStats.appearances,goals:p.careerStats.goals,assists:p.careerStats.assists,position:pos,compat:fit,changes:p.positionChanges,rating,market:Math.max(p.marketValue,...p.seasonHistory.map(x=>x.marketValueEnd))};
 }
 const n=Math.max(100,Number(process.argv[2]??2000));const policies:Policy[]=['natural','explore','wrong','late-switch'];const out:any={perPolicy:n};

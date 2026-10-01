@@ -77,6 +77,7 @@ function simulateOne(index:number):CareerResult {
     guard++;
   }
   const p=save.player;
+  if(p.phase!=='APOSENTADO')throw new Error(`Career ${index} did not retire within ${guard} transitions`);
   return {
     seed,
     position:p.position,

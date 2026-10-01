@@ -143,7 +143,7 @@ function fallbackNext(event: CareerEvent): string {
 /** Pure presentation: reads observed career state only; never initializes helpers, consumes RNG or changes saves. */
 export function buildCareerContext(save: SaveGame, event: CareerEvent): CareerContext {
   const p = save.player;
-  const fallback = (): CareerContext => ({ paragraphs: event.body.trim() ? [event.body] : [], nextStep: fallbackNext(event) });
+  const fallback = (): CareerContext => ({ paragraphs: event.body.trim() ? [event.body] : [], nextStep: event.decisionContext ?? fallbackNext(event) });
   if (!event.matchFeedback && event.kind !== 'SEASON_END' && event.kind !== 'MARKET') return fallback();
   const season = event.kind === 'SEASON_END' ? completedSeason(p, event) : p.currentSeason;
   if (!season) return fallback();
@@ -177,5 +177,5 @@ export function buildCareerContext(save: SaveGame, event: CareerEvent): CareerCo
   }
   const selected = threads.sort((a, b) => b.priority - a.priority).slice(0, 3);
   if (!selected.length) return fallback();
-  return { paragraphs: selected.map(t => t.text), nextStep: selected.find(t => t.next)?.next ?? fallbackNext(event) };
+  return { paragraphs: selected.map(t => t.text), nextStep: event.decisionContext ?? selected.find(t => t.next)?.next ?? fallbackNext(event) };
 }

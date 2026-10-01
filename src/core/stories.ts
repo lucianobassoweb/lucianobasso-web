@@ -16,7 +16,7 @@ function openChapter(p:PlayerState,comeback=false):void {
   const targetAppearances=kind==='COMEBACK'?2:3,targetMinutes=kind==='COMEBACK'?45:kind==='REGULARITY'?150:120;
   const targetGoodMatches=kind==='REGULARITY'?2:0;
   s.active={id:`story-${++s.sequence}`,kind,category,clubId:p.currentClubId,
-    title:kind==='COMEBACK'?'Reconstruir a participação':kind==='REGULARITY'?'Sustentar presença em campo':p.currentClubId?'Construir repertório na base':'Ganhar experiência na escolinha',
+    title:kind==='COMEBACK'?'Reconstruir a participação':kind==='REGULARITY'?'Sustentar presença em campo':category==='AMATEUR'?'Construir presença no futebol local':p.currentClubId?'Construir repertório na base':'Ganhar experiência na escolinha',
     objective:`Em até 8 rodadas desde a abertura: participar de ${targetAppearances} partidas e somar ${targetMinutes} minutos${targetGoodMatches?' com 2 notas de pelo menos 6,8':''}.`,
     startedSeason:p.season,startedTurn:p.careerTurn,deadlineTurn:p.careerTurn+8,
     appearances:0,minutes:0,goodMatches:0,targetAppearances,targetMinutes,targetGoodMatches};
@@ -52,7 +52,7 @@ export function updateStories(p:PlayerState,evidence?:StoryEvidence,comeback=fal
 /** Capture only observable choice state; a match simulated later cannot enter this receipt. */
 export function choiceSnapshot(p:PlayerState):Record<string,string|number> {
   const values:Record<string,string|number>={posição:p.position==='IND'?'Indefinida':POSITION_LABEL[p.position],clube:p.currentClubId?CLUB_BY_ID[p.currentClubId]?.name??p.currentClubId:'sem clube',fase:p.phase,
-    confiança:p.confidence,moral:p.morale,pressão:p.pressure,'condição física':p.physicalCondition,
+    confiança:p.confidence,moral:p.morale,pressão:p.pressure,'condição física':p.physicalCondition,'fadiga mental':p.mentalFatigue,
     'intenção de mercado':p.transferIntent,'abordagem de carreira':p.careerApproach??'STABILITY',
     'prioridade escolar':p.life?.education.priority??'BALANCED',observações:p.life?.scouting.observations??0,
     'testes realizados':p.life?.scouting.trialAttempts??0,função:p.tactical?.role??'BALANCED',

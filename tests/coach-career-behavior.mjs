@@ -36,6 +36,8 @@ const playable=make(553);playable.player.debut={season:2025,age:24,clubId:'gremi
 advanceCareer(playable);assert.ok(playable.pendingEvent.choices.length);assert.ok(playable.pendingEvent.matchFeedback);
 const feedback=playable.pendingEvent.matchFeedback;assert.ok(feedback.minutes>=0&&feedback.minutes<=90);assert.ok(feedback.goals+feedback.assists<=feedback.teamGoals);assert.ok(feedback.fanReaction&&feedback.coachReaction);
 assert.equal(playable.player.currentSeason.primaryPosition,'AM');assert.equal(playable.player.currentSeason.positionAppearances.AM,playable.player.currentSeason.appearances);
+// A legacy saved match still offers its original conversation, regardless of the new routine rotation.
+playable.pendingEvent.choices=[{id:'career:discuss',label:'Conversar sobre meu papel'}];
 const before=copy(playable.player.attributes);resolveChoice(playable,'career:discuss');assert.ok(playable.pendingEvent.id.startsWith('coach-talk'));resolveChoice(playable,'coach-talk:challenge');assert.ok(coachBond(playable.player,playable.player.tactical.coachId).conflict>0);assert.deepEqual(playable.player.attributes,before);
 // Historical positions survive a later reconversion and yearly archive.
 let guard=0;while(playable.player.seasonTurn<5&&guard++<40){const e=playable.pendingEvent;if(e?.choices?.length)resolveChoice(playable,e.choices[0].id);else advanceCareer(playable);}

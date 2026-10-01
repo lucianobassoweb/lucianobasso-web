@@ -2,7 +2,7 @@
 
 Jogo de carreira individual no futebol, responsivo para celular e desktop, com funcionamento offline. Começa aos 12 numa escolinha local. As decisões profissionais e de vida conduzem uma biografia sorteada.
 
-Versão experimental 0.3.4: estudos de Ronaldinho, Kaká, Romário, Diego Souza, Rivaldo, Lulinha e Somália aplicados a origem familiar, escola, descoberta, reconversão, transição, afastamentos e longevidade. Ver `docs/CAREER_CASE_STUDIES.md`, `docs/GAME_SPEC.md` e `PROJECT_LOG.md` para decisões, fórmulas, fontes e limites.
+Versão experimental 0.3.5: estudos de Ronaldinho, Kaká, Romário, Diego Souza, Rivaldo, Lulinha e Somália aplicados a origem familiar, escola, descoberta, reconversão, transição, afastamentos e longevidade. Ver `docs/CAREER_CASE_STUDIES.md`, `docs/GAME_SPEC.md` e `PROJECT_LOG.md` para decisões, fórmulas, fontes e limites.
 
 ```bash
 npm ci
@@ -55,3 +55,7 @@ Torcida, treinador e contexto/próximos passos aparecem diretamente na situaçã
 ## 0.3.4 — contexto da sua carreira
 
 Contexto e próximo passo passam a ser compostos a partir de fatos observados e das decisões presentes. Leitura local e determinística, sem consulta ao DNA nem mudanças nas regras esportivas. Saves existentes recebem a leitura ao abrir a atualização.
+
+## 0.3.5 — três respostas para dilemas da carreira
+
+Decisões entre partidas variam com a situação e têm efeitos de esforço, descanso, estudo da atuação, cooperação, aproximação pessoal e intriga. Famílias possuem intervalo de reaparição e memória persistente; marcos e propostas preservados. Afinidade pessoal e confiança profissional continuam distintas.

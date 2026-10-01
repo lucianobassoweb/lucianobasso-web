@@ -218,7 +218,17 @@ export interface ChoiceResult {
   eventId:string; choiceId:string; label:string; season:number; turn:number; summary:string; effects:string[];
 }
 
+export type DecisionFamily='LOAD'|'SPACE'|'SERVICE'|'RIVALRY'|'PRESSURE'|'ADAPTATION'|'PATH';
+export interface DecisionMemory {
+  recent:{family:DecisionFamily;turn:number}[];
+  lastOffered:Partial<Record<DecisionFamily,number>>;
+  lastExtraTurn?:number;
+  lastResolvedEvent?:string;
+  extraLoad?:number;
+}
+
 export interface PlayerState {
+  decisionMemory?:DecisionMemory;
   story?:StoryState;
   lastChoiceResult?:ChoiceResult;
   id: string;
@@ -294,6 +304,8 @@ export interface MatchFeedback {
   blockGames:number; blockStarts:number; blockGoals:number; blockAssists:number; blockMinutes:number;
 }
 export interface CareerEvent {
+  decisionContext?:string;
+  decisionFamily?:DecisionFamily;
   id: string;
   kind: 'INFO' | 'CHOICE' | 'MATCH' | 'SEASON_END' | 'MARKET' | 'MILESTONE';
   title: string;

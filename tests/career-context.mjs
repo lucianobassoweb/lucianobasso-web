@@ -172,7 +172,7 @@ check('five real formation rounds change observed focus without repeating defaul
   const snapshots = [];
   for (let round = 0; round < 5; round++) {
     if (round === 0) advanceCareer(s);
-    else { resolveChoice(s, 'career:local'); if (!s.pendingEvent) advanceCareer(s); }
+    else { const offered=s.pendingEvent.choices; const id=offered.find(c=>c.id==='career:local'||c.id==='career:stable')?.id??offered.find(c=>c.id==='routine:rest'||c.id==='routine:review')?.id??offered[0].id; resolveChoice(s,id); if (!s.pendingEvent) advanceCareer(s); }
     assert.ok(s.pendingEvent.matchFeedback);
     const before = JSON.stringify(s), result = build(s, s.pendingEvent);
     assert.equal(JSON.stringify(s), before);
