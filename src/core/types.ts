@@ -167,7 +167,7 @@ export interface LifeContext {
   childhood:'RUA'|'FUTSAL'|'ESCOLA'|'MULTIESPORTE';
   education:{priority:EducationPriority;chosenFor:number|null;credits:number;completed:boolean;yearProgress?:number};
   secondCareer?:{path:'WORK'|'TECHNICAL'|'DEGREE'|'COACH_COURSE';status:'SEEKING_WORK'|'IN_TRAINING'};
-  scouting:{observations:number;trialAttempts:number;lastAttemptSeason:number;rejections:{season:number;clubId:string}[]};
+  scouting:{searchPriority?:boolean;lastSearchSeason?:number;observations:number;trialAttempts:number;lastAttemptSeason:number;rejections:{season:number;clubId:string}[]};
 }
 export interface TacticalContext {
   coachId:string; role:TacticalRole; support:number; trust:number; discussedFor:number|null;

@@ -86,6 +86,57 @@ summary{min-height:44px;display:list-item;align-content:center}
 
 .rating-reason{font-size:14px;line-height:1.65;color:var(--muted);margin:14px 0 0}
 </style></head><body><div id="app"></div><script>const __modules = Object.create(null);
+__modules['core/random.js'] = (() => {
+
+class RNG {
+    state;
+    constructor(state) {
+        this.state = state;
+        if (!Number.isFinite(state) || state === 0)
+            this.state = 0x6d2b79f5;
+        this.state >>>= 0;
+    }
+    next() {
+        let t = this.state += 0x6D2B79F5;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        const out = ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        this.state >>>= 0;
+        return out;
+    }
+    int(min, max) {
+        return Math.floor(this.next() * (max - min + 1)) + min;
+    }
+    float(min, max) {
+        return min + this.next() * (max - min);
+    }
+    chance(probability) {
+        return this.next() < probability;
+    }
+    pick(items) {
+        if (!items.length)
+            throw new Error('RNG.pick called with empty array');
+        return items[Math.floor(this.next() * items.length)];
+    }
+    normal(mean = 0, stdDev = 1) {
+        const u1 = Math.max(this.next(), 1e-12);
+        const u2 = this.next();
+        const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+        return mean + z * stdDev;
+    }
+}
+function hashSeed(input) {
+    let h = 2166136261 >>> 0;
+    for (let i = 0; i < input.length; i++) {
+        h ^= input.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+}
+const clamp = (v, min = 0, max = 100) => Math.max(min, Math.min(max, v));
+
+return {RNG, hashSeed, clamp};
+})();
 __modules['data/clubs-br-2026.js'] = (() => {
 
 const A = [
@@ -154,6 +205,327 @@ if (BRAZIL_CLUBS_2026.length !== 156) {
 }
 
 return {BRAZIL_CLUBS_2026, CLUB_BY_ID};
+})();
+__modules['core/positions.js'] = (() => {
+const {clamp} = __modules['core/random.js'];
+
+const POSITIONS = ['GK', 'CB', 'FB', 'DM', 'CM', 'AM', 'WG', 'ST'];
+const POSITION_LABELS = { GK: 'Goleiro', CB: 'Zagueiro', FB: 'Lateral', DM: 'Volante', CM: 'Meia central', AM: 'Meia ofensivo', WG: 'Ponta', ST: 'Atacante' };
+const PROFILE_WEIGHTS = {
+    GK: { reflexes: .25, handling: .22, aerial: .16, positioning: .12, decisions: .10, passing: .07, strength: .05, technique: .03 },
+    CB: { positioning: .18, tackling: .19, heading: .15, strength: .14, decisions: .12, passing: .09, pace: .07, aerial: .06 },
+    FB: { pace: .17, stamina: .16, tackling: .14, crossing: .15, positioning: .11, passing: .10, technique: .09, decisions: .08 },
+    DM: { positioning: .16, tackling: .15, passing: .16, decisions: .15, vision: .12, stamina: .11, strength: .08, technique: .07 },
+    CM: { passing: .18, vision: .17, decisions: .15, technique: .14, stamina: .10, positioning: .09, dribbling: .08, tackling: .05, crossing: .04 },
+    AM: { vision: .19, passing: .16, technique: .16, dribbling: .14, decisions: .13, finishing: .09, pace: .07, positioning: .06 },
+    WG: { pace: .18, dribbling: .19, technique: .15, crossing: .13, finishing: .12, decisions: .08, vision: .08, stamina: .07 },
+    ST: { finishing: .22, positioning: .16, pace: .13, heading: .11, strength: .11, technique: .10, decisions: .09, dribbling: .08 }
+};
+const DNA_FIT_WEIGHTS = {
+    GK: { reflexAptitude: .28, aerialAptitude: .17, gameIntelligence: .14, coordination: .15, pressureResponse: .10, learningPlasticity: .06, injuryResistance: .04, adultHeightCm: .06 },
+    CB: { defensiveAptitude: .23, aerialAptitude: .15, gameIntelligence: .17, staminaAptitude: .10, pressureResponse: .08, coordination: .07, adultHeightCm: .10, injuryResistance: .05, learningPlasticity: .05 },
+    FB: { accelerationAptitude: .20, staminaAptitude: .18, defensiveAptitude: .15, technicalAptitude: .13, gameIntelligence: .11, coordination: .10, learningPlasticity: .07, adaptability: .06 },
+    DM: { gameIntelligence: .21, defensiveAptitude: .18, staminaAptitude: .14, technicalAptitude: .13, pressureResponse: .09, coordination: .08, learningPlasticity: .09, leadership: .08 },
+    CM: { gameIntelligence: .24, technicalAptitude: .20, staminaAptitude: .10, coordination: .12, learningPlasticity: .12, pressureResponse: .08, consistency: .08, adaptability: .06 },
+    AM: { gameIntelligence: .23, technicalAptitude: .23, coordination: .14, finishingAptitude: .08, accelerationAptitude: .07, learningPlasticity: .10, pressureResponse: .08, consistency: .07 },
+    WG: { accelerationAptitude: .22, technicalAptitude: .19, coordination: .17, finishingAptitude: .09, staminaAptitude: .08, learningPlasticity: .09, gameIntelligence: .08, adaptability: .08 },
+    ST: { finishingAptitude: .24, accelerationAptitude: .12, aerialAptitude: .12, technicalAptitude: .12, gameIntelligence: .11, pressureResponse: .10, coordination: .08, adultHeightCm: .06, consistency: .05 }
+};
+const POSITION_PRIOR = { GK: -1, CB: 0, FB: 0, DM: 1, CM: 0, AM: .7, WG: -.5, ST: 1 };
+function normalizedDNAValue(key, value) {
+    if (key === 'adultHeightCm')
+        return clamp(((Number(value) - 160) / 42) * 100, 0, 100);
+    if (key === 'dominantFoot')
+        return 50;
+    return Number(value);
+}
+function rawPositionCompatibility(player, pos) {
+    const weights = DNA_FIT_WEIGHTS[pos];
+    let score = 0, total = 0;
+    for (const [k, w] of Object.entries(weights)) {
+        score += normalizedDNAValue(k, player.dna[k]) * w;
+        total += w;
+    }
+    return score / Math.max(.001, total) + POSITION_PRIOR[pos];
+}
+/** Hidden natural fit. Diagnostic only; never show as a number in normal UI. */
+function positionCompatibility(player, pos) {
+    const best = Math.max(...POSITIONS.map(p => rawPositionCompatibility(player, p)));
+    const raw = rawPositionCompatibility(player, pos);
+    return Number(clamp(91 - (best - raw) * 2.15, 34, 96).toFixed(1));
+}
+function rankedNaturalPositions(player) {
+    return POSITIONS.map(position => ({ position, compatibility: positionCompatibility(player, position) })).sort((a, b) => b.compatibility - a.compatibility);
+}
+function roleRating(player, pos) {
+    const weights = PROFILE_WEIGHTS[pos];
+    let score = 0, total = 0;
+    for (const [k, w] of Object.entries(weights)) {
+        score += player.attributes[k] * w;
+        total += w;
+    }
+    return Number((score / Math.max(.001, total)).toFixed(1));
+}
+const positionalOverall = roleRating;
+function agePositionPressure(age) {
+    if (age <= 12)
+        return .05;
+    if (age === 13)
+        return .10;
+    if (age === 14)
+        return .24;
+    if (age === 15)
+        return .43;
+    if (age === 16)
+        return .68;
+    if (age === 17)
+        return .90;
+    if (age === 18)
+        return 1.08;
+    if (age <= 21)
+        return 1.12;
+    return 1.18;
+}
+function positionEffectiveness(player, pos, competitionFactor = 1) {
+    const fit = positionCompatibility(player, pos), pressure = agePositionPressure(player.age), prof = player.positionProficiency[pos] ?? 25;
+    const fitEffect = 1 + ((fit - 70) / 100) * .58 * pressure * competitionFactor;
+    const profEffect = .87 + (prof / 100) * .16;
+    const debtEffect = 1 - clamp(player.adaptationDebt, 0, 70) / 360;
+    return clamp(fitEffect * profEffect * debtEffect, .62, 1.14);
+}
+function effectivePositionRating(player, pos) {
+    return Number(clamp(roleRating(player, pos) * positionEffectiveness(player, pos, 1), 20, 99).toFixed(1));
+}
+function developmentEfficiency(player, pos) {
+    const fit = positionCompatibility(player, pos), pressure = agePositionPressure(player.age);
+    const fitLearning = 1 + ((fit - 70) / 100) * .45 * pressure;
+    const adaptationLearning = 1 - clamp(player.adaptationDebt, 0, 70) / 210;
+    return clamp(fitLearning * adaptationLearning, .64, 1.12);
+}
+function positionTrainingMultiplier(pos, key) {
+    const w = PROFILE_WEIGHTS[pos][key] ?? 0;
+    return .72 + w * 3.7;
+}
+const AXIS = { GK: [-2, 0], CB: [0, 0], FB: [0, 2], DM: [1, 0], CM: [2, 0], AM: [3, 0], WG: [3, 2], ST: [4, 0] };
+function positionDistance(a, b) {
+    if (a === b)
+        return 0;
+    if (a === 'GK' || b === 'GK')
+        return 1.9;
+    const [ax, ay] = AXIS[a], [bx, by] = AXIS[b];
+    return clamp(Math.abs(ax - bx) * .23 + Math.abs(ay - by) * .18, .18, 1.25);
+}
+function changeCost(age, from, to) {
+    if (!from || from === to)
+        return 0;
+    return Number(clamp(positionDistance(from, to) * 30 * agePositionPressure(age), 0, 70).toFixed(1));
+}
+function choosePositionForSeason(p, to) {
+    const from = p.position === 'IND' ? null : p.position, cost = changeCost(p.age, from, to);
+    if (from && from !== to) {
+        p.positionChanges++;
+        if (!p.secondaryPositions.includes(from))
+            p.secondaryPositions.push(from);
+    }
+    p.position = to;
+    p.positionSeasonChosenFor = p.season;
+    p.adaptationDebt = clamp(p.adaptationDebt + cost, 0, 70);
+    if (from && from !== to) {
+        const transfer = Math.max(0, (1 - positionDistance(from, to) / 1.9) * .22);
+        p.positionProficiency[to] = clamp(p.positionProficiency[to] + Math.max(0, p.positionProficiency[from] - p.positionProficiency[to]) * transfer, 15, 100);
+    }
+    const record = { season: p.season, age: p.age, position: to, previousPosition: from, startProficiency: Number(p.positionProficiency[to].toFixed(1)), endProficiency: Number(p.positionProficiency[to].toFixed(1)), changeCost: cost, hiddenCompatibility: positionCompatibility(p, to) };
+    p.positionHistory.unshift(record);
+    return record;
+}
+function trainPositionExperience(p, matchBlocks = 1) {
+    if (p.position === 'IND')
+        return;
+    const ageFactor = p.age <= 13 ? 1.55 : p.age <= 15 ? 1.32 : p.age <= 18 ? 1.08 : .78, learn = .80 + p.dna.learningPlasticity / 180;
+    const gain = 1.22 * ageFactor * learn * matchBlocks * (1 - p.adaptationDebt / 240);
+    p.positionProficiency[p.position] = clamp(p.positionProficiency[p.position] + gain, 0, 100);
+    for (const other of POSITIONS) {
+        if (other === p.position)
+            continue;
+        const spill = Math.max(0, .13 - positionDistance(p.position, other) * .08);
+        if (spill > 0)
+            p.positionProficiency[other] = clamp(p.positionProficiency[other] + gain * spill, 0, 100);
+    }
+    const recovery = (p.age <= 14 ? 2.4 : 1.65) * matchBlocks * (.82 + p.dna.adaptability / 180);
+    p.adaptationDebt = clamp(p.adaptationDebt - recovery, 0, 70);
+    const r = p.positionHistory.find(x => x.season === p.season && x.position === p.position);
+    if (r)
+        r.endProficiency = Number(p.positionProficiency[p.position].toFixed(1));
+}
+function positionChoiceHint(p, pos) {
+    const prof = Math.round(p.positionProficiency[pos]), current = p.position === 'IND' ? null : p.position, cost = changeCost(p.age, current, pos);
+    if (!current)
+        return `${POSITION_LABELS[pos]} · experimentar nesta temporada`;
+    if (current === pos)
+        return `${POSITION_LABELS[pos]} · experiência ${prof}/100 · continuidade favorece especialização`;
+    if (p.age <= 13)
+        return `${POSITION_LABELS[pos]} · experiência ${prof}/100 · mudança quase sem custo nesta idade`;
+    const severity = cost < 5 ? 'adaptação leve' : cost < 13 ? 'adaptação moderada' : cost < 25 ? 'adaptação relevante' : 'reconversão difícil';
+    return `${POSITION_LABELS[pos]} · experiência ${prof}/100 · ${severity}`;
+}
+function allPositions() { return [...POSITIONS]; }
+// Compatibility aliases used by the current playable shell.
+const POSITION_LABEL = POSITION_LABELS;
+function changeCostPreview(p, to) {
+    return changeCost(p.age, p.position === 'IND' ? null : p.position, to);
+}
+function changeCostLabel(cost) {
+    if (cost < 2)
+        return 'quase sem custo';
+    if (cost < 7)
+        return 'adaptação leve';
+    if (cost < 16)
+        return 'adaptação moderada';
+    if (cost < 28)
+        return 'adaptação relevante';
+    return 'reconversão difícil';
+}
+function selectPosition(p, to) {
+    const previous = p.position === 'IND' ? null : p.position;
+    const rec = choosePositionForSeason(p, to);
+    return { changed: previous !== null && previous !== to, cost: rec.changeCost, previous };
+}
+function trainPositionStep(p) { trainPositionExperience(p, 1); }
+function coachPositionFeedback(p) {
+    if (p.position === 'IND')
+        return 'Ainda é cedo para saber onde seu jogo se encaixa melhor.';
+    if (p.age <= 13)
+        return 'Nesta idade, experimentar ainda custa pouco. O importante é conhecer o campo inteiro.';
+    if (p.adaptationDebt > 12)
+        return 'A mudança ainda exige adaptação. O repertório anterior continua com você.';
+    const suggestion = observedPositionSuggestion(p);
+    if (suggestion)
+        return `Pelo que você tem mostrado, vale conversar sobre jogar como ${POSITION_LABEL[suggestion]}. Isso precisa ser testado em campo.`;
+    if (p.currentSeason.minutes < 300)
+        return 'Ainda faltam minutos para avaliar seu encaixe com segurança.';
+    return p.currentSeason.avgRating >= 7 ? 'Suas atuações estão sustentando a continuidade nessa posição.' : 'Vamos avaliar sua função e o apoio do time antes de concluir que o problema é a posição.';
+}
+/** Coach suggestions use learned attributes and experience, never hidden compatibility. */
+function observedPositionSuggestion(p) {
+    if (p.position === 'IND')
+        return null;
+    const current = p.position;
+    const score = (pos) => roleRating(p, pos) + (p.positionProficiency[pos] ?? 0) * .045 - positionDistance(current, pos) * 2;
+    const candidate = POSITIONS.filter(pos => (current === 'GK') === (pos === 'GK')).sort((a, b) => score(b) - score(a))[0];
+    return candidate !== current && score(candidate) > score(current) + 1.5 ? candidate : null;
+}
+/** A role changes demands within a position, without giving attributes or reversing aging. */
+function tacticalRating(p, pos) {
+    const base = effectivePositionRating(p, pos);
+    if (!p.tactical || pos === 'GK')
+        return base;
+    const a = p.attributes;
+    const mobility = (a.pace + a.stamina) / 2;
+    const reading = (a.positioning + a.decisions + a.technique) / 3;
+    const role = p.tactical.role;
+    const adjustment = role === 'HOLD' ? (reading - mobility) * .12 : role === 'MOBILE' ? (mobility - reading) * .12 : 0;
+    return Number(clamp(base + adjustment, 20, 99).toFixed(1));
+}
+
+return {POSITIONS, POSITION_LABELS, positionCompatibility, rankedNaturalPositions, roleRating, positionalOverall, agePositionPressure, positionEffectiveness, effectivePositionRating, developmentEfficiency, positionTrainingMultiplier, positionDistance, changeCost, choosePositionForSeason, trainPositionExperience, positionChoiceHint, allPositions, POSITION_LABEL, changeCostPreview, changeCostLabel, selectPosition, trainPositionStep, coachPositionFeedback, observedPositionSuggestion, tacticalRating};
+})();
+__modules['core/pathways.js'] = (() => {
+const {RNG, clamp, hashSeed} = __modules['core/random.js'];
+const {BRAZIL_CLUBS_2026} = __modules['data/clubs-br-2026.js'];
+const {roleRating} = __modules['core/positions.js'];
+
+
+
+const occupations = ['motorista', 'professor(a)', 'vendedor(a)', 'auxiliar de serviços', 'técnico(a)', 'autônomo(a)', 'enfermeiro(a)', 'engenheiro(a)', 'sem trabalho remunerado'];
+/** Separate stream: family resources never determine the athlete's DNA. */
+function generateLife(seed, hometown, heartClubId, hometownState) {
+    const rng = new RNG(hashSeed(`life:${seed}`));
+    const known = BRAZIL_CLUBS_2026.filter(c => c.city && c.city !== c.name && c.city !== 'A DEFINIR');
+    const origin = rng.pick(known.length ? known : BRAZIL_CLUBS_2026);
+    const city = hometown ?? origin.city;
+    const local = BRAZIL_CLUBS_2026.find(c => c.city === city) ?? origin;
+    const family = { resources: rng.int(10, 90), availableTime: rng.int(15, 95), relocationWillingness: rng.int(15, 90), parents: [rng.pick(occupations), rng.pick(occupations)] };
+    return { originState: hometownState ?? local.state, residence: city, heartClubId: heartClubId ?? rng.pick(BRAZIL_CLUBS_2026.filter(c => c.state === local.state)).id,
+        localSchool: `Escolinha comunitária de ${city}`, family, childhood: rng.pick(['RUA', 'FUTSAL', 'ESCOLA', 'MULTIESPORTE']),
+        education: { priority: 'BALANCED', chosenFor: null, credits: 0, completed: false }, scouting: { observations: 0, trialAttempts: 0, lastAttemptSeason: 0, rejections: [] } };
+}
+function ensureLife(p) {
+    return p.life ?? (p.life = generateLife(hashSeed(p.id), p.hometown, p.heartClubId));
+}
+function footballTime(p) {
+    if (p.age > 18)
+        return 1;
+    return ensureLife(p).education.priority === 'SCHOOL' ? .82 : ensureLife(p).education.priority === 'BALANCED' ? .94 : 1;
+}
+function finishEducationYear(p) {
+    if (p.age > 18)
+        return;
+    const e = ensureLife(p).education;
+    const credits = { SCHOOL: 1, BALANCED: .8, FOOTBALL: .35 };
+    e.credits = Number((e.credits + (e.yearProgress ?? credits[e.priority])).toFixed(2));
+    if (p.age === 18)
+        e.completed = e.credits >= 5;
+    e.yearProgress = 0;
+}
+function observeLocally(p) {
+    const life = ensureLife(p);
+    life.scouting.observations++;
+}
+/** Read-only preview, including legacy events; no invisible state is generated by rendering. */
+function evaluationSearchPreview(p) {
+    const scouting = p.life?.scouting;
+    const unavailable = p.currentClubId ? 'Você já tem vínculo com um clube; outras propostas seguem a negociação do projeto.' : p.professionalStatus === 'SENIOR' || !p.professionalStatus && p.careerStats.appearances > 0 ? 'No profissional, outros projetos seguem o mercado.' : scouting?.searchPriority ? 'Uma busca já aguarda a próxima lista de avaliações.' : scouting?.lastSearchSeason === p.season ? 'Você já iniciou uma busca nesta temporada.' : p.mentalFatigue >= 80 ? 'Recupere energia mental antes de iniciar outra busca.' : '';
+    const fatigue = clamp(p.mentalFatigue + 3) - p.mentalFatigue, pressure = clamp(p.pressure + 2) - p.pressure;
+    return { available: !unavailable, fatigue, pressure, hint: unavailable || `Fadiga mental +${fatigue}; pressão +${pressure}. Favorece outra opção na próxima lista; não garante convite ou aprovação.` };
+}
+function searchForEvaluation(p) {
+    const preview = evaluationSearchPreview(p);
+    if (!preview.available)
+        return null;
+    const scouting = ensureLife(p).scouting;
+    scouting.observations++;
+    scouting.searchPriority = true;
+    scouting.lastSearchSeason = p.season;
+    p.mentalFatigue = clamp(p.mentalFatigue + preview.fatigue);
+    p.pressure = clamp(p.pressure + preview.pressure);
+    return `Busca iniciada: fadiga mental +${preview.fatigue}, pressão +${preview.pressure}, observação +1. A próxima lista terá maior chance de incluir outra opção; convite e aprovação continuam incertos.`;
+}
+/** Geographic buckets are provisional: city/state, not invented kilometre distances. */
+function scoutingCandidates(p, rng) {
+    const life = ensureLife(p);
+    const priority = life.scouting.searchPriority === true;
+    delete life.scouting.searchPriority;
+    const local = BRAZIL_CLUBS_2026.filter(c => c.state === life.originState && c.id !== p.currentClubId && c.city !== 'A DEFINIR');
+    const modest = local.filter(c => c.prestige <= 60);
+    const pool = (modest.length ? modest : local).length ? (modest.length ? modest : local) : BRAZIL_CLUBS_2026.filter(c => c.city !== 'A DEFINIR' && c.division !== 'A');
+    const chosen = [rng.pick(pool)];
+    const observed = p.position === 'IND' ? 45 : roleRating(p, p.position);
+    const broaderChance = clamp(clamp((observed - 35) / 65, .12, .65) + (priority ? .12 : 0), .12, .77);
+    if ((life.scouting.observations >= 6 || priority) && rng.chance(broaderChance)) {
+        const wider = BRAZIL_CLUBS_2026.filter(c => c.id !== chosen[0].id && c.id !== p.currentClubId && c.city !== 'A DEFINIR' && (c.state === life.originState || rng.chance(.12)));
+        if (wider.length)
+            chosen.push(rng.pick(wider));
+    }
+    return chosen;
+}
+/** No compatibility/DNA lookup: evaluators see current performance and can make mistakes. */
+function trialProbability(p, club, transportSupport) {
+    const life = ensureLife(p);
+    const ability = p.position === 'IND' ? 45 : roleRating(p, p.position);
+    const physicalNow = (p.attributes.pace + p.attributes.stamina + p.attributes.strength) / 3;
+    const assessment = ability * .75 + physicalNow * .25;
+    const logistics = transportSupport ? 0 : Math.max(0, 45 - life.family.resources) / 200;
+    return clamp(.53 + (assessment - (34 + club.youth * .22)) / 60 - logistics, .12, .86);
+}
+function accrueEducation(p, calendarFraction) {
+    if (p.age > 18)
+        return;
+    const e = ensureLife(p).education;
+    const rate = e.priority === 'SCHOOL' ? 1 : e.priority === 'BALANCED' ? .8 : .35;
+    e.yearProgress = Math.min(1, (e.yearProgress ?? 0) + Math.max(0, calendarFraction) * rate);
+}
+
+return {generateLife, ensureLife, footballTime, finishEducationYear, observeLocally, evaluationSearchPreview, searchForEvaluation, scoutingCandidates, trialProbability, accrueEducation};
 })();
 __modules['core/context.js'] = (() => {
 const {CLUB_BY_ID} = __modules['data/clubs-br-2026.js'];
@@ -382,280 +754,6 @@ function promotionEvidence(p) {
 }
 
 return {ensureProfessionalStatus, competitionCategory, CATEGORY_LABEL, seasonGames, calendarScale, promotionEvidence};
-})();
-__modules['core/random.js'] = (() => {
-
-class RNG {
-    state;
-    constructor(state) {
-        this.state = state;
-        if (!Number.isFinite(state) || state === 0)
-            this.state = 0x6d2b79f5;
-        this.state >>>= 0;
-    }
-    next() {
-        let t = this.state += 0x6D2B79F5;
-        t = Math.imul(t ^ (t >>> 15), t | 1);
-        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-        const out = ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-        this.state >>>= 0;
-        return out;
-    }
-    int(min, max) {
-        return Math.floor(this.next() * (max - min + 1)) + min;
-    }
-    float(min, max) {
-        return min + this.next() * (max - min);
-    }
-    chance(probability) {
-        return this.next() < probability;
-    }
-    pick(items) {
-        if (!items.length)
-            throw new Error('RNG.pick called with empty array');
-        return items[Math.floor(this.next() * items.length)];
-    }
-    normal(mean = 0, stdDev = 1) {
-        const u1 = Math.max(this.next(), 1e-12);
-        const u2 = this.next();
-        const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-        return mean + z * stdDev;
-    }
-}
-function hashSeed(input) {
-    let h = 2166136261 >>> 0;
-    for (let i = 0; i < input.length; i++) {
-        h ^= input.charCodeAt(i);
-        h = Math.imul(h, 16777619);
-    }
-    return h >>> 0;
-}
-const clamp = (v, min = 0, max = 100) => Math.max(min, Math.min(max, v));
-
-return {RNG, hashSeed, clamp};
-})();
-__modules['core/positions.js'] = (() => {
-const {clamp} = __modules['core/random.js'];
-
-const POSITIONS = ['GK', 'CB', 'FB', 'DM', 'CM', 'AM', 'WG', 'ST'];
-const POSITION_LABELS = { GK: 'Goleiro', CB: 'Zagueiro', FB: 'Lateral', DM: 'Volante', CM: 'Meia central', AM: 'Meia ofensivo', WG: 'Ponta', ST: 'Atacante' };
-const PROFILE_WEIGHTS = {
-    GK: { reflexes: .25, handling: .22, aerial: .16, positioning: .12, decisions: .10, passing: .07, strength: .05, technique: .03 },
-    CB: { positioning: .18, tackling: .19, heading: .15, strength: .14, decisions: .12, passing: .09, pace: .07, aerial: .06 },
-    FB: { pace: .17, stamina: .16, tackling: .14, crossing: .15, positioning: .11, passing: .10, technique: .09, decisions: .08 },
-    DM: { positioning: .16, tackling: .15, passing: .16, decisions: .15, vision: .12, stamina: .11, strength: .08, technique: .07 },
-    CM: { passing: .18, vision: .17, decisions: .15, technique: .14, stamina: .10, positioning: .09, dribbling: .08, tackling: .05, crossing: .04 },
-    AM: { vision: .19, passing: .16, technique: .16, dribbling: .14, decisions: .13, finishing: .09, pace: .07, positioning: .06 },
-    WG: { pace: .18, dribbling: .19, technique: .15, crossing: .13, finishing: .12, decisions: .08, vision: .08, stamina: .07 },
-    ST: { finishing: .22, positioning: .16, pace: .13, heading: .11, strength: .11, technique: .10, decisions: .09, dribbling: .08 }
-};
-const DNA_FIT_WEIGHTS = {
-    GK: { reflexAptitude: .28, aerialAptitude: .17, gameIntelligence: .14, coordination: .15, pressureResponse: .10, learningPlasticity: .06, injuryResistance: .04, adultHeightCm: .06 },
-    CB: { defensiveAptitude: .23, aerialAptitude: .15, gameIntelligence: .17, staminaAptitude: .10, pressureResponse: .08, coordination: .07, adultHeightCm: .10, injuryResistance: .05, learningPlasticity: .05 },
-    FB: { accelerationAptitude: .20, staminaAptitude: .18, defensiveAptitude: .15, technicalAptitude: .13, gameIntelligence: .11, coordination: .10, learningPlasticity: .07, adaptability: .06 },
-    DM: { gameIntelligence: .21, defensiveAptitude: .18, staminaAptitude: .14, technicalAptitude: .13, pressureResponse: .09, coordination: .08, learningPlasticity: .09, leadership: .08 },
-    CM: { gameIntelligence: .24, technicalAptitude: .20, staminaAptitude: .10, coordination: .12, learningPlasticity: .12, pressureResponse: .08, consistency: .08, adaptability: .06 },
-    AM: { gameIntelligence: .23, technicalAptitude: .23, coordination: .14, finishingAptitude: .08, accelerationAptitude: .07, learningPlasticity: .10, pressureResponse: .08, consistency: .07 },
-    WG: { accelerationAptitude: .22, technicalAptitude: .19, coordination: .17, finishingAptitude: .09, staminaAptitude: .08, learningPlasticity: .09, gameIntelligence: .08, adaptability: .08 },
-    ST: { finishingAptitude: .24, accelerationAptitude: .12, aerialAptitude: .12, technicalAptitude: .12, gameIntelligence: .11, pressureResponse: .10, coordination: .08, adultHeightCm: .06, consistency: .05 }
-};
-const POSITION_PRIOR = { GK: -1, CB: 0, FB: 0, DM: 1, CM: 0, AM: .7, WG: -.5, ST: 1 };
-function normalizedDNAValue(key, value) {
-    if (key === 'adultHeightCm')
-        return clamp(((Number(value) - 160) / 42) * 100, 0, 100);
-    if (key === 'dominantFoot')
-        return 50;
-    return Number(value);
-}
-function rawPositionCompatibility(player, pos) {
-    const weights = DNA_FIT_WEIGHTS[pos];
-    let score = 0, total = 0;
-    for (const [k, w] of Object.entries(weights)) {
-        score += normalizedDNAValue(k, player.dna[k]) * w;
-        total += w;
-    }
-    return score / Math.max(.001, total) + POSITION_PRIOR[pos];
-}
-/** Hidden natural fit. Diagnostic only; never show as a number in normal UI. */
-function positionCompatibility(player, pos) {
-    const best = Math.max(...POSITIONS.map(p => rawPositionCompatibility(player, p)));
-    const raw = rawPositionCompatibility(player, pos);
-    return Number(clamp(91 - (best - raw) * 2.15, 34, 96).toFixed(1));
-}
-function rankedNaturalPositions(player) {
-    return POSITIONS.map(position => ({ position, compatibility: positionCompatibility(player, position) })).sort((a, b) => b.compatibility - a.compatibility);
-}
-function roleRating(player, pos) {
-    const weights = PROFILE_WEIGHTS[pos];
-    let score = 0, total = 0;
-    for (const [k, w] of Object.entries(weights)) {
-        score += player.attributes[k] * w;
-        total += w;
-    }
-    return Number((score / Math.max(.001, total)).toFixed(1));
-}
-const positionalOverall = roleRating;
-function agePositionPressure(age) {
-    if (age <= 12)
-        return .05;
-    if (age === 13)
-        return .10;
-    if (age === 14)
-        return .24;
-    if (age === 15)
-        return .43;
-    if (age === 16)
-        return .68;
-    if (age === 17)
-        return .90;
-    if (age === 18)
-        return 1.08;
-    if (age <= 21)
-        return 1.12;
-    return 1.18;
-}
-function positionEffectiveness(player, pos, competitionFactor = 1) {
-    const fit = positionCompatibility(player, pos), pressure = agePositionPressure(player.age), prof = player.positionProficiency[pos] ?? 25;
-    const fitEffect = 1 + ((fit - 70) / 100) * .58 * pressure * competitionFactor;
-    const profEffect = .87 + (prof / 100) * .16;
-    const debtEffect = 1 - clamp(player.adaptationDebt, 0, 70) / 360;
-    return clamp(fitEffect * profEffect * debtEffect, .62, 1.14);
-}
-function effectivePositionRating(player, pos) {
-    return Number(clamp(roleRating(player, pos) * positionEffectiveness(player, pos, 1), 20, 99).toFixed(1));
-}
-function developmentEfficiency(player, pos) {
-    const fit = positionCompatibility(player, pos), pressure = agePositionPressure(player.age);
-    const fitLearning = 1 + ((fit - 70) / 100) * .45 * pressure;
-    const adaptationLearning = 1 - clamp(player.adaptationDebt, 0, 70) / 210;
-    return clamp(fitLearning * adaptationLearning, .64, 1.12);
-}
-function positionTrainingMultiplier(pos, key) {
-    const w = PROFILE_WEIGHTS[pos][key] ?? 0;
-    return .72 + w * 3.7;
-}
-const AXIS = { GK: [-2, 0], CB: [0, 0], FB: [0, 2], DM: [1, 0], CM: [2, 0], AM: [3, 0], WG: [3, 2], ST: [4, 0] };
-function positionDistance(a, b) {
-    if (a === b)
-        return 0;
-    if (a === 'GK' || b === 'GK')
-        return 1.9;
-    const [ax, ay] = AXIS[a], [bx, by] = AXIS[b];
-    return clamp(Math.abs(ax - bx) * .23 + Math.abs(ay - by) * .18, .18, 1.25);
-}
-function changeCost(age, from, to) {
-    if (!from || from === to)
-        return 0;
-    return Number(clamp(positionDistance(from, to) * 30 * agePositionPressure(age), 0, 70).toFixed(1));
-}
-function choosePositionForSeason(p, to) {
-    const from = p.position === 'IND' ? null : p.position, cost = changeCost(p.age, from, to);
-    if (from && from !== to) {
-        p.positionChanges++;
-        if (!p.secondaryPositions.includes(from))
-            p.secondaryPositions.push(from);
-    }
-    p.position = to;
-    p.positionSeasonChosenFor = p.season;
-    p.adaptationDebt = clamp(p.adaptationDebt + cost, 0, 70);
-    if (from && from !== to) {
-        const transfer = Math.max(0, (1 - positionDistance(from, to) / 1.9) * .22);
-        p.positionProficiency[to] = clamp(p.positionProficiency[to] + Math.max(0, p.positionProficiency[from] - p.positionProficiency[to]) * transfer, 15, 100);
-    }
-    const record = { season: p.season, age: p.age, position: to, previousPosition: from, startProficiency: Number(p.positionProficiency[to].toFixed(1)), endProficiency: Number(p.positionProficiency[to].toFixed(1)), changeCost: cost, hiddenCompatibility: positionCompatibility(p, to) };
-    p.positionHistory.unshift(record);
-    return record;
-}
-function trainPositionExperience(p, matchBlocks = 1) {
-    if (p.position === 'IND')
-        return;
-    const ageFactor = p.age <= 13 ? 1.55 : p.age <= 15 ? 1.32 : p.age <= 18 ? 1.08 : .78, learn = .80 + p.dna.learningPlasticity / 180;
-    const gain = 1.22 * ageFactor * learn * matchBlocks * (1 - p.adaptationDebt / 240);
-    p.positionProficiency[p.position] = clamp(p.positionProficiency[p.position] + gain, 0, 100);
-    for (const other of POSITIONS) {
-        if (other === p.position)
-            continue;
-        const spill = Math.max(0, .13 - positionDistance(p.position, other) * .08);
-        if (spill > 0)
-            p.positionProficiency[other] = clamp(p.positionProficiency[other] + gain * spill, 0, 100);
-    }
-    const recovery = (p.age <= 14 ? 2.4 : 1.65) * matchBlocks * (.82 + p.dna.adaptability / 180);
-    p.adaptationDebt = clamp(p.adaptationDebt - recovery, 0, 70);
-    const r = p.positionHistory.find(x => x.season === p.season && x.position === p.position);
-    if (r)
-        r.endProficiency = Number(p.positionProficiency[p.position].toFixed(1));
-}
-function positionChoiceHint(p, pos) {
-    const prof = Math.round(p.positionProficiency[pos]), current = p.position === 'IND' ? null : p.position, cost = changeCost(p.age, current, pos);
-    if (!current)
-        return `${POSITION_LABELS[pos]} · experimentar nesta temporada`;
-    if (current === pos)
-        return `${POSITION_LABELS[pos]} · experiência ${prof}/100 · continuidade favorece especialização`;
-    if (p.age <= 13)
-        return `${POSITION_LABELS[pos]} · experiência ${prof}/100 · mudança quase sem custo nesta idade`;
-    const severity = cost < 5 ? 'adaptação leve' : cost < 13 ? 'adaptação moderada' : cost < 25 ? 'adaptação relevante' : 'reconversão difícil';
-    return `${POSITION_LABELS[pos]} · experiência ${prof}/100 · ${severity}`;
-}
-function allPositions() { return [...POSITIONS]; }
-// Compatibility aliases used by the current playable shell.
-const POSITION_LABEL = POSITION_LABELS;
-function changeCostPreview(p, to) {
-    return changeCost(p.age, p.position === 'IND' ? null : p.position, to);
-}
-function changeCostLabel(cost) {
-    if (cost < 2)
-        return 'quase sem custo';
-    if (cost < 7)
-        return 'adaptação leve';
-    if (cost < 16)
-        return 'adaptação moderada';
-    if (cost < 28)
-        return 'adaptação relevante';
-    return 'reconversão difícil';
-}
-function selectPosition(p, to) {
-    const previous = p.position === 'IND' ? null : p.position;
-    const rec = choosePositionForSeason(p, to);
-    return { changed: previous !== null && previous !== to, cost: rec.changeCost, previous };
-}
-function trainPositionStep(p) { trainPositionExperience(p, 1); }
-function coachPositionFeedback(p) {
-    if (p.position === 'IND')
-        return 'Ainda é cedo para saber onde seu jogo se encaixa melhor.';
-    if (p.age <= 13)
-        return 'Nesta idade, experimentar ainda custa pouco. O importante é conhecer o campo inteiro.';
-    if (p.adaptationDebt > 12)
-        return 'A mudança ainda exige adaptação. O repertório anterior continua com você.';
-    const suggestion = observedPositionSuggestion(p);
-    if (suggestion)
-        return `Pelo que você tem mostrado, vale conversar sobre jogar como ${POSITION_LABEL[suggestion]}. Isso precisa ser testado em campo.`;
-    if (p.currentSeason.minutes < 300)
-        return 'Ainda faltam minutos para avaliar seu encaixe com segurança.';
-    return p.currentSeason.avgRating >= 7 ? 'Suas atuações estão sustentando a continuidade nessa posição.' : 'Vamos avaliar sua função e o apoio do time antes de concluir que o problema é a posição.';
-}
-/** Coach suggestions use learned attributes and experience, never hidden compatibility. */
-function observedPositionSuggestion(p) {
-    if (p.position === 'IND')
-        return null;
-    const current = p.position;
-    const score = (pos) => roleRating(p, pos) + (p.positionProficiency[pos] ?? 0) * .045 - positionDistance(current, pos) * 2;
-    const candidate = POSITIONS.filter(pos => (current === 'GK') === (pos === 'GK')).sort((a, b) => score(b) - score(a))[0];
-    return candidate !== current && score(candidate) > score(current) + 1.5 ? candidate : null;
-}
-/** A role changes demands within a position, without giving attributes or reversing aging. */
-function tacticalRating(p, pos) {
-    const base = effectivePositionRating(p, pos);
-    if (!p.tactical || pos === 'GK')
-        return base;
-    const a = p.attributes;
-    const mobility = (a.pace + a.stamina) / 2;
-    const reading = (a.positioning + a.decisions + a.technique) / 3;
-    const role = p.tactical.role;
-    const adjustment = role === 'HOLD' ? (reading - mobility) * .12 : role === 'MOBILE' ? (mobility - reading) * .12 : 0;
-    return Number(clamp(base + adjustment, 20, 99).toFixed(1));
-}
-
-return {POSITIONS, POSITION_LABELS, positionCompatibility, rankedNaturalPositions, roleRating, positionalOverall, agePositionPressure, positionEffectiveness, effectivePositionRating, developmentEfficiency, positionTrainingMultiplier, positionDistance, changeCost, choosePositionForSeason, trainPositionExperience, positionChoiceHint, allPositions, POSITION_LABEL, changeCostPreview, changeCostLabel, selectPosition, trainPositionStep, coachPositionFeedback, observedPositionSuggestion, tacticalRating};
 })();
 __modules['data/coaches.js'] = (() => {
 
@@ -2419,82 +2517,6 @@ function evaluateFanMatch(p, m, o = {}) {
 
 return {evaluateFanMatch};
 })();
-__modules['core/pathways.js'] = (() => {
-const {RNG, clamp, hashSeed} = __modules['core/random.js'];
-const {BRAZIL_CLUBS_2026} = __modules['data/clubs-br-2026.js'];
-const {roleRating} = __modules['core/positions.js'];
-
-
-
-const occupations = ['motorista', 'professor(a)', 'vendedor(a)', 'auxiliar de serviços', 'técnico(a)', 'autônomo(a)', 'enfermeiro(a)', 'engenheiro(a)', 'sem trabalho remunerado'];
-/** Separate stream: family resources never determine the athlete's DNA. */
-function generateLife(seed, hometown, heartClubId, hometownState) {
-    const rng = new RNG(hashSeed(`life:${seed}`));
-    const known = BRAZIL_CLUBS_2026.filter(c => c.city && c.city !== c.name && c.city !== 'A DEFINIR');
-    const origin = rng.pick(known.length ? known : BRAZIL_CLUBS_2026);
-    const city = hometown ?? origin.city;
-    const local = BRAZIL_CLUBS_2026.find(c => c.city === city) ?? origin;
-    const family = { resources: rng.int(10, 90), availableTime: rng.int(15, 95), relocationWillingness: rng.int(15, 90), parents: [rng.pick(occupations), rng.pick(occupations)] };
-    return { originState: hometownState ?? local.state, residence: city, heartClubId: heartClubId ?? rng.pick(BRAZIL_CLUBS_2026.filter(c => c.state === local.state)).id,
-        localSchool: `Escolinha comunitária de ${city}`, family, childhood: rng.pick(['RUA', 'FUTSAL', 'ESCOLA', 'MULTIESPORTE']),
-        education: { priority: 'BALANCED', chosenFor: null, credits: 0, completed: false }, scouting: { observations: 0, trialAttempts: 0, lastAttemptSeason: 0, rejections: [] } };
-}
-function ensureLife(p) {
-    return p.life ?? (p.life = generateLife(hashSeed(p.id), p.hometown, p.heartClubId));
-}
-function footballTime(p) {
-    if (p.age > 18)
-        return 1;
-    return ensureLife(p).education.priority === 'SCHOOL' ? .82 : ensureLife(p).education.priority === 'BALANCED' ? .94 : 1;
-}
-function finishEducationYear(p) {
-    if (p.age > 18)
-        return;
-    const e = ensureLife(p).education;
-    const credits = { SCHOOL: 1, BALANCED: .8, FOOTBALL: .35 };
-    e.credits = Number((e.credits + (e.yearProgress ?? credits[e.priority])).toFixed(2));
-    if (p.age === 18)
-        e.completed = e.credits >= 5;
-    e.yearProgress = 0;
-}
-function observeLocally(p) {
-    const life = ensureLife(p);
-    life.scouting.observations++;
-}
-/** Geographic buckets are provisional: city/state, not invented kilometre distances. */
-function scoutingCandidates(p, rng) {
-    const life = ensureLife(p);
-    const local = BRAZIL_CLUBS_2026.filter(c => c.state === life.originState && c.id !== p.currentClubId && c.city !== 'A DEFINIR');
-    const modest = local.filter(c => c.prestige <= 60);
-    const pool = (modest.length ? modest : local).length ? (modest.length ? modest : local) : BRAZIL_CLUBS_2026.filter(c => c.city !== 'A DEFINIR' && c.division !== 'A');
-    const chosen = [rng.pick(pool)];
-    const observed = p.position === 'IND' ? 45 : roleRating(p, p.position);
-    if (life.scouting.observations >= 6 && rng.chance(clamp((observed - 35) / 65, .12, .65))) {
-        const wider = BRAZIL_CLUBS_2026.filter(c => c.id !== chosen[0].id && c.id !== p.currentClubId && c.city !== 'A DEFINIR' && (c.state === life.originState || rng.chance(.12)));
-        if (wider.length)
-            chosen.push(rng.pick(wider));
-    }
-    return chosen;
-}
-/** No compatibility/DNA lookup: evaluators see current performance and can make mistakes. */
-function trialProbability(p, club, transportSupport) {
-    const life = ensureLife(p);
-    const ability = p.position === 'IND' ? 45 : roleRating(p, p.position);
-    const physicalNow = (p.attributes.pace + p.attributes.stamina + p.attributes.strength) / 3;
-    const assessment = ability * .75 + physicalNow * .25;
-    const logistics = transportSupport ? 0 : Math.max(0, 45 - life.family.resources) / 200;
-    return clamp(.53 + (assessment - (34 + club.youth * .22)) / 60 - logistics, .12, .86);
-}
-function accrueEducation(p, calendarFraction) {
-    if (p.age > 18)
-        return;
-    const e = ensureLife(p).education;
-    const rate = e.priority === 'SCHOOL' ? 1 : e.priority === 'BALANCED' ? .8 : .35;
-    e.yearProgress = Math.min(1, (e.yearProgress ?? 0) + Math.max(0, calendarFraction) * rate);
-}
-
-return {generateLife, ensureLife, footballTime, finishEducationYear, observeLocally, scoutingCandidates, trialProbability, accrueEducation};
-})();
 __modules['core/decisions.js'] = (() => {
 const {clamp} = __modules['core/random.js'];
 const {CATEGORY_LABEL, calendarScale, competitionCategory} = __modules['core/calendar.js'];
@@ -2755,7 +2777,7 @@ function choiceSnapshot(p) {
         confiança: p.confidence, moral: p.morale, pressão: p.pressure, 'condição física': p.physicalCondition, 'fadiga mental': p.mentalFatigue,
         'intenção de mercado': p.transferIntent, 'abordagem de carreira': p.careerApproach ?? 'STABILITY',
         'prioridade escolar': p.life?.education.priority ?? 'BALANCED', observações: p.life?.scouting.observations ?? 0,
-        'testes realizados': p.life?.scouting.trialAttempts ?? 0, função: p.tactical?.role ?? 'BALANCED',
+        'testes realizados': p.life?.scouting.trialAttempts ?? 0, 'busca aguardando avaliação': p.life?.scouting.searchPriority ? 'sim' : 'não', função: p.tactical?.role ?? 'BALANCED',
         'plano de retorno': p.comebackPlan ?? 'nenhum', 'situação profissional': p.professionalStatus ?? 'YOUTH',
         'próximo percurso': p.life?.secondCareer?.path ?? 'nenhum', 'anos de contrato': p.contractYearsLeft,
         'dívida de adaptação': p.adaptationDebt };
@@ -3116,7 +3138,7 @@ const {ensureStories, updateStories, choiceSnapshot, recordChoice} = __modules['
 const {ensureProfessionalStatus, competitionCategory, CATEGORY_LABEL, seasonGames, calendarScale, promotionEvidence} = __modules['core/calendar.js'];
 const {ensureCoaching, syncCoachContext, simulateWorldBlock, reviewWorldCoaches, coachChangeEvent, resolveCoachChoice, coachDossier, roleProspect, opportunityAdjustment, performanceFeedback, rememberCoach, coachProfile, leagueTitle, coachDiscussionEvent, coachName, coachBond} = __modules['core/coaches.js'];
 const {ensureTransition, transitionEvent, transitionLoad, maybeInjury, injuryBlock, comebackEvent, legacyNarrative} = __modules['core/transitions.js'];
-const {generateLife, ensureLife, observeLocally, scoutingCandidates, trialProbability, finishEducationYear, accrueEducation} = __modules['core/pathways.js'];
+const {generateLife, ensureLife, evaluationSearchPreview, searchForEvaluation, observeLocally, scoutingCandidates, trialProbability, finishEducationYear, accrueEducation} = __modules['core/pathways.js'];
 const {RNG, clamp, hashSeed} = __modules['core/random.js'];
 const {generateDNA, initialAttributes, growthStep, updateBody, overall} = __modules['core/dna.js'];
 const {POSITIONS, POSITION_LABEL, changeCostPreview, changeCostLabel, selectPosition, trainPositionExperience, effectivePositionRating, observedPositionSuggestion, tacticalRating, roleRating} = __modules['core/positions.js'];
@@ -3649,7 +3671,7 @@ function contextualDecision(p, event) {
     else {
         event.body += p.age <= 18 ? ' Você e sua família avaliam a continuidade deste caminho.' : ' Você avalia a continuidade do seu percurso e o rendimento que vem construindo.';
         event.choices = [{ id: 'career:local', label: 'Sustentar o caminho atual', hint: 'Preservar o vínculo e seguir competindo' },
-            ...(ensureLife(p).scouting.observations < 30 ? [{ id: 'career:explore', label: 'Buscar outras oportunidades de avaliação', hint: 'Ampliar observação para convites futuros; não garante vaga' }] : []),
+            ...(evaluationSearchPreview(p).available ? [{ id: 'career:explore', label: 'Buscar outras oportunidades de avaliação', hint: evaluationSearchPreview(p).hint }] : []),
             ...(p.age <= 18 ? [{ id: 'career:education', label: 'Rever com a família o equilíbrio com a escola', hint: 'Reabrir a prioridade escolar deste ano' }] : [])];
     }
     return event;
@@ -3693,9 +3715,10 @@ function resolveChoiceInternal(save, choiceId) {
             log(p, p.age <= 18 ? 'FORMAÇÃO' : 'CAMINHO', 'Continuidade escolhida', p.age <= 18 ? 'A família sustenta a trajetória atual.' : 'Você decidiu seguir competindo no caminho atual.');
         }
         if (choiceId === 'career:explore') {
-            const scouting = ensureLife(p).scouting;
-            scouting.observations = Math.min(30, scouting.observations + 1);
-            log(p, 'OBSERVAÇÃO', 'Família procura outras portas', 'Mais observação pode ampliar os convites futuros.');
+            const detail = searchForEvaluation(p);
+            if (!detail)
+                return save;
+            log(p, 'OBSERVAÇÃO', p.age <= 18 ? 'Você e sua família procuram outra avaliação' : 'Você procura outra avaliação', detail);
         }
         if (choiceId === 'career:education') {
             if (p.age <= 18) {
@@ -3971,7 +3994,7 @@ function advanceCareerInternal(save) {
 }
 function resolveChoice(save, choiceId) {
     const event = save.pendingEvent;
-    if (!event?.choices?.some(c => c.id === choiceId))
+    if (!event?.choices?.some(c => c.id === choiceId) || choiceId === 'career:explore' && !evaluationSearchPreview(save.player).available)
         return save;
     ensureStories(save.player);
     const before = choiceSnapshot(save.player), previousLog = save.player.history[0];
@@ -4047,7 +4070,7 @@ const life = fields({ originState: text, residence: text, heartClubId: text, loc
     family: fields({ ...numeric('resources availableTime relocationWillingness'), parents: array(text) }),
     childhood: oneOf('RUA', 'FUTSAL', 'ESCOLA', 'MULTIESPORTE'),
     education: fields({ priority: oneOf('SCHOOL', 'BALANCED', 'FOOTBALL'), chosenFor: nullable(number), credits: number, completed: boolean, yearProgress: optional(number) }),
-    scouting: fields({ ...numeric('observations trialAttempts lastAttemptSeason'), rejections: array(fields({ season: number, clubId: text })) }),
+    scouting: fields({ searchPriority: optional(boolean), lastSearchSeason: optional(v => number(v) && Number.isSafeInteger(v) && Number(v) >= 0), ...numeric('observations trialAttempts lastAttemptSeason'), rejections: array(fields({ season: number, clubId: text })) }),
     secondCareer: optional(fields({ path: oneOf('WORK', 'TECHNICAL', 'DEGREE', 'COACH_COURSE'), status: oneOf('SEEKING_WORK', 'IN_TRAINING') })) });
 const coachChange = fields({ clubId: text, oldCoachId: text, newCoachId: text, season: number, turn: number, reason: text });
 const coaching = fields({ ...numeric('season completedBlocks seed'), progress: optional(number),
@@ -4093,7 +4116,14 @@ const playerFields = fields({ recentForm: optional(recentForm), decisionMemory: 
     history: array(fields({ ...numeric('turn season age'), type: text, headline: text, detail: text })),
     life: optional(life), tactical: optional(fields({ coachId: text, role: oneOf('BALANCED', 'MOBILE', 'HOLD'), support: number, trust: number, discussedFor: nullable(number) })),
     professionalStatus: optional(oneOf('YOUTH', 'INVITED', 'SENIOR')), coaching: optional(coaching) });
-const player = v => playerFields(v) && object(v) && (!object(v.recentForm) || Number(v.recentForm.lastObservedTurn) <= Number(v.careerTurn));
+const player = v => {
+    if (!playerFields(v) || !object(v))
+        return false;
+    if (object(v.recentForm) && Number(v.recentForm.lastObservedTurn) > Number(v.careerTurn))
+        return false;
+    const scouting = object(v.life) && object(v.life.scouting) ? v.life.scouting : null;
+    return !scouting || scouting.lastSearchSeason === undefined || Number(scouting.lastSearchSeason) <= Number(v.season);
+};
 /** The original mandatory fields are retained; later fields may be absent on legacy saves. */
 const saveShape = fields({ version: oneOf('0.1.0-playable.2'), createdAt: text, updatedAt: text, player, pendingEvent: nullable(event) });
 function finiteValues(value, ancestors = new Set()) {
@@ -4201,6 +4231,7 @@ function exportDiagnostic(save) {
 return {getPersistenceStatus, getRecoveryRaw, loadSave, storeSave, clearSave, exportDiagnostic};
 })();
 __modules['app.js'] = (() => {
+const {evaluationSearchPreview} = __modules['core/pathways.js'];
 const {buildCareerContext} = __modules['core/context.js'];
 const {competitionCategory, CATEGORY_LABEL} = __modules['core/calendar.js'];
 const {coachDossier, coachBond, coachName, bondLabel, ensureCoaching, standings, coachProfile} = __modules['core/coaches.js'];
@@ -4209,6 +4240,7 @@ const {createCareer, advanceCareer, resolveChoice, overallVisible, getClub, getP
 const {loadSave, storeSave, clearSave, exportDiagnostic, getPersistenceStatus, getRecoveryRaw} = __modules['core/persistence.js'];
 const {BRAZIL_CLUBS_2026} = __modules['data/clubs-br-2026.js'];
 const {POSITIONS, POSITION_LABEL, coachPositionFeedback} = __modules['core/positions.js'];
+
 
 
 
@@ -4229,7 +4261,7 @@ function theme() {
     const colors = c?.colors ?? ['#7bbcff', '#e8eef4'];
     return `style="--club:${colors[0]};--club2:${colors[1]};"`;
 }
-function appShell(content) { return `<main class="shell ${save ? 'playing' : 'creating'}" ${theme()}><div class="brand"><div><h1>1903</h1><span class="subbrand">CARREIRA</span></div><span class="build">0.3.7 · EXPERIMENTAL</span></div>${save ? nav() : ''}${persistenceNotice()}<div class="page-content">${content}</div></main>`; }
+function appShell(content) { return `<main class="shell ${save ? 'playing' : 'creating'}" ${theme()}><div class="brand"><div><h1>1903</h1><span class="subbrand">CARREIRA</span></div><span class="build">0.3.8 · EXPERIMENTAL</span></div>${save ? nav() : ''}${persistenceNotice()}<div class="page-content">${content}</div></main>`; }
 const navPaths = { career: 'M8 5l10 7-10 7V5Z', player: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM5 21v-2a7 7 0 0 1 14 0v2', stats: 'M5 20V10m7 10V4m7 16v-7', world: 'M4 7h16v13H4V7Zm4 0V4h8v3M4 12h16m-8-2v4' };
 function nav() { return `<nav class="bottom-nav" aria-label="Navegação da carreira"><div class="bottom-nav-inner">${[['career', 'Jogar', 'Jogar'], ['player', 'Jogador', 'Meu jogador'], ['stats', 'Histórico', 'Histórico'], ['world', 'Clube', 'Clube e mercado']].map(([id, label, full]) => `<button class="nav ${tab === id ? 'active' : ''}" data-tab="${id}" aria-label="${full}" aria-current="${tab === id ? 'page' : 'false'}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${navPaths[id]}"/></svg><span>${label}</span></button>`).join('')}</div></nav>`; }
 function persistenceNotice() {
@@ -4314,11 +4346,12 @@ function contextCard(e) {
     const context = buildCareerContext(save, e);
     return `<section class="match-context" aria-label="Contexto e próximos passos"><h4>Contexto e próximos passos</h4>${context.paragraphs.map(p => `<p>${esc(p)}</p>`).join('')}${context.nextStep ? `<p class="context-next"><b>Próximo passo</b>${esc(context.nextStep)}</p>` : ''}</section>`;
 }
+function choiceHint(c) { return c.id === 'career:explore' ? evaluationSearchPreview(save.player).hint : c.hint; }
 function eventCard() {
     if (!save?.pendingEvent)
         return save?.player.phase === 'APOSENTADO' ? `<div class="empty">Carreira encerrada. ${save.player.life?.secondCareer?.path === 'TECHNICAL' ? 'Novo caminho: formação técnica.' : save.player.life?.secondCareer?.path === 'DEGREE' ? 'Novo caminho: formação superior.' : save.player.life?.secondCareer?.path === 'COACH_COURSE' ? 'Novo caminho: formação para treinador.' : 'Novo caminho: buscar uma ocupação.'} Seu histórico permanece disponível.</div>` : '<div class="event-card"><span class="eyebrow">PRÓXIMO CAPÍTULO</span><h3>Seu caminho começa aqui.</h3><p>Conheça sua primeira oportunidade e faça sua escolha.</p><button class="action primary" id="advance">Iniciar minha trajetória</button></div>';
     const e = save.pendingEvent;
-    return `<article class="event-card ${e.matchFeedback ? 'has-match' : ''}" tabindex="-1" aria-label="Situação atual"><div class="event-top"><span class="eyebrow">${e.matchFeedback ? 'ÚLTIMA PARTIDA' : ({ INFO: 'SUA CARREIRA', CHOICE: 'HORA DE DECIDIR', MATCH: 'ÚLTIMA PARTIDA', SEASON_END: 'FIM DE TEMPORADA', MARKET: 'PROPOSTAS', MILESTONE: 'MOMENTO DA CARREIRA' }[e.kind])}</span><span class="event-age">${save.player.season} · ${save.player.age} anos</span></div><h3>${esc(e.title)}</h3>${feedbackCard(e)}${contextCard(e)}<div class="tags">${e.tags.map(t => `<span>${esc(t)}</span>`).join('')}</div>${e.choices?.length ? `<section class="decision-panel"><div class="decision-heading"><h4>Qual é sua decisão?</h4><span>${e.choices.length} caminhos</span></div>${e.choices.map((c, i) => `<button class="choice" data-choice="${c.id}"><span class="choice-number" aria-hidden="true">${String(i + 1).padStart(2, '0')}</span><span class="choice-copy"><b>${esc(c.label)}</b>${c.hint ? `<small>${esc(c.hint.startsWith(c.label + ' · ') ? c.hint.slice(c.label.length + 3) : c.hint)}</small>` : ''}</span></button>`).join('')}</section>` : `<button class="action primary" id="advance">Seguir minha carreira</button>`}</article>`;
+    return `<article class="event-card ${e.matchFeedback ? 'has-match' : ''}" tabindex="-1" aria-label="Situação atual"><div class="event-top"><span class="eyebrow">${e.matchFeedback ? 'ÚLTIMA PARTIDA' : ({ INFO: 'SUA CARREIRA', CHOICE: 'HORA DE DECIDIR', MATCH: 'ÚLTIMA PARTIDA', SEASON_END: 'FIM DE TEMPORADA', MARKET: 'PROPOSTAS', MILESTONE: 'MOMENTO DA CARREIRA' }[e.kind])}</span><span class="event-age">${save.player.season} · ${save.player.age} anos</span></div><h3>${esc(e.title)}</h3>${feedbackCard(e)}${contextCard(e)}<div class="tags">${e.tags.map(t => `<span>${esc(t)}</span>`).join('')}</div>${e.choices?.length ? `<section class="decision-panel"><div class="decision-heading"><h4>Qual é sua decisão?</h4><span>${e.choices.length} caminhos</span></div>${e.choices.map((c, i) => `<button class="choice" data-choice="${c.id}" ${c.id === 'career:explore' && !evaluationSearchPreview(save.player).available ? 'disabled' : ''}><span class="choice-number" aria-hidden="true">${String(i + 1).padStart(2, '0')}</span><span class="choice-copy"><b>${esc(c.label)}</b>${choiceHint(c) ? `<small>${esc(choiceHint(c).startsWith(c.label + ' · ') ? choiceHint(c).slice(c.label.length + 3) : choiceHint(c))}</small>` : ''}</span></button>`).join('')}</section>` : `<button class="action primary" id="advance">Seguir minha carreira</button>`}</article>`;
 }
 function seasonStrip() { const p = save.player, s = p.currentSeason.categories?.[competitionCategory(p)] ?? p.currentSeason; return `<div class="season-category">${esc(CATEGORY_LABEL[competitionCategory(p)])} · nesta temporada</div><div class="season-strip"><div><b>${s.appearances}</b><span>Jogos</span></div><div><b>${s.goals}</b><span>Gols</span></div><div><b>${s.assists}</b><span>Assist.</span></div><div><b>${s.motm ?? 0}</b><span>Destaques</span></div><div><b>${s.avgRating ? s.avgRating.toFixed(1) : '—'}</b><span>Nota média</span></div></div>`; }
 function renderCareer() { const p = save.player, c = getClub(p.currentClubId); root.innerHTML = appShell(`<header class="player-head"><div><span class="eyebrow">${p.season} · ${CATEGORY_LABEL[competitionCategory(p)]}</span><h2>${esc(p.name)}</h2><p>${c ? esc(c.name) : esc(p.life?.localSchool ?? 'Escolinha local')} · ${p.age} anos</p></div><div class="ovr"><b>${overallVisible(p)}</b><span>Overall</span></div></header><div class="career-layout"><section class="career-focus career-situation" tabindex="-1" aria-label="Seu momento na carreira">${choiceResultCard()}${chapterCard()}${eventCard()}</section><aside class="career-summary"><details class="summary-details"><summary>Minha temporada e momento</summary><div class="summary-content">${seasonStrip()}<div class="state-row"><div><span>Moral</span><b>${pct(p.morale)}</b></div><div><span>Confiança</span><b>${pct(p.confidence)}</b></div><div><span>Posição</span><b>${esc(getPositionLabel(p))}</b></div></div><div class="detail-card"><div><span>Origem</span><b>${esc(p.hometown)} · ${esc(p.life?.originState ?? '')}</b></div><div><span>Clube do coração</span><b>${esc(getClub(p.heartClubId)?.shortName ?? '—')}</b></div><div><span>Estudos</span><b>${p.life?.education.completed ? 'Concluídos' : p.age <= 18 ? 'Em formação' : 'Incompletos'}</b></div></div></div></details><details class="recent-memory"><summary>Memória da carreira</summary><div class="timeline">${p.history.slice(0, 8).map(h => `<div class="timeline-item"><i></i><div><b>${esc(h.headline)}</b><span>${h.season} · ${h.age} anos — ${esc(h.detail)}</span></div></div>`).join('') || '<div class="empty">A carreira está apenas começando.</div>'}</div></details></aside></div>`); if (window.innerWidth >= 900)

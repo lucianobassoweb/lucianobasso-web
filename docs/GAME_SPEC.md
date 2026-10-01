@@ -179,3 +179,12 @@ Para ST/WG, habilidade disponível não equivale a atuação boa sem evidência.
 Sequência recente observada no mesmo clube/categoria/posição/temporada: até oito partidas substanciais, incluindo qualquer participação com gol para encerrar seca. Banco/cameos sem gol só movem o marcador de observação, sem apagar evidência anterior. Pelo menos três jogos>=45min e180min para começar cobrança, seis/360min para intensidade plena. Assistências/criação atenuam, WG tem menor peso de gol, demais posições não recebem penalidade de atacante. Menor intensidade na infância, sem hard cap ou remoção automática do time. Chance de titularidade e feedback têm efeitos efetivos e podem se recuperar.
 
 Promoção continua por evidênciaU20, oito participações/420min, clube e idade16–20. ST/WG agora exigem nota>=6,7 e produção mínima por90min (ST gol+0,45assist>=0,30; WG gol+assist>=0,45). Outros critérios preservados. Parâmetros experimentais vinculados à nota nova, não taxa real. Save mantém a chave/versão estrutural; novo histórico opcional e guardado, nenhuma sequência ou nota antiga reconstruída.
+
+
+## 0.3.8 — procurar outra avaliação
+
+A procura é uma decisão de esforço: fadiga mental +3 e pressão +2, respeitando 0–100 e expondo o delta real antes de escolher. Somente sem clube, fora do profissional, com fadiga mental <80. Uma por temporada, sem sobrepor prioridade ainda aguardando lista. Ganho de observação +1 monotônico, inclusive em saves com contador acima de30.
+
+Na próxima geração de candidatos, a prioridade habilita a possibilidade de ampliar a lista mesmo abaixo de6 observações e soma0,12 à probabilidade ordinária (máximo0,77). Com >=6observações isso representa12p.p.; abaixo desse limiar o ganho total pode ser maior, porque a lista ordinária não faria esse sorteio. Continua possível receber uma única opção. Prioridade consumida na geração, sem garantir teste, aprovação ou promoção e sem mudar trialProbability. Não há custo financeiro sem saldo nem dano automático de reputação por procurar.
+
+Pressão e fadiga são estados persistentes usados na rotina/carga e no profissional; a nota juvenil e a aprovação não consultam esses estados hoje. Evento legado conserva IDs/corpo/opções; hint de busca vem do preview atual e motor bloqueia escolha indisponível antes de qualquer mutação. Campos opcionais searchPriority/lastSearchSeason preservam compatibilidade; corrupção ou cursor futuro acionam recuperação com os bytes originais.

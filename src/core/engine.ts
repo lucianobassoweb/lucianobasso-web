@@ -5,7 +5,7 @@ import {ensureStories, updateStories, choiceSnapshot, recordChoice} from './stor
 import { ensureProfessionalStatus, competitionCategory, CATEGORY_LABEL, seasonGames, calendarScale, promotionEvidence } from './calendar.js';
 import { ensureCoaching, syncCoachContext, simulateWorldBlock, reviewWorldCoaches, coachChangeEvent, resolveCoachChoice, coachDossier, roleProspect, opportunityAdjustment, performanceFeedback, rememberCoach, coachProfile, leagueTitle, coachDiscussionEvent, coachName, coachBond } from './coaches.js';
 import { ensureTransition, transitionEvent, transitionLoad, maybeInjury, injuryBlock, comebackEvent, legacyNarrative } from './transitions.js';
-import { generateLife, ensureLife, observeLocally, scoutingCandidates, trialProbability, finishEducationYear, accrueEducation } from './pathways.js';
+import { generateLife, ensureLife, evaluationSearchPreview,searchForEvaluation, observeLocally, scoutingCandidates, trialProbability, finishEducationYear, accrueEducation } from './pathways.js';
 import { RNG, clamp, hashSeed } from './random.js';
 import { generateDNA, initialAttributes, growthStep, updateBody, overall } from './dna.js';
 import { POSITIONS, POSITION_LABEL, changeCostPreview, changeCostLabel, selectPosition, trainPositionStep, trainPositionExperience, effectivePositionRating, observedPositionSuggestion, tacticalRating, roleRating } from './positions.js';
@@ -296,7 +296,7 @@ function contextualDecision(p:PlayerState,event:CareerEvent):CareerEvent{
   }else{
     event.body+=p.age<=18?' Você e sua família avaliam a continuidade deste caminho.':' Você avalia a continuidade do seu percurso e o rendimento que vem construindo.';
     event.choices=[{id:'career:local',label:'Sustentar o caminho atual',hint:'Preservar o vínculo e seguir competindo'},
-      ...(ensureLife(p).scouting.observations<30?[{id:'career:explore',label:'Buscar outras oportunidades de avaliação',hint:'Ampliar observação para convites futuros; não garante vaga'}]:[]),
+      ...(evaluationSearchPreview(p).available?[{id:'career:explore',label:'Buscar outras oportunidades de avaliação',hint:evaluationSearchPreview(p).hint}]:[]),
       ...(p.age<=18?[{id:'career:education',label:'Rever com a família o equilíbrio com a escola',hint:'Reabrir a prioridade escolar deste ano'}]:[])];
   }
   return event;
@@ -319,7 +319,7 @@ function resolveChoiceInternal(save:SaveGame,choiceId:string):SaveGame{
       log(p,'PROJETO',accepted?'Maior responsabilidade negociada':'O treinador pede evidências antes de ampliar seu papel',accepted?'Mais disputa por titularidade, acompanhada de maior cobrança.':'O pedido não assegurou mais espaço. Você pode insistir em campo ou ouvir outros clubes.');
     }
     if(choiceId==='career:local'){p.transferIntent='STAY';log(p,p.age<=18?'FORMAÇÃO':'CAMINHO','Continuidade escolhida',p.age<=18?'A família sustenta a trajetória atual.':'Você decidiu seguir competindo no caminho atual.');}
-    if(choiceId==='career:explore'){const scouting=ensureLife(p).scouting;scouting.observations=Math.min(30,scouting.observations+1);log(p,'OBSERVAÇÃO','Família procura outras portas','Mais observação pode ampliar os convites futuros.');}
+    if(choiceId==='career:explore'){const detail=searchForEvaluation(p);if(!detail)return save;log(p,'OBSERVAÇÃO',p.age<=18?'Você e sua família procuram outra avaliação':'Você procura outra avaliação',detail);}
     if(choiceId==='career:education'){if(p.age<=18){save.pendingEvent=educationEvent(p);return save;}else log(p,'EDUCAÇÃO','Você considera retomar os estudos','Seu percurso escolar permanece registrado; uma nova formação exige um projeto próprio.');}
   }else if(choiceId.startsWith('coach:')||choiceId.startsWith('coach-talk:')){
     const followUp=resolveCoachChoice(p,choiceId);log(p,'PROJETO','Decisão sobre o comando técnico',choiceId);if(followUp){save.pendingEvent=followUp;save.updatedAt=new Date().toISOString();return save;}
@@ -420,7 +420,7 @@ function advanceCareerInternal(save:SaveGame):SaveGame{
 
 export function resolveChoice(save:SaveGame,choiceId:string):SaveGame {
   const event=save.pendingEvent;
-  if(!event?.choices?.some(c=>c.id===choiceId))return save;
+  if(!event?.choices?.some(c=>c.id===choiceId)||choiceId==='career:explore'&&!evaluationSearchPreview(save.player).available)return save;
   ensureStories(save.player);const before=choiceSnapshot(save.player),previousLog=save.player.history[0];
   resolveChoiceInternal(save,choiceId);
   if(choiceId.startsWith('routine:')&&save.pendingEvent===event)return save;

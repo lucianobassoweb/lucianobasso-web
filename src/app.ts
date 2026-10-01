@@ -1,3 +1,4 @@
+import {evaluationSearchPreview} from './core/pathways.js';
 import { buildCareerContext } from './core/context.js';
 import { competitionCategory, CATEGORY_LABEL } from './core/calendar.js';
 import { coachDossier, coachBond, coachName, bondLabel, ensureCoaching, standings, coachProfile } from './core/coaches.js';
@@ -6,7 +7,7 @@ import { createCareer, advanceCareer, resolveChoice, overallVisible, getClub, cl
 import { loadSave, storeSave, clearSave, exportDiagnostic, getPersistenceStatus, getRecoveryRaw } from './core/persistence.js';
 import { BRAZIL_CLUBS_2026 } from './data/clubs-br-2026.js';
 import { POSITIONS, POSITION_LABEL, coachPositionFeedback } from './core/positions.js';
-import type { SaveGame, TransferIntent, VisibleAttributes, CareerEvent, SeasonStats } from './core/types.js';
+import type { SaveGame, TransferIntent, VisibleAttributes, CareerEvent, SeasonStats, CareerChoice } from './core/types.js';
 
 let save:SaveGame|null=loadSave();
 let tab='career';
@@ -20,7 +21,7 @@ function theme(){
   const c=save?getClub(save.player.currentClubId):null;const colors=c?.colors??['#7bbcff','#e8eef4'];
   return `style="--club:${colors[0]};--club2:${colors[1]};"`;
 }
-function appShell(content:string){return `<main class="shell ${save?'playing':'creating'}" ${theme()}><div class="brand"><div><h1>1903</h1><span class="subbrand">CARREIRA</span></div><span class="build">0.3.7 · EXPERIMENTAL</span></div>${save?nav():''}${persistenceNotice()}<div class="page-content">${content}</div></main>`;}
+function appShell(content:string){return `<main class="shell ${save?'playing':'creating'}" ${theme()}><div class="brand"><div><h1>1903</h1><span class="subbrand">CARREIRA</span></div><span class="build">0.3.8 · EXPERIMENTAL</span></div>${save?nav():''}${persistenceNotice()}<div class="page-content">${content}</div></main>`;}
 const navPaths:Record<string,string>={career:'M8 5l10 7-10 7V5Z',player:'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM5 21v-2a7 7 0 0 1 14 0v2',stats:'M5 20V10m7 10V4m7 16v-7',world:'M4 7h16v13H4V7Zm4 0V4h8v3M4 12h16m-8-2v4'};
 function nav(){return `<nav class="bottom-nav" aria-label="Navegação da carreira"><div class="bottom-nav-inner">${[['career','Jogar','Jogar'],['player','Jogador','Meu jogador'],['stats','Histórico','Histórico'],['world','Clube','Clube e mercado']].map(([id,label,full])=>`<button class="nav ${tab===id?'active':''}" data-tab="${id}" aria-label="${full}" aria-current="${tab===id?'page':'false'}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${navPaths[id!]}"/></svg><span>${label}</span></button>`).join('')}</div></nav>`;}
 function persistenceNotice(){
@@ -88,10 +89,11 @@ function contextCard(e:CareerEvent):string{
  return `<section class="match-context" aria-label="Contexto e próximos passos"><h4>Contexto e próximos passos</h4>${context.paragraphs.map(p=>`<p>${esc(p)}</p>`).join('')}${context.nextStep?`<p class="context-next"><b>Próximo passo</b>${esc(context.nextStep)}</p>`:''}</section>`;
 }
 
+function choiceHint(c:CareerChoice):string|undefined{return c.id==='career:explore'?evaluationSearchPreview(save!.player).hint:c.hint;}
 function eventCard(){
  if(!save?.pendingEvent)return save?.player.phase==='APOSENTADO'?`<div class="empty">Carreira encerrada. ${save.player.life?.secondCareer?.path==='TECHNICAL'?'Novo caminho: formação técnica.':save.player.life?.secondCareer?.path==='DEGREE'?'Novo caminho: formação superior.':save.player.life?.secondCareer?.path==='COACH_COURSE'?'Novo caminho: formação para treinador.':'Novo caminho: buscar uma ocupação.'} Seu histórico permanece disponível.</div>`:'<div class="event-card"><span class="eyebrow">PRÓXIMO CAPÍTULO</span><h3>Seu caminho começa aqui.</h3><p>Conheça sua primeira oportunidade e faça sua escolha.</p><button class="action primary" id="advance">Iniciar minha trajetória</button></div>';
  const e=save.pendingEvent;
- return `<article class="event-card ${e.matchFeedback?'has-match':''}" tabindex="-1" aria-label="Situação atual"><div class="event-top"><span class="eyebrow">${e.matchFeedback?'ÚLTIMA PARTIDA':({INFO:'SUA CARREIRA',CHOICE:'HORA DE DECIDIR',MATCH:'ÚLTIMA PARTIDA',SEASON_END:'FIM DE TEMPORADA',MARKET:'PROPOSTAS',MILESTONE:'MOMENTO DA CARREIRA'}[e.kind])}</span><span class="event-age">${save.player.season} · ${save.player.age} anos</span></div><h3>${esc(e.title)}</h3>${feedbackCard(e)}${contextCard(e)}<div class="tags">${e.tags.map(t=>`<span>${esc(t)}</span>`).join('')}</div>${e.choices?.length?`<section class="decision-panel"><div class="decision-heading"><h4>Qual é sua decisão?</h4><span>${e.choices.length} caminhos</span></div>${e.choices.map((c,i)=>`<button class="choice" data-choice="${c.id}"><span class="choice-number" aria-hidden="true">${String(i+1).padStart(2,'0')}</span><span class="choice-copy"><b>${esc(c.label)}</b>${c.hint?`<small>${esc(c.hint.startsWith(c.label+' · ')?c.hint.slice(c.label.length+3):c.hint)}</small>`:''}</span></button>`).join('')}</section>`:`<button class="action primary" id="advance">Seguir minha carreira</button>`}</article>`;
+ return `<article class="event-card ${e.matchFeedback?'has-match':''}" tabindex="-1" aria-label="Situação atual"><div class="event-top"><span class="eyebrow">${e.matchFeedback?'ÚLTIMA PARTIDA':({INFO:'SUA CARREIRA',CHOICE:'HORA DE DECIDIR',MATCH:'ÚLTIMA PARTIDA',SEASON_END:'FIM DE TEMPORADA',MARKET:'PROPOSTAS',MILESTONE:'MOMENTO DA CARREIRA'}[e.kind])}</span><span class="event-age">${save.player.season} · ${save.player.age} anos</span></div><h3>${esc(e.title)}</h3>${feedbackCard(e)}${contextCard(e)}<div class="tags">${e.tags.map(t=>`<span>${esc(t)}</span>`).join('')}</div>${e.choices?.length?`<section class="decision-panel"><div class="decision-heading"><h4>Qual é sua decisão?</h4><span>${e.choices.length} caminhos</span></div>${e.choices.map((c,i)=>`<button class="choice" data-choice="${c.id}" ${c.id==='career:explore'&&!evaluationSearchPreview(save!.player).available?'disabled':''}><span class="choice-number" aria-hidden="true">${String(i+1).padStart(2,'0')}</span><span class="choice-copy"><b>${esc(c.label)}</b>${choiceHint(c)?`<small>${esc(choiceHint(c)!.startsWith(c.label+' · ')?choiceHint(c)!.slice(c.label.length+3):choiceHint(c)!)}</small>`:''}</span></button>`).join('')}</section>`:`<button class="action primary" id="advance">Seguir minha carreira</button>`}</article>`;
 }
 
 function seasonStrip(){const p=save!.player,s=p.currentSeason.categories?.[competitionCategory(p)]??p.currentSeason;return `<div class="season-category">${esc(CATEGORY_LABEL[competitionCategory(p)])} · nesta temporada</div><div class="season-strip"><div><b>${s.appearances}</b><span>Jogos</span></div><div><b>${s.goals}</b><span>Gols</span></div><div><b>${s.assists}</b><span>Assist.</span></div><div><b>${s.motm??0}</b><span>Destaques</span></div><div><b>${s.avgRating?s.avgRating.toFixed(1):'—'}</b><span>Nota média</span></div></div>`;}

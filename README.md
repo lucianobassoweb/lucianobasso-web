@@ -2,7 +2,7 @@
 
 Jogo de carreira individual no futebol, responsivo para celular e desktop, com funcionamento offline. Começa aos 12 numa escolinha local. As decisões profissionais e de vida conduzem uma biografia sorteada.
 
-Versão experimental 0.3.7: estudos de Ronaldinho, Kaká, Romário, Diego Souza, Rivaldo, Lulinha e Somália aplicados a origem familiar, escola, descoberta, reconversão, transição, afastamentos e longevidade. Ver `docs/CAREER_CASE_STUDIES.md`, `docs/GAME_SPEC.md` e `PROJECT_LOG.md` para decisões, fórmulas, fontes e limites.
+Versão experimental 0.3.8: estudos de Ronaldinho, Kaká, Romário, Diego Souza, Rivaldo, Lulinha e Somália aplicados a origem familiar, escola, descoberta, reconversão, transição, afastamentos e longevidade. Ver `docs/CAREER_CASE_STUDIES.md`, `docs/GAME_SPEC.md` e `PROJECT_LOG.md` para decisões, fórmulas, fontes e limites.
 
 ```bash
 npm ci
@@ -69,3 +69,10 @@ Cobrança por setor e reconhecimento individual passam a considerar posição, m
 ## 0.3.7 — produção do atacante e disputa por espaço
 
 Nota de ST/WG passa a exigir produção observada: assistência permite boa avaliação sem gol; sem contribuição direta/criação suficiente a nota não sobe apenas pelo repertório. Justificativa visível na partida. Sequência recente no mesmo clube/categoria/posição/temporada pesa na escalação, treinador e torcida; formação recebe menor intensidade. Banco e entradas curtas sem gol não inventam nem apagam a seca. Gol encerra o episódio, assistências/criação atenuam. Critério de promoção ofensiva foi ajustado à nova nota com produção por90minutos e amostra mínima, sem promoção automática por idade. Saves legados mantêm seus eventos/notas: registro recente começa nas próximas atuações, sem inventar partidas antigas.
+
+
+## 0.3.8 — busca de avaliação com custo e oportunidade
+
+Buscar outras avaliações custa 3 de fadiga mental e até 2 de pressão, informados antes do clique e registrados no recibo. Uma busca por temporada, sem acumular enquanto aguarda a próxima lista; só sem vínculo com clube e fora do profissional, com fadiga abaixo de 80. A prioridade favorece um segundo candidato na próxima lista e é consumida nessa geração, mesmo sem segunda opção. Não altera a probabilidade de aprovação. Eventos/saves antigos mantêm o conteúdo e recebem o hint atual. Pressão/fadiga ainda não reduzem diretamente nota juvenil ou aprovação; não confundir busca, convite e teste.
+
+Teste repetível: `tests/search-evaluation.mjs`, 8 grupos, além da suíte e gates do protocolo. Revisão independente: 7 grupos. Validação de interface em 390×844 e 320×740 com save fictício isolado; sem teste Safari físico.

@@ -41,7 +41,7 @@ const life=fields({originState:text,residence:text,heartClubId:text,localSchool:
   family:fields({...numeric('resources availableTime relocationWillingness'),parents:array(text)}),
   childhood:oneOf('RUA','FUTSAL','ESCOLA','MULTIESPORTE'),
   education:fields({priority:oneOf('SCHOOL','BALANCED','FOOTBALL'),chosenFor:nullable(number),credits:number,completed:boolean,yearProgress:optional(number)}),
-  scouting:fields({...numeric('observations trialAttempts lastAttemptSeason'),rejections:array(fields({season:number,clubId:text}))}),
+  scouting:fields({searchPriority:optional(boolean),lastSearchSeason:optional(v=>number(v)&&Number.isSafeInteger(v)&&Number(v)>=0),...numeric('observations trialAttempts lastAttemptSeason'),rejections:array(fields({season:number,clubId:text}))}),
   secondCareer:optional(fields({path:oneOf('WORK','TECHNICAL','DEGREE','COACH_COURSE'),status:oneOf('SEEKING_WORK','IN_TRAINING')}))});
 const coachChange=fields({clubId:text,oldCoachId:text,newCoachId:text,season:number,turn:number,reason:text});
 const coaching=fields({...numeric('season completedBlocks seed'),progress:optional(number),
@@ -87,7 +87,13 @@ const playerFields=fields({recentForm:optional(recentForm),decisionMemory:option
   history:array(fields({...numeric('turn season age'),type:text,headline:text,detail:text})),
   life:optional(life),tactical:optional(fields({coachId:text,role:oneOf('BALANCED','MOBILE','HOLD'),support:number,trust:number,discussedFor:nullable(number)})),
   professionalStatus:optional(oneOf('YOUTH','INVITED','SENIOR')),coaching:optional(coaching)});
-const player:Guard=v=>playerFields(v)&&object(v)&&(!object(v.recentForm)||Number(v.recentForm.lastObservedTurn)<=Number(v.careerTurn));
+const player:Guard=v=>{
+  if(!playerFields(v)||!object(v))return false;
+  if(object(v.recentForm)&&Number(v.recentForm.lastObservedTurn)>Number(v.careerTurn))return false;
+  const scouting=object(v.life)&&object(v.life.scouting)?v.life.scouting:null;
+  return !scouting||scouting.lastSearchSeason===undefined||Number(scouting.lastSearchSeason)<=Number(v.season);
+};
+
 /** The original mandatory fields are retained; later fields may be absent on legacy saves. */
 const saveShape=fields({version:oneOf('0.1.0-playable.2'),createdAt:text,updatedAt:text,player,pendingEvent:nullable(event)});
 function finiteValues(value:unknown,ancestors=new Set<object>()):boolean{
