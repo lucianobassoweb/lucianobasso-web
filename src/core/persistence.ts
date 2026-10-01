@@ -52,19 +52,20 @@ const coaching=fields({...numeric('season completedBlocks seed'),progress:option
   changes:array(coachChange),pendingChange:nullable(coachChange)});
 const feedback=fields({opponent:text,coachName:text,fanReaction:text,coachReaction:text,started:boolean,cleanSheet:boolean,
   ...numeric('minutes goals assists rating saves teamGoals oppGoals blockGames blockStarts blockGoals blockAssists blockMinutes'),
-  category:optional(category),showScore:optional(boolean),ratingReason:optional(text)});
-const decisionFamily=oneOf('LOAD','SPACE','SERVICE','RIVALRY','PRESSURE','ADAPTATION','PATH');
+  category:optional(category),showScore:optional(boolean),ratingReason:optional(text),groupReaction:optional(text)});
+const decisionFamily=oneOf('LOAD','SPACE','SERVICE','RIVALRY','PRESSURE','ADAPTATION','PATH','LIFE');
 const event=fields({decisionContext:optional(text),decisionFamily:optional(decisionFamily),id:text,kind:oneOf('INFO','CHOICE','MATCH','SEASON_END','MARKET','MILESTONE'),title:text,body:text,tags:array(text),
   choices:optional(array(fields({id:text,label:text,hint:optional(text)}))),payload:optional(object),matchFeedback:optional(feedback)});
 const natural:Guard=v=>number(v)&&Number.isSafeInteger(v)&&Number(v)>=0;
-const chapterShape={id:text,kind:oneOf('FORMATION','REGULARITY','COMEBACK'),title:text,objective:text,
+const chapterShape={challengeVersion:optional(v=>v===1),position:optional(oneOf('IND','GK','CB','FB','DM','CM','AM','WG','ST')),minMatchMinutes:optional(v=>number(v)&&Number(v)>=20&&Number(v)<=90),performanceLabel:optional(text),id:text,kind:oneOf('FORMATION','REGULARITY','COMEBACK'),title:text,objective:text,
   startedSeason:natural,startedTurn:natural,deadlineTurn:natural,clubId:nullable(text),category,
   appearances:natural,minutes:natural,goodMatches:natural,targetAppearances:natural,targetMinutes:natural,targetGoodMatches:natural};
-const chapter:Guard=v=>fields(chapterShape)(v)&&object(v)&&Number(v.deadlineTurn)>Number(v.startedTurn)&&Number(v.targetAppearances)>0&&Number(v.targetMinutes)>0&&Number(v.goodMatches)<=Number(v.appearances);
+const chapter:Guard=v=>fields(chapterShape)(v)&&object(v)&&Number(v.deadlineTurn)>Number(v.startedTurn)&&Number(v.targetAppearances)>0&&Number(v.targetMinutes)>0&&Number(v.goodMatches)<=Number(v.appearances)
+  &&(v.challengeVersion!==1||position(v.position)&&number(v.minMatchMinutes)&&Number(v.minMatchMinutes)>=20&&Number(v.minMatchMinutes)<=90&&text(v.performanceLabel)&&Number(v.targetGoodMatches)>0&&Number(v.targetGoodMatches)<=Number(v.targetAppearances)&&Number(v.targetMinutes)>=Number(v.targetAppearances)*Number(v.minMatchMinutes));
 const archivedChapter:Guard=v=>chapter(v)&&fields({endedSeason:natural,endedTurn:natural,outcome:oneOf('ACHIEVED','PARTIAL','UNMET'),payoff:text})(v)&&object(v)&&Number(v.endedTurn)>=Number(v.startedTurn);
 const story=fields({active:nullable(chapter),archive:array(archivedChapter),lastObservedTurn:natural,sequence:natural});
 const choiceResult=fields({eventId:text,choiceId:text,label:text,season:natural,turn:natural,summary:text,effects:array(text)});
-const decisionMemory=fields({recent:v=>Array.isArray(v)&&v.length<=3&&v.every(fields({family:decisionFamily,turn:natural})),lastOffered:v=>object(v)&&Object.keys(v).length<=7&&Object.entries(v).every(([key,value])=>decisionFamily(key)&&natural(value)),lastExtraTurn:optional(natural),lastResolvedEvent:optional(text),extraLoad:optional(v=>natural(v)&&Number(v)<=2)});
+const decisionMemory=fields({recent:v=>Array.isArray(v)&&v.length<=3&&v.every(fields({family:decisionFamily,turn:natural})),lastOffered:v=>object(v)&&Object.keys(v).length<=8&&Object.entries(v).every(([key,value])=>decisionFamily(key)&&natural(value)),lastExtraTurn:optional(natural),lastResolvedEvent:optional(text),extraLoad:optional(v=>natural(v)&&Number(v)<=2)});
 const bounded=(lo:number,hi:number):Guard=>v=>number(v)&&Number(v)>=lo&&Number(v)<=hi;
 const formContext=fields({clubId:nullable(text),category,position:oneOf('IND','GK','CB','FB','DM','CM','AM','WG','ST'),season:natural});
 const formObservation=fields({turn:natural,minutes:bounded(0,120),goals:v=>natural(v)&&Number(v)<=20,assists:v=>natural(v)&&Number(v)<=20,rating:bounded(0,10),xg:bounded(0,20),xa:bounded(0,20)});
@@ -75,7 +76,9 @@ const recentForm:Guard=v=>{
 };
 
 const youthPositionResponse=fields({season:v=>number(v)&&Number.isSafeInteger(v)&&Number(v)>=0,reviewedSeason:v=>number(v)&&Number.isSafeInteger(v)&&Number(v)>=0,clubId:nullable(text),category,position,recommendedPosition:position,decision:oneOf('INSIST','EXPERIMENT'),penalty:v=>number(v)&&Number(v)>=0&&Number(v)<=.16});
-const playerFields=fields({attributeScale:optional(oneOf('ADULT_REFERENCE_1')),youthPositionResponse:optional(youthPositionResponse),recentForm:optional(recentForm),decisionMemory:optional(decisionMemory),story:optional(story),lastChoiceResult:optional(choiceResult),id:text,name:text,hometown:text,heartClubId:text,currentClubId:nullable(text),
+const lifestyle=fields({happiness:bounded(0,100),excessKg:bounded(0,12),sleepDebt:bounded(0,8),lastProcessedTurn:natural});
+const squad=fields({version:oneOf('CONTEXT_1'),currentKey:optional(text),lastObservedTurn:natural,contexts:map(fields({appearances:natural,starts:natural,minutes:natural,captain:boolean,lastOfferedSeason:optional(natural),lastResolvedEvent:optional(text)}))});
+const playerFields=fields({lifestyle:optional(lifestyle),squad:optional(squad),attributeScale:optional(oneOf('ADULT_REFERENCE_1')),youthPositionResponse:optional(youthPositionResponse),recentForm:optional(recentForm),decisionMemory:optional(decisionMemory),story:optional(story),lastChoiceResult:optional(choiceResult),id:text,name:text,hometown:text,heartClubId:text,currentClubId:nullable(text),
   ...numeric('birthYear age season seasonTurn careerTurn adaptationDebt positionChanges heightCm weightKg morale confidence pressure mentalFatigue physicalCondition reputation marketValue contractYearsLeft rngState'),
   phase:oneOf('ESCOLINHA','BASE','PROFISSIONAL','AUGE','VETERANO','APOSENTADO'),position:oneOf('IND','GK','CB','FB','DM','CM','AM','WG','ST'),
   transferIntent:oneOf('STAY','OPEN','LEAVE','FORCE'),secondaryPositions:array(position),
@@ -91,6 +94,8 @@ const playerFields=fields({attributeScale:optional(oneOf('ADULT_REFERENCE_1')),y
   professionalStatus:optional(oneOf('YOUTH','INVITED','SENIOR')),coaching:optional(coaching)});
 const player:Guard=v=>{
   if(!playerFields(v)||!object(v))return false;
+  if(object(v.lifestyle)&&Number(v.lifestyle.lastProcessedTurn)>Number(v.careerTurn))return false;
+  if(object(v.squad)){if(Number(v.squad.lastObservedTurn)>Number(v.careerTurn)||!object(v.squad.contexts))return false;for(const ctx of Object.values(v.squad.contexts)){if(!object(ctx)||Number(ctx.starts)>Number(ctx.appearances)||Number(ctx.minutes)>Number(ctx.appearances)*120||ctx.lastOfferedSeason!==undefined&&Number(ctx.lastOfferedSeason)>Number(v.season))return false;}}
   if(object(v.recentForm)&&Number(v.recentForm.lastObservedTurn)>Number(v.careerTurn))return false;
   if(object(v.youthPositionResponse)){const plan=v.youthPositionResponse;if(!Number.isSafeInteger(plan.season)||Number(plan.season)>Number(v.season)||Number(plan.reviewedSeason)!==Number(plan.season)-1||plan.decision==='EXPERIMENT'&&Number(plan.penalty)!==0||plan.decision==='INSIST'&&(plan.position===plan.recommendedPosition||Number(plan.penalty)<.08))return false;}
   const scouting=object(v.life)&&object(v.life.scouting)?v.life.scouting:null;

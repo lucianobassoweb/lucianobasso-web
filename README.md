@@ -2,7 +2,7 @@
 
 Jogo de carreira individual no futebol, responsivo para celular e desktop, com funcionamento offline. Começa aos 12 numa escolinha local. As decisões profissionais e de vida conduzem uma biografia sorteada.
 
-Versão experimental 0.3.11: estudos de Ronaldinho, Kaká, Romário, Diego Souza, Rivaldo, Lulinha e Somália aplicados a origem familiar, escola, descoberta, reconversão, transição, afastamentos e longevidade. Ver `docs/CAREER_CASE_STUDIES.md`, `docs/GAME_SPEC.md` e `PROJECT_LOG.md` para decisões, fórmulas, fontes e limites.
+Versão experimental 0.3.12: estudos de Ronaldinho, Kaká, Romário, Diego Souza, Rivaldo, Lulinha e Somália aplicados a origem familiar, escola, descoberta, reconversão, transição, afastamentos e longevidade. Ver `docs/CAREER_CASE_STUDIES.md`, `docs/GAME_SPEC.md` e `PROJECT_LOG.md` para decisões, fórmulas, fontes e limites.
 
 ```bash
 npm ci
@@ -104,3 +104,14 @@ Atributos usam referência adulta: partida aos12 reduzida19,2 pontos, aprendizag
 
 
 Correção final deUX0.3.11: HUD compacto persistente durante a rolagem (no celular acima da navegação), uma coluna e faixa de temporada substituem os dois cartões grandes. Balanço anual mostra os números do ano encerrado, partidas mostram o ano em andamento. Capítulos ficam depois das decisões; reações/contexto/próximos passos continuam diretos.
+
+
+## 0.3.12 — decisões, grupo e estudos
+
+Decisões ficam junto das quatro habilidades relevantes da posição, acima da partida. HUD de sete estados permanece no topo móvel. Fonte nativa Apple, títulos menores e pesos discretos; perfil mostra idade e os 16 atributos adquiridos. Cores com rótulos comparam a referência experimental da idade, sem revelar DNA ou potencial.
+
+Respeito/ressentimento do grupo afetam abastecimento ofensivo e cobertura de intervenções defensivas; capitania exige presença real e tem custos. Lazer permite felicidade, recuperação ou custos persistentes de sono/peso/condição; álcool apenas em personagens adultos. Novos capítulos exigem atuações factuais por posição, preservando os capítulos legados.
+
+Habilidades adquiridas evoluem por causas, sem ruído aleatório na progressão. Até os18, escola acelera visão e decisão, mas reduz treino técnico e físico. Ganhos cognitivos permanecem depois; não há bônus retroativo de diploma. Rever vídeo aumenta discretamente experiência posicional e cobra fadiga, sem gerar atributos.
+
+Save continua local ao navegador/dispositivo, na mesma chave. Teste via raw.githack é acesso público por link, sem controle de acesso; hospedagem privada e sincronização ainda não foram configuradas.

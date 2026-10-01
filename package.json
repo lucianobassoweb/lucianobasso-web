@@ -1,6 +1,6 @@
 {
   "name": "1903",
-  "version": "0.3.11-experimental",
+  "version": "0.3.12-experimental",
   "private": true,
   "type": "module",
   "scripts": {
@@ -11,7 +11,7 @@
     "simulate:positions": "node dist/dev/simulate-positions.js",
     "audit:positions": "node dist/dev/position-audit.js",
     "simulate:distribution": "node dist/dev/position-distribution.js",
-    "test": "npm run build && node tests/career-behavior.mjs && node tests/new-case-behavior.mjs && node tests/coach-career-behavior.mjs && node tests/single-match-career.mjs && node tests/persistence.test.mjs && node tests/story-career.mjs && node tests/career-context.mjs && node tests/decision-dilemmas.mjs && node tests/fan-accountability.mjs && node tests/fan-engine.mjs && node tests/form.mjs && node tests/attack-engine.mjs && node tests/search-evaluation.mjs && node tests/youth-position-review.mjs && node tests/youth-position-engine.mjs && node tests/attribute-scale.mjs",
+    "test": "npm run build && node tests/career-behavior.mjs && node tests/new-case-behavior.mjs && node tests/coach-career-behavior.mjs && node tests/single-match-career.mjs && node tests/persistence.test.mjs && node tests/story-career.mjs && node tests/career-context.mjs && node tests/decision-dilemmas.mjs && node tests/fan-accountability.mjs && node tests/fan-engine.mjs && node tests/form.mjs && node tests/attack-engine.mjs && node tests/search-evaluation.mjs && node tests/youth-position-review.mjs && node tests/youth-position-engine.mjs && node tests/attribute-scale.mjs && node tests/story-challenges.mjs && node tests/lifestyle.mjs && node tests/group-life-engine.mjs && node tests/development-causes.mjs",
     "standalone": "npm run build && python3 make_standalone.py"
   },
   "devDependencies": {

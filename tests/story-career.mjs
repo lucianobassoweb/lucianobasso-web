@@ -7,7 +7,9 @@ import {createCareerWithSeed,advanceCareer,resolveChoice} from '../dist/core/eng
 import {ensureStories,updateStories,choiceSnapshot} from '../dist/core/stories.js';
 import {ensureCoaching,syncCoachContext} from '../dist/core/coaches.js';
 const fresh=seed=>createCareerWithSeed('História',seed,'gremio','Porto Alegre','RS');
-const ready=seed=>{const s=fresh(seed),p=s.player;s.pendingEvent=null;p.position='GK';p.positionSeasonChosenFor=p.season;p.life.education.chosenFor=p.season;return s;};
+const ready=seed=>{const s=fresh(seed),p=s.player;s.pendingEvent=null;p.position='GK';p.positionSeasonChosenFor=p.season;p.life.education.chosenFor=p.season;
+// Explicit legacy active chapter: retain the old contractual objectives in this compatibility suite.
+p.story.active={id:'story-1',kind:'FORMATION',category:'U15',clubId:null,title:'Legado',objective:'3 participações, 120 minutos',startedSeason:p.season,startedTurn:0,deadlineTurn:8,appearances:0,minutes:0,goodMatches:0,targetAppearances:3,targetMinutes:120,targetGoodMatches:0};p.story.sequence=1;return s;};
 const senior=seed=>{const s=ready(seed),p=s.player;p.age=24;p.phase='PROFISSIONAL';p.professionalStatus='SENIOR';p.currentClubId='gremio';p.currentSeason.clubId='gremio';delete p.story;ensureCoaching(p);syncCoachContext(p);p.tactical.discussedFor=p.season;return s;};
 const migrant=ready(310);delete migrant.player.story;migrant.player.currentSeason.appearances=15;migrant.player.currentSeason.minutes=900;migrant.player.careerTurn=15;
 ensureStories(migrant.player);assert.equal(migrant.player.story.active.appearances,0);assert.equal(migrant.player.story.archive.length,0);assert.equal(migrant.player.story.active.startedTurn,15);
@@ -29,7 +31,7 @@ const retire=senior(386);retire.pendingEvent={id:'retirement',kind:'CHOICE',titl
 const reconsider=senior(388),job=ensureCoaching(reconsider.player).jobs['vasco'];
 reconsider.pendingEvent={id:'offer',kind:'MARKET',title:'Proposta',body:'',tags:[],payload:{coachOffers:{vasco:job.coachId+'-old'}},choices:[{id:'market:vasco:100:2026',label:'Aceitar Vasco'}]};
 resolveChoice(reconsider,'market:vasco:100:2026');assert.equal(reconsider.pendingEvent.id,'market-reconsider');assert.equal(reconsider.player.currentClubId,'gremio');assert.match(reconsider.player.lastChoiceResult.summary,/treinador/);assert.ok(!reconsider.player.lastChoiceResult.effects.some(x=>x.startsWith('clube:')));
-const regular=senior(390);regular.player.careerStats.appearances=100;regular.player.careerStats.minutes=9000;regular.player.positionProficiency.GK=95;for(const key of Object.keys(regular.player.attributes))regular.player.attributes[key]=90;
+const regular=senior(390);ensureStories(regular.player);Object.assign(regular.player.story.active,{objective:'Legado: 3 partidas, 150 minutos, 2 notas >=6,8',targetAppearances:3,targetMinutes:150,targetGoodMatches:2});for(const k of ['challengeVersion','position','minMatchMinutes','performanceLabel'])delete regular.player.story.active[k];regular.player.careerStats.appearances=100;regular.player.careerStats.minutes=9000;regular.player.positionProficiency.GK=95;for(const key of Object.keys(regular.player.attributes))regular.player.attributes[key]=90;
 for(let i=0;i<25&&!regular.player.story?.archive.some(c=>c.kind==='REGULARITY'&&c.outcome==='ACHIEVED');i++){if(regular.pendingEvent?.choices?.length)resolveChoice(regular,regular.pendingEvent.choices[0].id);else advanceCareer(regular);}
 const regularPayoff=regular.player.story.archive.find(c=>c.kind==='REGULARITY'&&c.outcome==='ACHIEVED');assert.ok(regularPayoff);assert.ok(regularPayoff.goodMatches>=2);assert.ok(regularPayoff.minutes>=150);
 const adult=ready(391);adult.player.age=23;adult.player.professionalStatus='YOUTH';advanceCareer(adult);assert.ok(!adult.pendingEvent.choices.some(c=>c.id==='career:education'));

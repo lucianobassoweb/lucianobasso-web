@@ -69,22 +69,29 @@ export function growthStep(p:PlayerState,rng:RNG,focus:keyof VisibleAttributes|n
   const pos=p.position==='IND'?null:p.position;const devEff=pos?developmentEfficiency(p,pos):1;
   const keys=Object.keys(p.attributes) as (keyof VisibleAttributes)[];
   for(const key of keys){
+    // Study contributes to acquired reading/decision skills; football-specific practice still competes for time.
+    // No retroactive diploma bonus or change to hidden aptitude. These gains persist after adolescence.
+    const cognitive=key==='vision'||key==='decisions';
+    const learningTime=cognitive&&age<=18?(p.life?.education.priority==='SCHOOL'?1.22:p.life?.education.priority==='FOOTBALL'?1:1.08):time;
     const current=p.attributes[key],apt=aptitudeForAttribute(p,key);const roleFactor=pos?positionTrainingMultiplier(pos,key):.90;const focusFactor=focus===key?1.55:1;
     const maturation=['pace','stamina','strength','heading','aerial'].includes(key)&&age<=21?clamp(.72+(age-p.dna.physicalMaturationAge+2)*.08,.56,1.12):1;
-    const ceilingResistance=Math.max(.095,(103-current)/72);let delta=(age<=21?.30:.40)*ageFactor*plasticity*lateBoost*roleFactor*focusFactor*ceilingResistance*devEff*time*coaching*maturation*(p.injury?(['pace','stamina','strength'].includes(key)?.25:.55):1)*(.78+apt/170);
+    const ceilingResistance=Math.max(.095,(103-current)/72);let delta=(age<=21?.30:.40)*ageFactor*plasticity*lateBoost*roleFactor*focusFactor*ceilingResistance*devEff*learningTime*coaching*maturation*(p.injury?(['pace','stamina','strength'].includes(key)?.25:.55):1)*(.78+apt/170);
     if(age>=30&&['pace','stamina','strength'].includes(key))delta-=.06+(age-30)*.045;
     // Reading the game and technique age differently from running capacity.
     if(age>=33&&['vision','decisions','positioning','technique','passing','finishing'].includes(key))delta=Math.max(delta,0);
     // Greater learning during formation compensates the lower acquired starting level, without a cap on potential.
     delta*=age<=13?1.4:age<=17?2.75:age<=21?1.25:1;
-    delta+=rng.normal(0,.045);delta*=calendarScale(p);p.attributes[key]=Number(clamp(current+delta,5,99).toFixed(2));
+    // Keep the legacy stream schedule so unrelated match draws are not shifted.
+    // These samples no longer enter acquired-skill progression.
+    rng.normal(0,.045);delta*=calendarScale(p);p.attributes[key]=Number(clamp(current+delta,5,99).toFixed(2));
   }
 }
 
 export function updateBody(p:PlayerState,rng:RNG):void{
   if(p.age>=21)return;const target=p.dna.adultHeightCm,maturity=p.dna.physicalMaturationAge,yearsLeft=Math.max(1,maturity+2-p.age),gap=Math.max(0,target-p.heightCm);
   if(gap>0){const expected=gap/yearsLeft/4.5;p.heightCm=Number(Math.min(target,p.heightCm+Math.max(0,rng.normal(expected,.42))).toFixed(1));}
-  const targetWeight=Math.max(43,(p.heightCm-100)*(p.age<16?.72:p.age<19?.80:.87));p.weightKg=Number((p.weightKg+(targetWeight-p.weightKg)*.18+rng.normal(0,.2)).toFixed(1));
+  const excess=p.lifestyle?.excessKg??0,baseWeight=p.weightKg-excess;
+  const targetWeight=Math.max(43,(p.heightCm-100)*(p.age<16?.72:p.age<19?.80:.87));p.weightKg=Number((Number((baseWeight+(targetWeight-baseWeight)*.18+rng.normal(0,.2)).toFixed(1))+excess).toFixed(4));
 }
 
 export function overall(p:PlayerState):number{

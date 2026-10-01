@@ -1,3 +1,5 @@
+import {groupAttackSupply,groupCoverRisk} from './group.js';
+import {lifestylePerformancePenalty} from './lifestyle.js';
 import { RNG, clamp } from './random.js';
 import { tacticalRating, roleRating } from './positions.js';
 import type { Club, PlayerState, PlayablePosition } from './types.js';
@@ -21,6 +23,7 @@ export interface MatchResult {
   cleanSheet: boolean;
   headline: string;
   ratingReason?:string;
+  groupCovers?:number;
 }
 
 /** Offensive notes describe observed output, not the player's underlying skill. */
@@ -51,7 +54,7 @@ export function simulatePlayerMatch(player:PlayerState,own:Club,opponent:Club,rn
   const effective=tacticalRating(player,pos);
   const eff=clamp(effective/Math.max(30,rawOv),.68,1.12);
   const emotional=1+((player.morale-50)/100)*.035+((player.confidence-50)/100)*.045-Math.max(0,player.pressure-50)/100*(.025+(100-player.dna.pressureResponse)/100*.08)-player.mentalFatigue/100*.025;
-  const playerLevel=rawOv*eff*emotional;
+  const playerLevel=rawOv*eff*emotional-lifestylePerformancePenalty(player);
   const ownStrength=own.prestige*.68+own.finance*.12+own.youth*.20;
   const oppStrength=opponent.prestige*.68+opponent.finance*.12+opponent.youth*.20;
   const home=fixture?.home??rng.chance(.5);
@@ -66,20 +69,24 @@ export function simulatePlayerMatch(player:PlayerState,own:Club,opponent:Club,rn
   const minutes=fixture?.minutes??(started?rng.int(70,90):rng.int(12,38));
   const minFactor=minutes/90;
   const starFactor=clamp(.72+(playerLevel-ownStrength*.72)/85,.55,1.42);
+  const groupSupply=groupAttackSupply(player);
   let goals=0,assists=0;
   for(let i=0;i<teamGoals;i++){
-    if(rng.chance(goalShare[pos]*starFactor*minFactor*(.85+supply*.3)))goals++;
-    else if(rng.chance(assistShare[pos]*starFactor*minFactor))assists++;
+    if(rng.chance(goalShare[pos]*starFactor*minFactor*(.85+supply*.3)*groupSupply))goals++;
+    else if(rng.chance(assistShare[pos]*starFactor*minFactor*groupSupply))assists++;
   }
   // Rare individual events can occur even in low-scoring games; keeps careers from feeling mechanically tied to score allocation.
-  if(pos!=='GK'&&teamGoals>0&&goals===0&&assists<teamGoals&&rng.chance(goalShare[pos]*.12*starFactor*minFactor))goals=1;
+  if(pos!=='GK'&&teamGoals>0&&goals===0&&assists<teamGoals&&rng.chance(goalShare[pos]*.12*starFactor*minFactor*groupSupply))goals=1;
   const finishing=(player.attributes.finishing+player.attributes.positioning)/200;
   const creation=(player.attributes.vision+player.attributes.passing+player.attributes.crossing)/300;
-  const xg=Number(clamp((goals*.55+rng.float(.02,.36)*goalShare[pos]*5)*minFactor*(.72+finishing*.5),0,2.7).toFixed(2));
-  const xa=Number(clamp((assists*.48+rng.float(.02,.32)*assistShare[pos]*5)*minFactor*(.72+creation*.5),0,2.5).toFixed(2));
+  const xg=Number(clamp((goals*.55+rng.float(.02,.36)*goalShare[pos]*5)*minFactor*(.72+finishing*.5)*groupSupply,0,2.7).toFixed(2));
+  const xa=Number(clamp((assists*.48+rng.float(.02,.32)*assistShare[pos]*5)*minFactor*(.72+creation*.5)*groupSupply,0,2.5).toFixed(2));
   const saves=pos==='GK'?Math.max(0,poisson(rng,clamp(2.7+oppLambda*.75,1.3,6.8))):0;
   const cleanSheet=pos==='GK'&&oppGoals===0&&minutes>=60;
-  const yellow=rng.chance(cardBase[pos]*minFactor+(player.pressure/1000)*importance);
+  const risk=cardBase[pos]*minFactor+(player.pressure/1000)*importance,draw=rng.next();
+  const coordinatedRisk=risk*(minutes>0?groupCoverRisk(player):1);
+  const yellow=draw<coordinatedRisk;
+  const groupCovers=coordinatedRisk<risk&&draw>=coordinatedRisk&&draw<risk?1:0;
   const red=yellow ? rng.chance((pos==='CB'||pos==='DM') ? .035 : .018) : rng.chance((pos==='CB'||pos==='DM') ? .004 : .0015);
   const resultImpact=teamGoals>oppGoals ? .28 : teamGoals<oppGoals ? -.24 : .03;
   const defensiveImpact=(pos==='GK' ? saves*.055+(cleanSheet ? .28 : 0) : ['CB','FB','DM'].includes(pos) ? (oppGoals===0 ? .22 : 0) : 0);
@@ -94,5 +101,5 @@ export function simulatePlayerMatch(player:PlayerState,own:Club,opponent:Club,rn
     assists>0?`${assists} assistência${assists>1?'s':''}.`:
     pos==='GK'&&cleanSheet?`${saves} defesas e jogo sem sofrer gol.`:
     rating>=7.6?'Atuação de alto nível sem participação direta em gol.':'Partida concluída.';
-  return {opponentId:opponent.id,home,started,teamGoals,oppGoals,minutes,goals,assists,motm,yellow,red,rating,xg,xa,saves,cleanSheet,headline,...(ratingReason?{ratingReason}:{})};
+  return {opponentId:opponent.id,home,started,teamGoals,oppGoals,minutes,goals,assists,motm,yellow,red,rating,xg,xa,saves,cleanSheet,headline,groupCovers,...(ratingReason?{ratingReason}:{})};
 }

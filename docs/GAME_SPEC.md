@@ -222,3 +222,20 @@ Condição física, fadiga mental, pressão, confiança e moral aparecem diretam
 ### Correção de UX após feedback — apresentação final0.3.11
 
 Esta regra substitui o cartão grandeComoestou e a janelaMinhaTemporada: Jogar usa uma coluna, HUD compacto de cinco estados persistente durante a rolagem, faixa de temporada e partida/decisão como foco. No celular os estados ficam imediatamente acima da navegação; no desktop junto à navegação superior. Capítulos ficam depois do acontecimento e suas escolhas; recibos compactos conservam consequências. Dados de origem/família/estudos ficam no perfil. Torcida, treinador, contexto e próximos passos seguem diretos, sem expandir. Balanço anual usa o ano encerrado identificado pelo evento, sem mostrar zeros do ano recém-aberto. Reinício continua visível no final da telaJogar e exige confirmação.
+
+
+## 0.3.12 experimental — grupo, hábitos e escolhas próximas das habilidades
+
+Esta seção substitui os capítulos automáticos e a apresentação anterior das decisões. Quatro habilidades adquiridas relevantes ficam no cabeçalho, com valores atuais, barras, classificação textual e cores relativas à idade. Perfil mostra16 habilidades/idade; DNA continua oculto. Referência editorial por idade12/13/14/15/16/17/18/21/25+:24/27/31/37/43/49/55/61/65, interpolada, verde>=ref+6/vermelho<ref−6/âmbar restante. É referência do jogo, não parâmetro científico. Fonte nativa, títulos menores e pouco negrito conforme pedido. HUD fixo no topo do celular com físico, fadiga, pressão, confiança, moral, respeito e felicidade. Reações/contexto/próximos passos permanecem diretos.
+
+Respeito é por clube/escolinha e categoria, com memórias preservadas. Cooperação combina respeito e ressentimento; abastecimento altera contribuição/xG/xA, e cobertura reduz risco de intervenção com cartão emCB/FB/DM. Não reescreve placar coletivo. Capitania requer10 titularidades/600min/respeito75/ressentimento<=20 neste contexto, oferta uma vez por temporada; aceitar custa pressão4/fadiga2, recusar não tira respeito. Faixa pode ser revogada, não garante vaga.
+
+Hábitos: felicidade separada da moral, excesso de peso e carga de sono opcionais. Lazer equilibrado ajuda recuperação; noites longas/comida trazem prazer com custo de condição/sono/peso persistente. Menores têm videogame/amigos/festas sem álcool; adultos podem ter cerveja/balada. Pesos/duração são abstrações de rotina, não efeitos médicos de uma refeição. Novos capítulos exigem4 participações>=45min/180min na base ou240profissional e2 boas atuações com fatos da posição em8 rodadas. Amostra forte eleva exigência; retorno tem3 participações>=20min/90min/2 boas. Legados mantêm seus alvos.
+
+### Escola e desenvolvimento cognitivo — decisão do usuário
+
+Escola não deve reduzir indistintamente todos os atributos. Aos12–18, prioridade SCHOOL/BALANCED/FOOTBALL aplica1,22/1,08/1 ao aprendizado de visão e tomada de decisão; demais atributos mantêm0,82/0,94/1 de tempo para futebol. DNA, idade, posição, foco, adaptação, maturação, lesão e resistência ao crescimento continuam modulando o delta. Após18, todas as prioridades usam1: os ganhos adquiridos permanecem e já participam das avaliações por função e partidas. Não há aumento retroativo no carregamento/escolha de prioridade nem alteração do DNA. Posicionamento segue sendo prática específica de futebol. Escolaridade mantém progresso e portas da segunda carreira, sem conceder profissão/diploma automaticamente.
+
+Ruído aleatório foi retirado do delta de atributos. Mantêm-se leituras legadas de RNG apenas para compatibilidade da agenda de sorteios. Rever vídeo concede experiência posicional0,12×escala do calendário e fadiga2, sem bônus de atributos. Saves históricos não são recalculados.
+
+Treinador aparece no cabeçalho/perfil; clubes usam comando atribuído na simulação, escolinhas têm nome ficcional estável. Save legado sem comando mostra ausência até inicialização pelo motor, sem fabricar cargo retroativo. Elenco/passes/votos nominais/comissões distintas de base permanecem futuros. Não validar4h ou Safari físico por testes automatizados.

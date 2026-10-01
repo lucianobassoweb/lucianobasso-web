@@ -2,7 +2,7 @@
 
 ## Referência e leitura
 
-Leia `docs/GAME_SPEC.md`, as últimas decisões de `PROJECT_LOG.md` e `docs/AI_SESSION_PROTOCOL.md` antes de alterar o jogo. A base é 0.3.11 experimental (motor da 0.3.0); D0021/D0022 substituem partidas em blocos e origem sorteada. Fonte em `src/`; `index.html` é gerado. Saves legados precisam de compatibilidade. O log é append-only.
+Leia `docs/GAME_SPEC.md`, as últimas decisões de `PROJECT_LOG.md` e `docs/AI_SESSION_PROTOCOL.md` antes de alterar o jogo. A base é 0.3.12 experimental (motor da 0.3.0); D0021/D0022 substituem partidas em blocos e origem sorteada. Fonte em `src/`; `index.html` é gerado. Saves legados precisam de compatibilidade. O log é append-only.
 
 ## Autorização e roteamento
 

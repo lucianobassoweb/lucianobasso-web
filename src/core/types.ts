@@ -208,6 +208,7 @@ export interface StoryChapter {
   startedSeason:number; startedTurn:number; deadlineTurn:number; clubId:string|null; category:CompetitionCategory;
   appearances:number; minutes:number; goodMatches:number;
   targetAppearances:number; targetMinutes:number; targetGoodMatches:number;
+  challengeVersion?:1; position?:Position; minMatchMinutes?:number; performanceLabel?:string;
 }
 export interface StoryArchiveEntry extends StoryChapter {
   endedSeason:number; endedTurn:number; outcome:'ACHIEVED'|'PARTIAL'|'UNMET'; payoff:string;
@@ -219,7 +220,7 @@ export interface ChoiceResult {
   eventId:string; choiceId:string; label:string; season:number; turn:number; summary:string; effects:string[];
 }
 
-export type DecisionFamily='LOAD'|'SPACE'|'SERVICE'|'RIVALRY'|'PRESSURE'|'ADAPTATION'|'PATH';
+export type DecisionFamily='LOAD'|'SPACE'|'SERVICE'|'RIVALRY'|'PRESSURE'|'ADAPTATION'|'PATH'|'LIFE';
 export interface DecisionMemory {
   recent:{family:DecisionFamily;turn:number}[];
   lastOffered:Partial<Record<DecisionFamily,number>>;
@@ -233,7 +234,12 @@ export interface YouthPositionResponse {
   position:PlayablePosition; recommendedPosition:PlayablePosition; decision:'INSIST'|'EXPERIMENT'; penalty:number;
 }
 
+export interface LifestyleState {happiness:number;excessKg:number;sleepDebt:number;lastProcessedTurn:number;}
+export interface SquadState {version:'CONTEXT_1';currentKey?:string;lastObservedTurn:number;contexts:Record<string,{appearances:number;starts:number;minutes:number;captain:boolean;lastOfferedSeason?:number;lastResolvedEvent?:string}>;}
+
 export interface PlayerState {
+  lifestyle?:LifestyleState;
+  squad?:SquadState;
   youthPositionResponse?:YouthPositionResponse;
   recentForm?:RecentMatchForm;
   decisionMemory?:DecisionMemory;
@@ -309,7 +315,7 @@ export interface MatchFeedback {
   showScore?:boolean;
   opponent:string; coachName:string; started:boolean; minutes:number; goals:number; assists:number; rating:number;
   saves:number; cleanSheet:boolean; teamGoals:number; oppGoals:number;
-  fanReaction:string; coachReaction:string; ratingReason?:string;
+  fanReaction:string; coachReaction:string; ratingReason?:string; groupReaction?:string;
   blockGames:number; blockStarts:number; blockGoals:number; blockAssists:number; blockMinutes:number;
 }
 export interface CareerEvent {
