@@ -1,0 +1,5 @@
+import assert from 'node:assert/strict';
+import {createCareerWithSeed} from '../dist/core/engine.js';
+import {clubStanding} from '../dist/core/club-standing.js';
+const p=createCareerWithSeed('Tabela',55).player;assert.equal(clubStanding(p).label,'Sem tabela');p.currentClubId='gremio';assert.equal(clubStanding(p).label,'Sem tabela');p.professionalStatus='SENIOR';assert.equal(clubStanding(p).label,'Não registrada');const c=(id,points,gf=10,ga=4,group='A')=>({clubId:id,points,goalsFor:gf,goalsAgainst:ga,group,games:5});p.coaching={season:2026,campaigns:{gremio:c('gremio',9),vasco:c('vasco',9,10,6),santos:c('santos',12),other:c('other',15,30,0,'B')}};const before=JSON.stringify(p);assert.equal(clubStanding(p).label,'2º · Série A');assert.match(clubStanding(p).detail,/2º de 3 clubes, 9 pontos/);assert.equal(JSON.stringify(p),before);p.coaching.campaigns.gremio.games=0;assert.equal(clubStanding(p).label,'Sem jogos');p.coaching.campaigns.gremio.games=5;p.coaching.campaigns.gremio.group='D2';assert.equal(clubStanding(p).label,'1º · Série D · grupo 2');
+console.log('PASS ranking tie-breaks/group filtering/no fixtures/legacy/youth/read-only');

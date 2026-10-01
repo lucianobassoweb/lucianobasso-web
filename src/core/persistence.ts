@@ -1,3 +1,4 @@
+import {DECISION_CASES,caseActionId} from '../data/decision-cases.js';
 import {migrateAttributeScale} from './attribute-scale.js';
 import type { SaveGame } from './types.js';
 const KEY='1903.save.playable2';
@@ -52,11 +53,13 @@ const coaching=fields({...numeric('season completedBlocks seed'),progress:option
   changes:array(coachChange),pendingChange:nullable(coachChange)});
 const feedback=fields({opponent:text,coachName:text,fanReaction:text,coachReaction:text,started:boolean,cleanSheet:boolean,
   ...numeric('minutes goals assists rating saves teamGoals oppGoals blockGames blockStarts blockGoals blockAssists blockMinutes'),
-  category:optional(category),showScore:optional(boolean),ratingReason:optional(text),groupReaction:optional(text)});
+  category:optional(category),showScore:optional(boolean),ratingReason:optional(text),groupReaction:optional(text),stateReaction:optional(text),opponentId:optional(text)});
 const decisionFamily=oneOf('LOAD','SPACE','SERVICE','RIVALRY','PRESSURE','ADAPTATION','PATH','LIFE');
-const event=fields({decisionContext:optional(text),decisionFamily:optional(decisionFamily),id:text,kind:oneOf('INFO','CHOICE','MATCH','SEASON_END','MARKET','MILESTONE'),title:text,body:text,tags:array(text),
-  choices:optional(array(fields({id:text,label:text,hint:optional(text)}))),payload:optional(object),matchFeedback:optional(feedback)});
 const natural:Guard=v=>number(v)&&Number.isSafeInteger(v)&&Number(v)>=0;
+const caseContext=fields({clubId:nullable(text),category,position:oneOf('IND','GK','CB','FB','DM','CM','AM','WG','ST'),season:natural,turn:natural});
+const eventFields=fields({decisionCaseId:optional(v=>text(v)&&DECISION_CASES.some(c=>c.id===v)),decisionCaseContext:optional(caseContext),decisionContext:optional(text),decisionFamily:optional(decisionFamily),id:text,kind:oneOf('INFO','CHOICE','MATCH','SEASON_END','MARKET','MILESTONE'),title:text,body:text,tags:array(text),
+  choices:optional(array(fields({id:text,label:text,hint:optional(text)}))),payload:optional(object),matchFeedback:optional(feedback)});
+const event:Guard=v=>eventFields(v)&&object(v)&&(v.decisionCaseId===undefined?v.decisionCaseContext===undefined:object(v.decisionCaseContext)&&DECISION_CASES.some(c=>c.id===v.decisionCaseId&&c.family===v.decisionFamily)&&Array.isArray(v.choices)&&v.choices.length===3&&new Set(v.choices.map(c=>object(c)?c.id:null)).size===3);
 const chapterShape={challengeVersion:optional(v=>v===1),position:optional(oneOf('IND','GK','CB','FB','DM','CM','AM','WG','ST')),minMatchMinutes:optional(v=>number(v)&&Number(v)>=20&&Number(v)<=90),performanceLabel:optional(text),id:text,kind:oneOf('FORMATION','REGULARITY','COMEBACK'),title:text,objective:text,
   startedSeason:natural,startedTurn:natural,deadlineTurn:natural,clubId:nullable(text),category,
   appearances:natural,minutes:natural,goodMatches:natural,targetAppearances:natural,targetMinutes:natural,targetGoodMatches:natural};
@@ -65,7 +68,7 @@ const chapter:Guard=v=>fields(chapterShape)(v)&&object(v)&&Number(v.deadlineTurn
 const archivedChapter:Guard=v=>chapter(v)&&fields({endedSeason:natural,endedTurn:natural,outcome:oneOf('ACHIEVED','PARTIAL','UNMET'),payoff:text})(v)&&object(v)&&Number(v.endedTurn)>=Number(v.startedTurn);
 const story=fields({active:nullable(chapter),archive:array(archivedChapter),lastObservedTurn:natural,sequence:natural});
 const choiceResult=fields({eventId:text,choiceId:text,label:text,season:natural,turn:natural,summary:text,effects:array(text)});
-const decisionMemory=fields({recent:v=>Array.isArray(v)&&v.length<=3&&v.every(fields({family:decisionFamily,turn:natural})),lastOffered:v=>object(v)&&Object.keys(v).length<=8&&Object.entries(v).every(([key,value])=>decisionFamily(key)&&natural(value)),lastExtraTurn:optional(natural),lastResolvedEvent:optional(text),extraLoad:optional(v=>natural(v)&&Number(v)<=2)});
+const decisionMemory=fields({recentCases:optional(v=>Array.isArray(v)&&v.length<=20&&v.every(fields({id:text,turn:natural}))),recent:v=>Array.isArray(v)&&v.length<=3&&v.every(fields({family:decisionFamily,turn:natural})),lastOffered:v=>object(v)&&Object.keys(v).length<=8&&Object.entries(v).every(([key,value])=>decisionFamily(key)&&natural(value)),lastExtraTurn:optional(natural),lastResolvedEvent:optional(text),extraLoad:optional(v=>natural(v)&&Number(v)<=2)});
 const bounded=(lo:number,hi:number):Guard=>v=>number(v)&&Number(v)>=lo&&Number(v)<=hi;
 const formContext=fields({clubId:nullable(text),category,position:oneOf('IND','GK','CB','FB','DM','CM','AM','WG','ST'),season:natural});
 const formObservation=fields({turn:natural,minutes:bounded(0,120),goals:v=>natural(v)&&Number(v)<=20,assists:v=>natural(v)&&Number(v)<=20,rating:bounded(0,10),xg:bounded(0,20),xa:bounded(0,20)});
@@ -78,7 +81,12 @@ const recentForm:Guard=v=>{
 const youthPositionResponse=fields({season:v=>number(v)&&Number.isSafeInteger(v)&&Number(v)>=0,reviewedSeason:v=>number(v)&&Number.isSafeInteger(v)&&Number(v)>=0,clubId:nullable(text),category,position,recommendedPosition:position,decision:oneOf('INSIST','EXPERIMENT'),penalty:v=>number(v)&&Number(v)>=0&&Number(v)<=.16});
 const lifestyle=fields({happiness:bounded(0,100),excessKg:bounded(0,12),sleepDebt:bounded(0,8),lastProcessedTurn:natural});
 const squad=fields({version:oneOf('CONTEXT_1'),currentKey:optional(text),lastObservedTurn:natural,contexts:map(fields({appearances:natural,starts:natural,minutes:natural,captain:boolean,lastOfferedSeason:optional(natural),lastResolvedEvent:optional(text)}))});
-const playerFields=fields({lifestyle:optional(lifestyle),squad:optional(squad),attributeScale:optional(oneOf('ADULT_REFERENCE_1')),youthPositionResponse:optional(youthPositionResponse),recentForm:optional(recentForm),decisionMemory:optional(decisionMemory),story:optional(story),lastChoiceResult:optional(choiceResult),id:text,name:text,hometown:text,heartClubId:text,currentClubId:nullable(text),
+const compensation=fields({kind:oneOf('AID','SALARY'),clubId:text,monthly:bounded(1,2500000),agreedSeason:natural,lastReviewedSeason:natural});
+const stateKeys=['physicalCondition','mentalFatigue','pressure','confidence','morale','respect','happiness'];
+const stateDelta=fields({turn:natural,season:natural,groupChanged:optional(boolean),values:v=>object(v)&&Object.entries(v).every(([key,n])=>stateKeys.includes(key)&&bounded(-100,100)(n))});
+const emotionRecord=fields({turn:natural,result:oneOf('W','D','L'),position:oneOf('IND','GK','CB','FB','DM','CM','AM','WG','ST'),minutes:bounded(0,120),goals:v=>natural(v)&&Number(v)<=20,personalFailure:boolean});
+const matchEmotions:Guard=v=>{if(!fields({context:fields({clubId:nullable(text),category,season:natural}),lastObservedTurn:v=>number(v)&&Number.isSafeInteger(v)&&Number(v)>=-1,observations:v=>Array.isArray(v)&&v.length<=8&&v.every(emotionRecord)})(v)||!object(v)||!Array.isArray(v.observations))return false;const observations=v.observations;return observations.every((r,i)=>object(r)&&Number(r.turn)<=Number(v.lastObservedTurn)&&(i===0||Number(r.turn)>Number(observations[i-1].turn)));};
+const playerFields=fields({matchEmotions:optional(matchEmotions),lastStateDelta:optional(stateDelta),compensation:optional(compensation),lifestyle:optional(lifestyle),squad:optional(squad),attributeScale:optional(oneOf('ADULT_REFERENCE_1')),youthPositionResponse:optional(youthPositionResponse),recentForm:optional(recentForm),decisionMemory:optional(decisionMemory),story:optional(story),lastChoiceResult:optional(choiceResult),id:text,name:text,hometown:text,heartClubId:text,currentClubId:nullable(text),
   ...numeric('birthYear age season seasonTurn careerTurn adaptationDebt positionChanges heightCm weightKg morale confidence pressure mentalFatigue physicalCondition reputation marketValue contractYearsLeft rngState'),
   phase:oneOf('ESCOLINHA','BASE','PROFISSIONAL','AUGE','VETERANO','APOSENTADO'),position:oneOf('IND','GK','CB','FB','DM','CM','AM','WG','ST'),
   transferIntent:oneOf('STAY','OPEN','LEAVE','FORCE'),secondaryPositions:array(position),
@@ -94,6 +102,10 @@ const playerFields=fields({lifestyle:optional(lifestyle),squad:optional(squad),a
   professionalStatus:optional(oneOf('YOUTH','INVITED','SENIOR')),coaching:optional(coaching)});
 const player:Guard=v=>{
   if(!playerFields(v)||!object(v))return false;
+  if(object(v.matchEmotions)&&(Number(v.matchEmotions.lastObservedTurn)>Number(v.careerTurn)||object(v.matchEmotions.context)&&Number(v.matchEmotions.context.season)>Number(v.season)))return false;
+  if(object(v.decisionMemory)&&Array.isArray(v.decisionMemory.recentCases)&&v.decisionMemory.recentCases.some(r=>object(r)&&Number(r.turn)>Number(v.careerTurn)))return false;
+  if(object(v.lastStateDelta)&&(Number(v.lastStateDelta.turn)>Number(v.careerTurn)||Number(v.lastStateDelta.season)>Number(v.season)))return false;
+  if(object(v.compensation)){const pay=v.compensation;const senior=v.professionalStatus==='SENIOR'||v.professionalStatus===undefined&&(object(v.careerStats)&&Number(v.careerStats.appearances)>0||Number(v.age)>20&&!!v.currentClubId);if(pay.clubId!==v.currentClubId||Number(pay.agreedSeason)>Number(v.season)||Number(pay.lastReviewedSeason)>Number(v.season)||Number(pay.lastReviewedSeason)<Number(pay.agreedSeason)||pay.kind!==(senior?'SALARY':'AID')||Number(pay.monthly)<(senior?1500:150)||pay.kind==='AID'&&Number(pay.monthly)>3500)return false;}
   if(object(v.lifestyle)&&Number(v.lifestyle.lastProcessedTurn)>Number(v.careerTurn))return false;
   if(object(v.squad)){if(Number(v.squad.lastObservedTurn)>Number(v.careerTurn)||!object(v.squad.contexts))return false;for(const ctx of Object.values(v.squad.contexts)){if(!object(ctx)||Number(ctx.starts)>Number(ctx.appearances)||Number(ctx.minutes)>Number(ctx.appearances)*120||ctx.lastOfferedSeason!==undefined&&Number(ctx.lastOfferedSeason)>Number(v.season))return false;}}
   if(object(v.recentForm)&&Number(v.recentForm.lastObservedTurn)>Number(v.careerTurn))return false;
@@ -111,7 +123,14 @@ function finiteValues(value:unknown,ancestors=new Set<object>()):boolean{
   ancestors.add(value);
   const valid=Object.values(value).every(v=>finiteValues(v,ancestors));ancestors.delete(value);return valid;
 }
-function validSave(value:unknown):value is SaveGame{return saveShape(value)&&finiteValues(value);}
+function validSave(value:unknown):value is SaveGame{
+  if(!saveShape(value)||!finiteValues(value))return false;
+  const s=value as SaveGame,e=s.pendingEvent;
+  if(e?.decisionCaseId){const definition=DECISION_CASES.find(c=>c.id===e.decisionCaseId)!;const category=e.matchFeedback?.category??e.decisionCaseContext?.category??'';
+    if(!definition.choices.every((option,i)=>e.choices?.[i]?.id===caseActionId(option.action,s.player.age,s.player.currentClubId,category)))return false;
+  }
+  return true;
+}
 function inspect(raw:string):SaveGame|null{
   try{const parsed:unknown=JSON.parse(raw);if(validSave(parsed)){recoveryRaw=null;return parsed;}}catch{/* Preserve the exact input for manual recovery. */}
   recoveryRaw=raw;report('corrupt','A carreira salva não pôde ser lida. Baixe os dados originais para recuperação.');return null;

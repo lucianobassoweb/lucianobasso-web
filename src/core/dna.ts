@@ -1,3 +1,4 @@
+import {developmentLoad,acquiredSkillWear} from './development-load.js';
 import { formationOffset } from './attribute-scale.js';
 import { calendarScale } from './calendar.js';
 import { coachProfile } from './coaches.js';
@@ -64,7 +65,7 @@ function aptitudeForAttribute(p:PlayerState,key:keyof VisibleAttributes):number{
 
 export function growthStep(p:PlayerState,rng:RNG,focus:keyof VisibleAttributes|null=null):void{
   const coaching=p.tactical&&p.age<=21?.92+coachProfile(p.tactical.coachId).youth/600:1;
-  const age=p.age;const time=footballTime(p);const plasticity=p.dna.learningPlasticity/100;const lateBoost=p.dna.lateBloomer>62&&age>=18&&age<=23?1.18:1;
+  const load=developmentLoad(p);const age=p.age;const time=footballTime(p);const plasticity=p.dna.learningPlasticity/100;const lateBoost=p.dna.lateBloomer>62&&age>=18&&age<=23?1.18:1;
   const ageFactor=age<=14?1.08:age<=17?1.13:age<=21?.93:age<=25?.64:age<=29?.31:age<=32?.07:-.16;
   const pos=p.position==='IND'?null:p.position;const devEff=pos?developmentEfficiency(p,pos):1;
   const keys=Object.keys(p.attributes) as (keyof VisibleAttributes)[];
@@ -83,7 +84,7 @@ export function growthStep(p:PlayerState,rng:RNG,focus:keyof VisibleAttributes|n
     delta*=age<=13?1.4:age<=17?2.75:age<=21?1.25:1;
     // Keep the legacy stream schedule so unrelated match draws are not shifted.
     // These samples no longer enter acquired-skill progression.
-    rng.normal(0,.045);delta*=calendarScale(p);p.attributes[key]=Number(clamp(current+delta,5,99).toFixed(2));
+    rng.normal(0,.045);if(delta>0)delta*=load.learningMultiplier;delta=(delta-acquiredSkillWear(load,key))*calendarScale(p);p.attributes[key]=Number(clamp(current+delta,5,99).toFixed(2));
   }
 }
 

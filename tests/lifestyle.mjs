@@ -4,13 +4,13 @@ import {buildRoutineDecision,resolveRoutineChoice} from '../dist/core/decisions.
 import {ensureLifestyle,stepLifestyle,lifestylePerformancePenalty} from '../dist/core/lifestyle.js';
 import {updateBody} from '../dist/core/dna.js';
 import {RNG} from '../dist/core/random.js';
-const families=['LOAD','SPACE','SERVICE','RIVALRY','PRESSURE','ADAPTATION','PATH','LIFE'];
 const fresh=(age=12)=>{const p=createCareerWithSeed('Hábitos',415,'gremio','Porto Alegre','RS').player;Object.assign(p,{age,position:'GK',careerTurn:10,physicalCondition:70,mentalFatigue:20});return p;};
 const event=(turn=10)=>({id:`life-${turn}`,kind:'INFO',title:'Partida',body:'Atuação',tags:[],matchFeedback:{category:'U15',started:true,minutes:70,rating:7,goals:0,assists:0}});
-const offer=p=>{p.decisionMemory={recent:[],lastOffered:Object.fromEntries(families.filter(f=>f!=='LIFE').map(f=>[f,p.careerTurn]))};return buildRoutineDecision(p,event(p.careerTurn));};
+// Old persisted LIFE triplets exercise the original primitive deltas, without case extras.
+const offer=p=>{p.decisionMemory={recent:[],lastOffered:{}};return {...event(p.careerTurn),decisionFamily:'LIFE',choices:(p.age<18?['routine:leisure','routine:food','routine:gaming']:['routine:leisure','routine:pizza-beer','routine:party']).map(id=>({id,label:`Legacy ${id}`}))};};
 let n=0;const check=(name,fn)=>{fn();n++;console.log('PASS',name);};
-check('age appropriate choices and family cooldown without RNG',()=>{
- for(const age of [12,17,18,25]){const p=fresh(age),state=p.rngState,e=offer(p);assert.equal(e.decisionFamily,'LIFE');assert.equal(e.choices.length,3);assert.equal(p.rngState,state);assert.deepEqual(e.choices.map(c=>c.id),age<18?['routine:leisure','routine:food','routine:gaming']:['routine:leisure','routine:pizza-beer','routine:party']);if(age<18)assert.doesNotMatch(JSON.stringify(e),/cerveja|balada|sexual/i);p.careerTurn++;assert.notEqual(buildRoutineDecision(p,event(p.careerTurn)).decisionFamily,'LIFE');}
+check('legacy age appropriate choices are preserved without RNG',()=>{
+ for(const age of [12,17,18,25]){const p=fresh(age),state=p.rngState,e=offer(p);assert.equal(e.decisionFamily,'LIFE');assert.equal(e.choices.length,3);assert.equal(p.rngState,state);assert.deepEqual(e.choices.map(c=>c.id),age<18?['routine:leisure','routine:food','routine:gaming']:['routine:leisure','routine:pizza-beer','routine:party']);if(age<18)assert.doesNotMatch(JSON.stringify(e),/cerveja|balada|sexual/i);const before=JSON.stringify(e);assert.equal(buildRoutineDecision(p,e),e);assert.equal(JSON.stringify(e),before);}
 });
 check('food and adult indulgences change real states without DNA attributes or moral',()=>{
  for(const [age,id,kg,happiness,condition] of [[12,'routine:food',.3,7,-4],[18,'routine:pizza-beer',.4,7,-4],[25,'routine:party',.3,9,-9]]){const p=fresh(age),e=offer(p),rng=new RNG(77),r=rng.state,w=p.weightKg,m=p.morale,dna=structuredClone(p.dna),attrs=structuredClone(p.attributes);assert.ok(resolveRoutineChoice(p,e,id,rng));assert.equal(p.lifestyle.happiness,50+happiness);assert.equal(p.lifestyle.excessKg,kg);assert.ok(Math.abs(p.weightKg-w-kg)<1e-8);assert.equal(p.physicalCondition,70+condition);assert.equal(p.morale,m);assert.deepEqual(p.dna,dna);assert.deepEqual(p.attributes,attrs);assert.equal(rng.state,r);assert.match(p.history[0].detail,/felicidade \+/);assert.match(p.history[0].detail,/peso \(kg\) \+0,[34]/);if(id==='routine:party'){assert.equal(p.lifestyle.sleepDebt,2);assert.equal(p.mentalFatigue,26);}}

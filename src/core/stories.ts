@@ -1,3 +1,4 @@
+import {compensationView} from './compensation.js';
 import {groupRelation,groupKey} from './group.js';
 import {CLUB_BY_ID} from '../data/clubs-br-2026.js';
 import {POSITION_LABEL} from './positions.js';
@@ -99,12 +100,12 @@ export function updateStories(p:PlayerState,evidence?:StoryEvidence,comeback=fal
 /** Capture only observable choice state; a match simulated later cannot enter this receipt. */
 export function choiceSnapshot(p:PlayerState):Record<string,string|number> {
   const values:Record<string,string|number>={posição:p.position==='IND'?'Indefinida':POSITION_LABEL[p.position],clube:p.currentClubId?CLUB_BY_ID[p.currentClubId]?.name??p.currentClubId:'sem clube',fase:p.phase,
-    confiança:p.confidence,moral:p.morale,pressão:p.pressure,'respeito do grupo':groupRelation(p).respect,capitania:p.squad?.contexts[groupKey(p)]?.captain?'sim':'não','felicidade pessoal':p.lifestyle?.happiness??50,peso:p.weightKg,'carga de sono':p.lifestyle?.sleepDebt??0,'condição física':p.physicalCondition,'fadiga mental':p.mentalFatigue,
+    confiança:p.confidence,moral:p.morale,pressão:p.pressure,'respeito do grupo':groupRelation(p).respect,'afinidade do grupo':groupRelation(p).affinity,'ressentimento do grupo':groupRelation(p).resentment,capitania:p.squad?.contexts[groupKey(p)]?.captain?'sim':'não','felicidade pessoal':p.lifestyle?.happiness??50,peso:p.weightKg,'carga de sono':p.lifestyle?.sleepDebt??0,'condição física':p.physicalCondition,'fadiga mental':p.mentalFatigue,
     'intenção de mercado':p.transferIntent,'abordagem de carreira':p.careerApproach??'STABILITY',
     'prioridade escolar':p.life?.education.priority??'BALANCED',observações:p.life?.scouting.observations??0,
     'testes realizados':p.life?.scouting.trialAttempts??0,'busca aguardando avaliação':p.life?.scouting.searchPriority?'sim':'não','resposta à posição proposta':p.youthPositionResponse?.decision==='INSIST'?'insistir':p.youthPositionResponse?.decision==='EXPERIMENT'?'experimentar':'não registrada',função:p.tactical?.role??'BALANCED',
     'plano de retorno':p.comebackPlan??'nenhum','situação profissional':p.professionalStatus??'YOUTH',
-    'próximo percurso':p.life?.secondCareer?.path??'nenhum','anos de contrato':p.contractYearsLeft,
+    'próximo percurso':p.life?.secondCareer?.path??'nenhum','anos de contrato':p.contractYearsLeft,'remuneração mensal (R$)':compensationView(p).monthly??'não registrado',
     'dívida de adaptação':p.adaptationDebt,'experiência na posição':p.position==='IND'?0:p.positionProficiency[p.position]};
   for(const [id,bond] of Object.entries(p.coaching?.bonds??{})){
     values[`confiança de ${coachName(id)}`]=bond.trust;values[`afinidade com ${coachName(id)}`]=bond.affinity;values[`conflito com ${coachName(id)}`]=bond.conflict;

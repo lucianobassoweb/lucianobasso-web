@@ -33,14 +33,14 @@ export function groupMatchText(p:PlayerState,minutes:number,covers=0):string{
   const role=p.position==='ST'||p.position==='WG'||p.position==='AM'||p.position==='CM'?`Abastecimento ofensivo ${percent>=0?'+':''}${percent}% pela coordenação do grupo; habilidade e finalização continuam necessárias.`:['CB','FB','DM'].includes(p.position)?`Coordenação defensiva ${cooperation>0?'favorece a cobertura':cooperation<0?'dificulta a cobertura':'neutra'}.${covers?' Uma cobertura coletiva evitou uma intervenção de risco nesta partida.':''}`:'A relação com o grupo segue sendo construída.';
   return `Respeito do grupo ${Math.round(r.respect)}/100${r.resentment>=10?`; ressentimento ${Math.round(r.resentment)}/100`:''}. ${role}`;
 }
-export function observeGroupMatch(p:PlayerState,m:{minutes:number;started:boolean;rating:number;red:boolean}):void{
+export function observeGroupMatch(p:PlayerState,m:{minutes:number;started:boolean;rating:number;red:boolean;goalDutyMissed?:boolean}):void{
   ensureGroupContext(p);const s=p.squad!;
   if(p.careerTurn<=s.lastObservedTurn)return;s.lastObservedTurn=p.careerTurn;
   if(m.minutes<=0)return;
   const key=groupKey(p),ctx=s.contexts[key]??=( {appearances:0,starts:0,minutes:0,captain:false} );
   ctx.appearances++;ctx.minutes+=m.minutes;ctx.starts+=m.started?1:0;
   const r=ensureGroupRelation(p),substantial=m.minutes>=45;
-  const change=m.red?-3:substantial?(m.rating>=7?.6:m.rating<6.2?-.8:0):0;
+  const change=m.red?-3:substantial?(m.rating>=7&&!m.goalDutyMissed?.6:m.rating<6.2?-.8:0):0;
   r.respect=clamp(r.respect+change);
   // Failure remains possible after election: the group can withdraw its confidence.
   if(ctx.captain&&(r.respect<55||r.resentment>40)){

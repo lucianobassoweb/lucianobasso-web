@@ -1,4 +1,7 @@
+import type {MatchEmotionMemory} from './match-emotions.js';
 import type {RecentMatchForm} from './form.js';
+import type {Compensation} from './compensation.js';
+import type {StateDelta} from './state-delta.js';
 export type Division = 'A' | 'B' | 'C' | 'D';
 export type Foot = 'D' | 'E';
 export type CareerPhase = 'ESCOLINHA' | 'BASE' | 'PROFISSIONAL' | 'AUGE' | 'VETERANO' | 'APOSENTADO';
@@ -224,6 +227,7 @@ export type DecisionFamily='LOAD'|'SPACE'|'SERVICE'|'RIVALRY'|'PRESSURE'|'ADAPTA
 export interface DecisionMemory {
   recent:{family:DecisionFamily;turn:number}[];
   lastOffered:Partial<Record<DecisionFamily,number>>;
+  recentCases?:{id:string;turn:number}[];
   lastExtraTurn?:number;
   lastResolvedEvent?:string;
   extraLoad?:number;
@@ -238,6 +242,7 @@ export interface LifestyleState {happiness:number;excessKg:number;sleepDebt:numb
 export interface SquadState {version:'CONTEXT_1';currentKey?:string;lastObservedTurn:number;contexts:Record<string,{appearances:number;starts:number;minutes:number;captain:boolean;lastOfferedSeason?:number;lastResolvedEvent?:string}>;}
 
 export interface PlayerState {
+  matchEmotions?:MatchEmotionMemory;
   lifestyle?:LifestyleState;
   squad?:SquadState;
   youthPositionResponse?:YouthPositionResponse;
@@ -293,6 +298,8 @@ export interface PlayerState {
   reputation: number;
   marketValue: number;
   contractYearsLeft: number;
+  compensation?:Compensation;
+  lastStateDelta?:StateDelta;
   transferIntent: TransferIntent;
   careerStats: CareerTotals;
   currentSeason: SeasonStats;
@@ -313,12 +320,15 @@ export interface CareerChoice {
 export interface MatchFeedback {
   category?:CompetitionCategory;
   showScore?:boolean;
+  opponentId?:string;
   opponent:string; coachName:string; started:boolean; minutes:number; goals:number; assists:number; rating:number;
   saves:number; cleanSheet:boolean; teamGoals:number; oppGoals:number;
-  fanReaction:string; coachReaction:string; ratingReason?:string; groupReaction?:string;
+  fanReaction:string; coachReaction:string; ratingReason?:string; groupReaction?:string; stateReaction?:string;
   blockGames:number; blockStarts:number; blockGoals:number; blockAssists:number; blockMinutes:number;
 }
 export interface CareerEvent {
+  decisionCaseId?:string;
+  decisionCaseContext?:{clubId:string|null;category:CompetitionCategory;position:Position;season:number;turn:number};
   decisionContext?:string;
   decisionFamily?:DecisionFamily;
   id: string;

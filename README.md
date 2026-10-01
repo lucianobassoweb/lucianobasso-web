@@ -2,7 +2,7 @@
 
 Jogo de carreira individual no futebol, responsivo para celular e desktop, com funcionamento offline. Começa aos 12 numa escolinha local. As decisões profissionais e de vida conduzem uma biografia sorteada.
 
-Versão experimental 0.3.12: estudos de Ronaldinho, Kaká, Romário, Diego Souza, Rivaldo, Lulinha e Somália aplicados a origem familiar, escola, descoberta, reconversão, transição, afastamentos e longevidade. Ver `docs/CAREER_CASE_STUDIES.md`, `docs/GAME_SPEC.md` e `PROJECT_LOG.md` para decisões, fórmulas, fontes e limites.
+Versão experimental 0.3.13: estudos de Ronaldinho, Kaká, Romário, Diego Souza, Rivaldo, Lulinha e Somália aplicados a origem familiar, escola, descoberta, reconversão, transição, afastamentos e longevidade. Ver `docs/CAREER_CASE_STUDIES.md`, `docs/GAME_SPEC.md` e `PROJECT_LOG.md` para decisões, fórmulas, fontes e limites.
 
 ```bash
 npm ci
@@ -115,3 +115,27 @@ Respeito/ressentimento do grupo afetam abastecimento ofensivo e cobertura de int
 Habilidades adquiridas evoluem por causas, sem ruído aleatório na progressão. Até os18, escola acelera visão e decisão, mas reduz treino técnico e físico. Ganhos cognitivos permanecem depois; não há bônus retroativo de diploma. Rever vídeo aumenta discretamente experiência posicional e cobra fadiga, sem gerar atributos.
 
 Save continua local ao navegador/dispositivo, na mesma chave. Teste via raw.githack é acesso público por link, sem controle de acesso; hospedagem privada e sincronização ainda não foram configuradas.
+
+
+## 0.3.13 — decisões e consequências visíveis
+
+- 150 situações editoriais em `src/data/decision-cases.ts`, escolhidas por idade, contexto e sorteio determinístico independente das partidas. Até20 casos recentes evitados; família tem intervalo preferencial de5 rodadas. Custos usam ações testadas e modificadores sociais explícitos.
+- Derrotas consecutivas e intercaladas na janela de8 jogos reduzem moral/felicidade. Cobrança por função considera minutos, gols, gols sofridos, chances registradas, nota e repetição; aumenta pressão e reduz respeito. Banco com partida recebe apenas efeito coletivo; ausência de jogo não gera resultado.
+- HUD colorido com delta factual pequeno; fadiga e pressão têm direção inversa. Clique agrega decisão e partida seguinte. Mudança de grupo não compara respeito entre grupos diferentes.
+- Cabeçalho, última partida e habilidades têm mesma largura e altura mínima134px, crescendo quando o texto exige. Reações e contexto continuam diretos.
+- Formação com adversários nomeados; clubes regionais no cadastro e escolinhas locais fictícias, sem alegar calendário oficial de base.
+- Ajuda de custo revista anualmente; salário contratado e referência futura separados. Valorização influencia negociação, sem alterar acordo a cada jogo. Legados sem salário não ganham histórico inventado.
+
+Saves usam a mesma chave e versão estrutural, com campos opcionais. `npm test` inclui catálogo, emoções, deltas, adversários e remuneração. `npm run standalone` mantém a rota HTML única. Publicação continua na branch experimental, PRdraft#1.
+
+
+Carga de partidas agora acumula condição e fadiga na formação, proporcional a minutos, resistência, idade e pressão. Sobrecarga reduz aprendizado e pode desgastar habilidades adquiridas; repouso interrompe a perda e prática permite recuperar. Calibração experimental documentada no LOG. O balanço anual compara seis métricas com o ano imediatamente anterior e informa quando falta base.
+
+
+### Decisões e identidade — ajuste final 0.3.13
+
+Recibo removido da tela Jogar por pedido explícito. Dados internos da última escolha permanecem para compatibilidade e auditoria. Antes das opções aparecem título da situação, texto da oferta persistida e até dois fatos atuais pertinentes (carga, minutos, produção, vínculo, adaptação ou escola), sem sorteio no render nem DNA. Hints mantêm custos, retirando a consequência genérica duplicada do catálogo. Capitania ativa do grupo atual mostra badge C ao lado do nome em Jogar e Meu jogador; faixa revogada, outro grupo ou aposentadoria não exibem badge. Outros badges propostos, ainda não implementados: estreia profissional, seleção e recorde contextual, somente com evidência real.
+
+Posição do time no campeonato usa campanha profissional existente, pontos/saldo/gols e grupo da divisão, no quadro do nome. Sem calendário de tabela juvenil, a base indica Sem tabela; save sem campanha indica Não registrada. Nunca fabricar colocação. Tamanho mínimo dos três cartões permanece134px.
+
+Equilíbrio continua experimental. Auditoria com primeira opção automática caiu para72 jogos profissionais na política natural; com gestão explícita de repouso/pressão,372. Exploração precoce tem284 jogos nessa gestão, contra127 na posição errada. Isso demonstra sensibilidade às decisões e não certifica calibração final, diversão ou quatro horas. Ver PROJECT_LOG e evidências em outputs da conversa.

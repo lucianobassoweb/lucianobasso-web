@@ -1,4 +1,7 @@
-import {clamp, type RNG} from './random.js';
+import {DECISION_CASES,type DecisionCase,type CaseAction} from '../data/decision-cases.js';
+import {CLUB_BY_ID} from '../data/clubs-br-2026.js';
+import {POSITION_LABEL} from './positions.js';
+import {clamp,RNG,hashSeed} from './random.js';
 import {CATEGORY_LABEL, calendarScale, competitionCategory} from './calendar.js';
 import {rememberCoach, syncCoachContext} from './coaches.js';
 import {ensureLife} from './pathways.js';
@@ -42,19 +45,82 @@ function packages(p:PlayerState,event:CareerEvent):Record<DecisionFamily,{situat
     PATH:{situation:p.age<=18?`A rotina de ${CATEGORY_LABEL[m.category??competitionCategory(p)]} divide tempo com a escola (${ensureLife(p).education.priority==='SCHOOL'?'estudos priorizados':ensureLife(p).education.priority==='FOOTBALL'?'futebol priorizado':'tempo dividido'}). Você pode rever essa divisão do tempo, continuar neste caminho ou aliviar a cobrança pessoal.`:senior?`Você está vinculado ao projeto atual, com intenção de mercado ${p.transferIntent==='STAY'?'de permanecer':'aberta a mudanças'}. Ouvir alternativas compete com conservar o vínculo e reduzir a cobrança.`:`Você segue competindo no futebol local. ${talk?'Conversar sobre sua avaliação':'Rever sua atuação'} pode ajudar a interpretar o rendimento atual; continuar neste caminho e reduzir a cobrança pessoal são as outras alternativas.`,choices:[path,stable,c.reset],priority:p.age<=18?4:1},
   };
 }
-/** Selection consumes no RNG. Persisted last-offer turns prevent a set recurring within five rounds. */
+function caseEligible(p:PlayerState,event:CareerEvent,definition:DecisionCase):boolean {
+  const m=event.matchFeedback;if(!m)return false;
+  const category=m.category??competitionCategory(p);
+  if(p.age<(definition.minAge??12)||p.age>(definition.maxAge??99))return false;
+  if(definition.scope==='SENIOR'&&category!=='SENIOR'||definition.scope==='YOUTH'&&(category==='SENIOR'||p.age>20))return false;
+  if(definition.positions&&!definition.positions.some(pos=>pos===p.position))return false;
+  if(definition.requires==='BENCH'&&m.minutes!==0||definition.requires==='STARTER'&&!m.started
+    ||definition.requires==='LOW_CONDITION'&&p.physicalCondition>=75&&p.mentalFatigue<=45
+    ||definition.requires==='PRESSURE'&&p.pressure<=55||definition.requires==='ADAPTATION'&&p.adaptationDebt<=0
+    ||definition.requires==='RESENTMENT'&&groupRelation(p).resentment<=0)return false;
+  return true;
+}
+function caseChoice(p:PlayerState,event:CareerEvent,action:CaseAction,packs=packages(p,event)):CareerChoice|null {
+  if(action==='extra')return packs.LOAD.choices[0]!.id==='routine:extra'?packs.LOAD.choices[0]!:null;
+  if(action==='focus')return p.adaptationDebt>0&&!p.injury?c.focus:null;
+  if(action==='leisure')return packs.LIFE.choices[0]!;
+  if(action==='food')return packs.LIFE.choices[1]!;
+  if(action==='night')return packs.LIFE.choices[2]!;
+  if(action==='path')return packs.PATH.choices[0]!;
+  if(action==='stable')return packs.PATH.choices[1]!;
+  if(action==='discuss')return p.currentClubId&&p.age>=16?choice('career:discuss','Conversar com o treinador','Abre uma conversa; nenhuma vaga garantida'):c.review;
+  return c[action];
+}
+function renderCaseText(p:PlayerState,event:CareerEvent,text:string):string {
+  const terms:Record<string,string>={position:p.position==='IND'?'posição em descoberta':POSITION_LABEL[p.position],club:p.currentClubId?CLUB_BY_ID[p.currentClubId]?.shortName??'seu clube':p.life?.localSchool??'sua escolinha',minutes:String(event.matchFeedback?.minutes??0),rating:event.matchFeedback?.rating?.toFixed(1)??'sem nota'};
+  return text.replace(/\{(position|club|minutes|rating)\}/g,(_,key:string)=>terms[key]!);
+}
+function socialHint(social:DecisionCase['choices'][number]['social']):string {
+  if(!social)return '';const labels={respect:'respeito do grupo',affinity:'afinidade do grupo',resentment:'ressentimento'};
+  return Object.entries(social).filter(([,v])=>v!==0).map(([k,v])=>`${labels[k as keyof typeof labels]} ${v!<0?'−':'+'}${Math.abs(v!)}`).join('; ');
+}
+function preparedCase(p:PlayerState,event:CareerEvent,definition:DecisionCase,packs=packages(p,event)):CareerChoice[]|null {
+  if(!caseEligible(p,event,definition))return null;
+  const choices:CareerChoice[]=[];
+  for(const option of definition.choices){const base=caseChoice(p,event,option.action,packs);if(!base)return null;
+    const social=socialHint(option.social);choices.push({id:base.id,label:renderCaseText(p,event,option.label),hint:[base.hint,option.consequence,social?`Além disso: ${social}.`:null].filter(Boolean).join(' ')});
+  }
+  return new Set(choices.map(x=>x.id)).size===3?choices:null;
+}
+/** Seeded contextual draw on a separate stream. Persisted cases never reroll on render/reload. */
 export function buildRoutineDecision(p:PlayerState,event:CareerEvent):CareerEvent {
   if(event.choices?.length||!event.matchFeedback||!['MATCH','INFO'].includes(event.kind)||p.phase==='APOSENTADO')return event;
   const memory=p.decisionMemory??={recent:[],lastOffered:{}};
-  const packs=packages(p,event);
-  const eligible=families.filter(f=>p.careerTurn-(memory.lastOffered[f]??-99)>=5);
-  const pool=eligible.length?eligible:families;
-  const score=(f:DecisionFamily)=>packs[f].priority+Math.min(20,p.careerTurn-(memory.lastOffered[f]??-99))*3;
-  const family=[...pool].sort((a,b)=>score(b)-score(a)||((families.indexOf(a)+p.careerTurn)%families.length)-((families.indexOf(b)+p.careerTurn)%families.length))[0]!;
-  memory.lastOffered[family]=p.careerTurn;
-  memory.recent=[...memory.recent,{family,turn:p.careerTurn}].slice(-3);
-  event.decisionFamily=family;event.decisionContext=packs[family].situation;event.choices=packs[family].choices;
+  const packs=packages(p,event),eligibleFamilies=families.filter(f=>p.careerTurn-(memory.lastOffered[f]??-99)>=5);
+  const available=DECISION_CASES.flatMap(definition=>{const choices=preparedCase(p,event,definition,packs);return choices?[{definition,choices}]:[];});
+  const notRecent=available.filter(x=>!memory.recentCases?.some(r=>r.id===x.definition.id));
+  const fresh=notRecent.length?notRecent:available;
+  const cooled=fresh.filter(x=>eligibleFamilies.includes(x.definition.family));const pool=cooled.length?cooled:fresh;
+  if(!pool.length){const family=families.find(f=>eligibleFamilies.includes(f))??'LOAD';event.decisionFamily=family;event.decisionContext=packs[family].situation;event.choices=packs[family].choices;return event;}
+  const counts=Object.fromEntries(families.map(f=>[f,pool.filter(x=>x.definition.family===f).length]));
+  const weight=(x:typeof pool[number])=>(1+packs[x.definition.family].priority+Math.min(20,p.careerTurn-(memory.lastOffered[x.definition.family]??-99))*.35)/counts[x.definition.family]!;
+  const random=new RNG(hashSeed(`${p.id}|${event.id}|${p.rngState}|${memory.recentCases?.map(x=>x.id).join(',')??''}`));
+  let draw=random.float(0,pool.reduce((sum,x)=>sum+weight(x),0));let selected=pool[pool.length-1]!;
+  for(const candidate of pool){draw-=weight(candidate);if(draw<=0){selected=candidate;break;}}
+  const {definition,choices}=selected;memory.lastOffered[definition.family]=p.careerTurn;
+  memory.recent=[...memory.recent,{family:definition.family,turn:p.careerTurn}].slice(-3);
+  memory.recentCases=[...(memory.recentCases??[]),{id:definition.id,turn:p.careerTurn}].slice(-20);
+  event.decisionFamily=definition.family;event.decisionCaseId=definition.id;
+  event.decisionCaseContext={clubId:p.currentClubId,category:event.matchFeedback.category??competitionCategory(p),position:p.position,season:p.season,turn:p.careerTurn};
+  event.decisionContext=renderCaseText(p,event,`${definition.title}. ${definition.situation}`);event.choices=choices;
   return event;
+}
+export function canResolveCaseChoice(p:PlayerState,event:CareerEvent,id:string):boolean {
+  if(!event.decisionCaseId)return true;
+  const definition=DECISION_CASES.find(x=>x.id===event.decisionCaseId),ctx=event.decisionCaseContext;
+  if(!definition||!ctx||ctx.clubId!==p.currentClubId||ctx.season!==p.season||ctx.turn!==p.careerTurn||ctx.position!==p.position||ctx.category!==competitionCategory(p)||definition.family!==event.decisionFamily)return false;
+  const prepared=preparedCase(p,event,definition);return !!prepared&&event.choices?.length===prepared.length&&prepared.every((choice,i)=>event.choices![i]?.id===choice.id)&&prepared.some(choice=>choice.id===id);
+}
+export function applyCaseSocial(p:PlayerState,event:CareerEvent,id:string):string[] {
+  if(!event.decisionCaseId)return [];
+  const definition=DECISION_CASES.find(x=>x.id===event.decisionCaseId);if(!definition)return [];
+  const index=event.choices?.findIndex(x=>x.id===id)??-1;const option=definition.choices[index];if(!option?.social)return [];
+  const r=ensureGroupRelation(p),keys:string[]=[];
+  for(const [key,value] of Object.entries(option.social)){if(!value)continue;const k=key as 'respect'|'affinity'|'resentment';r[k]=clamp(r[k]+value);keys.push(k==='respect'?'groupRespect':k==='affinity'?'groupAffinity':'groupResentment');}
+  if(keys.length){r.memories.unshift(`${p.season}: ${definition.title} — ${option.label}`);r.memories=r.memories.slice(0,16);}
+  return keys;
 }
 const deltaLabels:Record<string,string>={happiness:'felicidade',weight:'peso (kg)',sleep:'carga de sono',condition:'condição',fatigue:'fadiga mental',pressure:'pressão',confidence:'confiança pessoal',adaptation:'adaptação pendente',knowledge:'conhecimento da habilidade',attribute:'ganho na habilidade trabalhada',groupAffinity:'afinidade do grupo',groupRespect:'respeito do grupo',groupResentment:'ressentimento do grupo',groupRivalry:'rivalidade no grupo',coachAffinity:'afinidade com o treinador',coachTrust:'confiança profissional',coachConflict:'conflito com o treinador',proficiency:'experiência na posição'};
 function effectSnapshot(p:PlayerState,key:keyof VisibleAttributes):Record<string,number>{
@@ -71,10 +137,10 @@ function effectReport(before:Record<string,number>,after:Record<string,number>,k
 }
 /** Only offered routine ids can mutate the player; resolution is idempotent per event. */
 export function canResolveRoutineChoice(p:PlayerState,event:CareerEvent,id:string):boolean {
-  if(!event.decisionFamily||!event.choices?.some(c=>c.id===id)||!id.startsWith('routine:')||p.phase==='APOSENTADO'||p.decisionMemory?.lastResolvedEvent===event.id)return false;
+  if(!canResolveCaseChoice(p,event,id)||!event.decisionFamily||!event.choices?.some(c=>c.id===id)||!id.startsWith('routine:')||p.phase==='APOSENTADO'||p.decisionMemory?.lastResolvedEvent===event.id)return false;
   if(['routine:pizza-beer','routine:party'].includes(id)&&p.age<18)return false;
   if(['routine:food','routine:gaming'].includes(id)&&p.age>=18)return false;
-  if(['routine:leisure','routine:food','routine:gaming','routine:pizza-beer','routine:party'].includes(id)&&event.decisionFamily!=='LIFE')return false;
+  if(['routine:leisure','routine:food','routine:gaming','routine:pizza-beer','routine:party'].includes(id)&&event.decisionFamily!=='LIFE'&&!event.decisionCaseId)return false;
   if(id==='routine:extra'&&(p.injury||p.physicalCondition<55||p.mentalFatigue>=80||p.careerTurn-(p.decisionMemory?.lastExtraTurn??-99)<5))return false;
   if(id==='routine:focus'&&(p.adaptationDebt<=0||p.injury))return false;
   if(!['extra','rest','review','reset','help','team','focus','expose','intrigue','leisure','food','gaming','pizza-beer','party'].some(action=>id===`routine:${action}`))return false;
@@ -130,6 +196,7 @@ export function resolveRoutineChoice(p:PlayerState,event:CareerEvent,id:string,r
     else{coach('Insinuação trouxe apoio social sem evidência esportiva',2,0,0);r.affinity=clamp(r.affinity+2);r.resentment=clamp(r.resentment+2);detail='A insinuação circulou sem descoberta. Confiança profissional não aumentou; nenhum espaço foi garantido.';keys=['coachAffinity','coachTrust','groupAffinity','groupResentment'];}
     const rivalryDelta=Number((r.rivalry-before.groupRivalry!).toFixed(6));r.memories.unshift(`${p.season}: ${caught?'Descoberta':'Circulação'} de insinuação contra concorrente; rivalidade +${rivalryDelta}`);r.memories=r.memories.slice(0,16);keys.push('groupRivalry','fatigue');
   }
+  keys=[...new Set([...keys,...applyCaseSocial(p,event,id)])];
   detail+=' '+effectReport(before,effectSnapshot(p,key),keys);
   memory.lastResolvedEvent=event.id;
   p.history.unshift({turn:p.careerTurn,season:p.season,age:p.age,type:'DECISÃO',headline:event.choices!.find(c=>c.id===id)!.label,detail});p.history=p.history.slice(0,220);
