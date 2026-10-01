@@ -55,7 +55,7 @@ export function choiceSnapshot(p:PlayerState):Record<string,string|number> {
     confiança:p.confidence,moral:p.morale,pressão:p.pressure,'condição física':p.physicalCondition,'fadiga mental':p.mentalFatigue,
     'intenção de mercado':p.transferIntent,'abordagem de carreira':p.careerApproach??'STABILITY',
     'prioridade escolar':p.life?.education.priority??'BALANCED',observações:p.life?.scouting.observations??0,
-    'testes realizados':p.life?.scouting.trialAttempts??0,'busca aguardando avaliação':p.life?.scouting.searchPriority?'sim':'não',função:p.tactical?.role??'BALANCED',
+    'testes realizados':p.life?.scouting.trialAttempts??0,'busca aguardando avaliação':p.life?.scouting.searchPriority?'sim':'não','resposta à posição proposta':p.youthPositionResponse?.decision==='INSIST'?'insistir':p.youthPositionResponse?.decision==='EXPERIMENT'?'experimentar':'não registrada',função:p.tactical?.role??'BALANCED',
     'plano de retorno':p.comebackPlan??'nenhum','situação profissional':p.professionalStatus??'YOUTH',
     'próximo percurso':p.life?.secondCareer?.path??'nenhum','anos de contrato':p.contractYearsLeft,
     'dívida de adaptação':p.adaptationDebt};

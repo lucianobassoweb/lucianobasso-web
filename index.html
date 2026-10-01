@@ -2315,6 +2315,83 @@ function leagueTitle(p) {
 
 return {coachName, coachProfile, ensureCoaching, ensureCoachJob, coachBond, syncCoachContext, standings, jobStability, objective, bondLabel, coachDossier, roleProspect, opportunityAdjustment, rememberCoach, performanceFeedback, evaluateCoachJob, simulateWorldBlock, reviewWorldCoaches, coachChangeEvent, coachDiscussionEvent, resolveCoachChoice, leagueTitle};
 })();
+__modules['core/youth-position-review.js'] = (() => {
+const {POSITIONS, POSITION_LABELS, positionDistance, roleRating} = __modules['core/positions.js'];
+
+const YOUTH_CATEGORIES = ['U15', 'U17', 'U20'];
+const REPERTOIRE = {
+    GK: ['reflexes', 'handling'], CB: ['tackling', 'positioning'], FB: ['crossing', 'stamina'],
+    DM: ['tackling', 'passing'], CM: ['passing', 'vision'], AM: ['vision', 'technique'],
+    WG: ['dribbling', 'pace'], ST: ['finishing', 'positioning'],
+};
+const ATTRIBUTE_LABELS = {
+    reflexes: 'reflexos', handling: 'manejo da bola', tackling: 'marcação', positioning: 'posicionamento',
+    crossing: 'cruzamento', stamina: 'resistência', passing: 'passe', vision: 'leitura de jogo',
+    technique: 'técnica', dribbling: 'drible', pace: 'velocidade', finishing: 'finalização',
+};
+const bounded = (value, fallback = 0) => Number.isFinite(value)
+    ? Math.max(0, Math.min(100, value)) : fallback;
+/** Review documented youth output and learned repertoire; no natural-fit or genetic inference. */
+function reviewYouthPosition(p) {
+    if (p.age < 13 || p.age > 18 || !Number.isInteger(p.age) || p.position === 'IND'
+        || p.positionSeasonChosenFor === p.season || p.professionalStatus === 'SENIOR'
+        || p.professionalStatus === 'INVITED'
+        || p.professionalStatus === undefined && p.phase !== 'ESCOLINHA' && p.phase !== 'BASE')
+        return null;
+    const previous = p.seasonHistory[0];
+    if (!previous || previous.season !== p.season - 1 || previous.age > 18 || previous.age < 12
+        || previous.primaryPosition !== p.position || !previous.positionsPlayed?.length
+        || new Set(previous.positionsPlayed).size !== 1 || previous.positionsPlayed[0] !== p.position)
+        return null;
+    // Category totals lack a position breakdown: mixed positions cannot justify a positional verdict.
+    if (previous.positionAppearances && Object.entries(previous.positionAppearances)
+        .some(([position, appearances]) => position !== p.position && (appearances ?? 0) > 0))
+        return null;
+    const categories = previous.categories;
+    if (!categories || (categories.SENIOR?.appearances ?? 0) > 0 || (categories.SENIOR?.minutes ?? 0) > 0)
+        return null;
+    const candidates = YOUTH_CATEGORIES.map(category => ({ category, stats: categories[category] }))
+        .filter(candidate => candidate.stats && candidate.stats.appearances > 0)
+        .sort((a, b) => b.stats.appearances - a.stats.appearances);
+    const selected = candidates[0];
+    if (!selected?.stats)
+        return null;
+    const { appearances, minutes, goals, assists, avgRating: rating } = selected.stats;
+    if (![appearances, minutes, goals, assists, rating].every(Number.isFinite)
+        || appearances < 8 || minutes < 420 || goals < 0 || assists < 0 || rating <= 0 || rating > 10)
+        return null;
+    const attacking = p.position === 'ST' || p.position === 'WG';
+    const production = (goals + (p.position === 'ST' ? 0.45 : 1) * assists) * 90 / minutes;
+    const poorSeason = attacking
+        ? production < (p.position === 'ST' ? 0.20 : 0.30) && rating < 7.2
+        : rating < (p.position === 'GK' ? 6.2 : 6.3);
+    if (!poorSeason)
+        return null;
+    const current = p.position;
+    const score = (position) => {
+        const learned = roleRating(p, position);
+        return (Number.isFinite(learned) ? learned : 0) + bounded(p.positionProficiency[position] ?? 0) * 0.045
+            - positionDistance(current, position) * 2;
+    };
+    // Rank alternatives, not a supposedly natural position; even the best candidate must be tested.
+    const recommendedPosition = POSITIONS.filter(position => position !== current)
+        .sort((a, b) => score(b) - score(a))[0];
+    if (!recommendedPosition)
+        return null;
+    const [first, second] = REPERTOIRE[recommendedPosition];
+    const evidence = attacking
+        ? `${appearances} jogos, ${minutes} minutos, ${goals} ${goals === 1 ? 'gol' : 'gols'}, ${assists} ${assists === 1 ? 'assistência' : 'assistências'} e nota média ${rating.toFixed(1).replace('.', ',')}`
+        : `nota média ${rating.toFixed(1).replace('.', ',')} em ${appearances} participações e ${minutes} minutos`;
+    return {
+        previousSeason: previous.season, previousPosition: current, recommendedPosition,
+        category: selected.category, appearances, minutes, goals, assists, rating,
+        reason: `Na temporada ${previous.season}, ${evidence}. O treinador propõe experimentar ${POSITION_LABELS[recommendedPosition]}, considerando o repertório aprendido de ${ATTRIBUTE_LABELS[first]} e ${ATTRIBUTE_LABELS[second]}, a experiência na função e a adaptação necessária. O encaixe precisa ser testado em campo.`,
+        opportunityPenalty: p.age <= 13 ? 0.08 : p.age <= 15 ? 0.12 : 0.16,
+    };
+}
+
+return {reviewYouthPosition};
+})();
 __modules['core/form.js'] = (() => {
 
 const finite = (n, fallback = 0) => Number.isFinite(n) ? n : fallback;
@@ -2802,7 +2879,7 @@ function choiceSnapshot(p) {
         confiança: p.confidence, moral: p.morale, pressão: p.pressure, 'condição física': p.physicalCondition, 'fadiga mental': p.mentalFatigue,
         'intenção de mercado': p.transferIntent, 'abordagem de carreira': p.careerApproach ?? 'STABILITY',
         'prioridade escolar': p.life?.education.priority ?? 'BALANCED', observações: p.life?.scouting.observations ?? 0,
-        'testes realizados': p.life?.scouting.trialAttempts ?? 0, 'busca aguardando avaliação': p.life?.scouting.searchPriority ? 'sim' : 'não', função: p.tactical?.role ?? 'BALANCED',
+        'testes realizados': p.life?.scouting.trialAttempts ?? 0, 'busca aguardando avaliação': p.life?.scouting.searchPriority ? 'sim' : 'não', 'resposta à posição proposta': p.youthPositionResponse?.decision === 'INSIST' ? 'insistir' : p.youthPositionResponse?.decision === 'EXPERIMENT' ? 'experimentar' : 'não registrada', função: p.tactical?.role ?? 'BALANCED',
         'plano de retorno': p.comebackPlan ?? 'nenhum', 'situação profissional': p.professionalStatus ?? 'YOUTH',
         'próximo percurso': p.life?.secondCareer?.path ?? 'nenhum', 'anos de contrato': p.contractYearsLeft,
         'dívida de adaptação': p.adaptationDebt };
@@ -3156,6 +3233,7 @@ function simulatePlayerMatch(player, own, opponent, rng, started = true, importa
 return {observedAttackRating, simulatePlayerMatch};
 })();
 __modules['core/engine.js'] = (() => {
+const {reviewYouthPosition} = __modules['core/youth-position-review.js'];
 const {recordRecentMatchForm, evaluateRecentMatchForm} = __modules['core/form.js'];
 const {evaluateFanMatch} = __modules['core/fans.js'];
 const {buildRoutineDecision, resolveRoutineChoice} = __modules['core/decisions.js'];
@@ -3169,6 +3247,7 @@ const {generateDNA, initialAttributes, growthStep, updateBody, overall} = __modu
 const {POSITIONS, POSITION_LABEL, changeCostPreview, changeCostLabel, selectPosition, trainPositionExperience, effectivePositionRating, observedPositionSuggestion, tacticalRating, roleRating} = __modules['core/positions.js'];
 const {BRAZIL_CLUBS_2026, CLUB_BY_ID} = __modules['data/clubs-br-2026.js'];
 const {simulatePlayerMatch, observedAttackRating} = __modules['core/match.js'];
+
 
 
 
@@ -3231,7 +3310,23 @@ function revealAttribute(p, rng) {
 }
 function positionChoiceEvent(p) {
     const ageText = p.age <= 13 ? 'Nesta idade, experimentar quase não cobra preço.' : p.age <= 15 ? 'A especialização começa a importar, mas ainda há espaço para explorar.' : p.age <= 18 ? 'Agora a escolha pesa: trocar exige adaptação e pode custar rendimento.' : 'A posição profissional já está consolidada.';
-    return { id: `position-${p.season}`, kind: 'CHOICE', title: `Onde você quer jogar aos ${p.age}?`, body: `Escolha a posição principal desta temporada. ${ageText} O jogo não revela qual delas combina melhor com seu DNA.`, tags: ['FORMAÇÃO', 'POSIÇÃO'], choices: POSITIONS.map(pos => ({ id: `position:${pos}`, label: POSITION_LABEL[pos], hint: p.position === 'IND' ? `${POSITION_LABEL[pos]} · experimentar` : p.position === pos ? `${POSITION_LABEL[pos]} · experiência ${Math.round(p.positionProficiency[pos])}/100 · continuidade` : `${POSITION_LABEL[pos]} · ${changeCostLabel(changeCostPreview(p, pos))}` })) };
+    const review = reviewYouthPosition(p);
+    const body = review ? `Como ${POSITION_LABEL[review.previousPosition]}: ${review.reason} Você pode aceitar, testar outra posição ou insistir. Insistir reduz a chance de começar como titular em ${Math.round(review.opportunityPenalty * 100)} pontos percentuais neste projeto, até mostrar uma resposta suficiente em campo. ${ageText}` : `Escolha a posição principal desta temporada. ${ageText}`;
+    return { id: `position-${p.season}`, kind: 'CHOICE', title: review ? 'O treinador propõe outra posição' : `Onde você quer jogar aos ${p.age}?`, body, tags: ['FORMAÇÃO', 'POSIÇÃO', ...(review ? ['AVALIAÇÃO DO ANO'] : [])], ...(review ? { payload: { youthPositionReview: review } } : {}), choices: POSITIONS.map(pos => ({ id: `position:${pos}`, label: review && pos === p.position ? `Insistir como ${POSITION_LABEL[pos]}` : review && pos === review.recommendedPosition ? `Experimentar ${POSITION_LABEL[pos]} · recomendado` : POSITION_LABEL[pos], hint: review && pos === p.position ? `Chance de titularidade −${Math.round(review.opportunityPenalty * 100)} p.p.; pode recuperar espaço com rendimento` : review && pos !== p.position ? `${changeCostLabel(changeCostPreview(p, pos))}; aprender outra posição não garante sucesso` : p.position === 'IND' ? `${POSITION_LABEL[pos]} · experimentar` : p.position === pos ? `${POSITION_LABEL[pos]} · experiência ${Math.round(p.positionProficiency[pos])}/100 · continuidade` : `${POSITION_LABEL[pos]} · ${changeCostLabel(changeCostPreview(p, pos))}` })) };
+}
+/** A refused annual experiment costs opportunity in this project until observed performance answers it. */
+function youthPositionOpportunityPenalty(p) {
+    const plan = p.youthPositionResponse;
+    if (!plan || plan.decision !== 'INSIST' || plan.season !== p.season || plan.position !== p.position || plan.clubId !== p.currentClubId || plan.category !== competitionCategory(p) || p.professionalStatus === 'SENIOR')
+        return 0;
+    const stats = p.currentSeason.categories?.[plan.category];
+    if (stats && stats.appearances >= 5 && stats.minutes >= 240) {
+        const rate = (stats.goals + (p.position === 'ST' ? .45 : 1) * stats.assists) * 90 / stats.minutes;
+        const answered = p.position === 'ST' ? rate >= .25 && stats.avgRating >= 6.7 : p.position === 'WG' ? rate >= .40 && stats.avgRating >= 6.7 : stats.avgRating >= 6.7;
+        if (answered)
+            return 0;
+    }
+    return plan.penalty;
 }
 function assignYouthClub(p, rng) {
     const life = ensureLife(p);
@@ -3400,7 +3495,7 @@ function simulateYouthBlock(p, rng) {
         const stageStandard = 32 + (p.age - 12) * 2.5 + (p.currentClubId ? CLUB_BY_ID[p.currentClubId].youth * .07 : 0);
         const learned = roleRating(p, pos);
         const rating = clamp(6.05 + (learned - stageStandard) / 14 + (g * .8 + a * .55) + (comp - 1) * 1.8 - (p.decisionMemory?.extraLoad ?? 0) * .2 + rng.normal(0, .42), 4.7, 9.6);
-        const dummy = { opponentId: 'youth', home: true, started: rng.chance(clamp(.72 - recent.startPenalty, .25, .85)), teamGoals: g + a + rng.int(0, 2), oppGoals: rng.int(0, 2), minutes: rng.int(42, 80), goals: g, assists: a, motm: rating >= 8.2, yellow: rng.chance(['CB', 'DM', 'FB'].includes(pos) ? .08 : .035), red: false, rating: Number(rating.toFixed(1)), xg: Number((g * .55 + rng.float(.01, .18)).toFixed(2)), xa: Number((a * .45 + rng.float(.01, .16)).toFixed(2)), saves: pos === 'GK' ? rng.int(1, 5) : 0, cleanSheet: pos === 'GK' && rng.chance(.34), headline: '' };
+        const dummy = { opponentId: 'youth', home: true, started: rng.chance(clamp(.72 - recent.startPenalty - youthPositionOpportunityPenalty(p), .25, .85)), teamGoals: g + a + rng.int(0, 2), oppGoals: rng.int(0, 2), minutes: rng.int(42, 80), goals: g, assists: a, motm: rating >= 8.2, yellow: rng.chance(['CB', 'DM', 'FB'].includes(pos) ? .08 : .035), red: false, rating: Number(rating.toFixed(1)), xg: Number((g * .55 + rng.float(.01, .18)).toFixed(2)), xa: Number((a * .45 + rng.float(.01, .16)).toFixed(2)), saves: pos === 'GK' ? rng.int(1, 5) : 0, cleanSheet: pos === 'GK' && rng.chance(.34), headline: '' };
         dummy.cleanSheet = pos === 'GK' && dummy.oppGoals === 0;
         if (pos === 'GK')
             dummy.rating = Number(clamp(dummy.rating + dummy.saves * .075 + (dummy.cleanSheet ? .25 : 0), 4.7, 9.6).toFixed(1));
@@ -3433,7 +3528,8 @@ function simulateYouthBlock(p, rng) {
     if (featured.minutes >= 45)
         applyFormConsequences(p, form, false);
     const fanReaction = applyMatchFanReaction(p, featured, competitionCategory(p), p.currentClubId ? CLUB_BY_ID[p.currentClubId] : undefined) + (form.fanText ? ' ' + form.fanText : '');
-    const coachReaction = form.coachText || (featured.rating >= 7.4 ? 'A atuação chamou atenção para seu repertório.' : 'O treinador observa sua evolução sem concluir seu potencial.');
+    const annualPenalty = youthPositionOpportunityPenalty(p);
+    const coachReaction = (annualPenalty ? `A recusa da experiência proposta reduz a chance de titularidade nas próximas partidas deste projeto (−${Math.round(annualPenalty * 100)} p.p. na chance de titularidade). ` : '') + (form.coachText || (featured.rating >= 7.4 ? 'A atuação chamou atenção para seu repertório.' : 'O treinador observa sua evolução sem concluir seu potencial.'));
     return { matchFeedback: { category: competitionCategory(p), opponent: p.age > 20 ? 'Equipe do futebol local' : p.currentClubId ? 'Adversário da base' : 'Equipe local de formação', coachName: p.age > 20 ? 'Treinador do futebol local' : 'Treinador da formação', started: featured.started, minutes: featured.minutes, goals: featured.goals, assists: featured.assists, rating: featured.rating, saves: featured.saves, cleanSheet: featured.cleanSheet, teamGoals: featured.teamGoals, oppGoals: featured.oppGoals, ...(featured.ratingReason ? { ratingReason: featured.ratingReason } : {}), fanReaction, coachReaction, blockGames: games, blockStarts: youthMatches.filter(m => m.started).length, blockGoals: goals, blockAssists: assists, blockMinutes: youthMatches.reduce((sum, m) => sum + m.minutes, 0) }, id: `y-${p.careerTurn}`, kind: 'INFO', title: `${CATEGORY_LABEL[competitionCategory(p)]} · ${featured.teamGoals} × ${featured.oppGoals}`, body: `${CATEGORY_LABEL[competitionCategory(p)]}: ${featured.minutes} minutos nesta partida. ${signal} Os treinadores agora observam melhor: ${ATTRIBUTE_LABELS[key]}.`, tags: [p.age > 20 ? 'FUTEBOL LOCAL' : 'FORMAÇÃO', POSITION_LABEL[pos].toUpperCase()] };
 }
 function opponentPool(own) {
@@ -3805,10 +3901,16 @@ function resolveChoiceInternal(save, choiceId) {
     }
     else if (choiceId.startsWith('position:')) {
         const pos = choiceId.split(':')[1];
+        const review = save.pendingEvent?.payload?.youthPositionReview ? reviewYouthPosition(p) : null;
+        if (review) {
+            const insist = pos === review.previousPosition;
+            p.youthPositionResponse = { season: p.season, reviewedSeason: review.previousSeason, clubId: p.currentClubId, category: competitionCategory(p), position: pos, recommendedPosition: review.recommendedPosition, decision: insist ? 'INSIST' : 'EXPERIMENT', penalty: insist ? review.opportunityPenalty : 0 };
+            log(p, 'EXPERIMENTAÇÃO', insist ? 'Você decidiu insistir na posição' : 'Você aceitou experimentar outra posição', insist ? `A recomendação após ${review.previousSeason} foi recusada. Chance de titularidade −${Math.round(review.opportunityPenalty * 100)} p.p. neste projeto até uma resposta suficiente em campo.` : `Você começa a aprender ${POSITION_LABEL[pos]}; repertório preservado, adaptação e sucesso ainda dependem do percurso.`);
+        }
         const rec = selectPosition(p, pos);
         if (!p.currentSeason.appearances)
             p.currentSeason.primaryPosition = pos;
-        log(p, 'POSIÇÃO', `Temporada como ${POSITION_LABEL[pos]}`, rec.previous && rec.previous !== pos ? `Mudança de ${POSITION_LABEL[rec.previous]} para ${POSITION_LABEL[pos]}. ${changeCostLabel(rec.cost)}.` : 'Continuidade na função escolhida.');
+        log(p, 'POSIÇÃO', `Temporada como ${POSITION_LABEL[pos]}`, (rec.previous && rec.previous !== pos ? `Mudança de ${POSITION_LABEL[rec.previous]} para ${POSITION_LABEL[pos]}. ${changeCostLabel(rec.cost)}.` : 'Continuidade na função escolhida.') + (review ? pos === review.previousPosition ? ` Você recusou a experiência proposta: chance de titularidade −${Math.round(review.opportunityPenalty * 100)} p.p. neste projeto, recuperável com rendimento.` : ' Você começa uma experiência em outra posição; sucesso não é garantido.' : ''));
     }
     else if (choiceId.startsWith('after:')) {
         const life = ensureLife(p);
@@ -4129,7 +4231,8 @@ const recentForm = v => {
     const observations = v.observations;
     return observations.every((o, i) => object(o) && Number(o.turn) <= Number(v.lastObservedTurn) && Number(o.minutes) > 0 && (i === 0 || Number(o.turn) > Number(observations[i - 1].turn)));
 };
-const playerFields = fields({ recentForm: optional(recentForm), decisionMemory: optional(decisionMemory), story: optional(story), lastChoiceResult: optional(choiceResult), id: text, name: text, hometown: text, heartClubId: text, currentClubId: nullable(text),
+const youthPositionResponse = fields({ season: v => number(v) && Number.isSafeInteger(v) && Number(v) >= 0, reviewedSeason: v => number(v) && Number.isSafeInteger(v) && Number(v) >= 0, clubId: nullable(text), category, position, recommendedPosition: position, decision: oneOf('INSIST', 'EXPERIMENT'), penalty: v => number(v) && Number(v) >= 0 && Number(v) <= .16 });
+const playerFields = fields({ youthPositionResponse: optional(youthPositionResponse), recentForm: optional(recentForm), decisionMemory: optional(decisionMemory), story: optional(story), lastChoiceResult: optional(choiceResult), id: text, name: text, hometown: text, heartClubId: text, currentClubId: nullable(text),
     ...numeric('birthYear age season seasonTurn careerTurn adaptationDebt positionChanges heightCm weightKg morale confidence pressure mentalFatigue physicalCondition reputation marketValue contractYearsLeft rngState'),
     phase: oneOf('ESCOLINHA', 'BASE', 'PROFISSIONAL', 'AUGE', 'VETERANO', 'APOSENTADO'), position: oneOf('IND', 'GK', 'CB', 'FB', 'DM', 'CM', 'AM', 'WG', 'ST'),
     transferIntent: oneOf('STAY', 'OPEN', 'LEAVE', 'FORCE'), secondaryPositions: array(position),
@@ -4148,6 +4251,11 @@ const player = v => {
         return false;
     if (object(v.recentForm) && Number(v.recentForm.lastObservedTurn) > Number(v.careerTurn))
         return false;
+    if (object(v.youthPositionResponse)) {
+        const plan = v.youthPositionResponse;
+        if (!Number.isSafeInteger(plan.season) || Number(plan.season) > Number(v.season) || Number(plan.reviewedSeason) !== Number(plan.season) - 1 || plan.decision === 'EXPERIMENT' && Number(plan.penalty) !== 0 || plan.decision === 'INSIST' && (plan.position === plan.recommendedPosition || Number(plan.penalty) < .08))
+            return false;
+    }
     const scouting = object(v.life) && object(v.life.scouting) ? v.life.scouting : null;
     return !scouting || scouting.lastSearchSeason === undefined || Number(scouting.lastSearchSeason) <= Number(v.season);
 };
@@ -4288,7 +4396,7 @@ function theme() {
     const colors = c?.colors ?? ['#7bbcff', '#e8eef4'];
     return `style="--club:${colors[0]};--club2:${colors[1]};"`;
 }
-function appShell(content) { return `<main class="shell ${save ? 'playing' : 'creating'}" ${theme()}><div class="brand"><div><h1>1903</h1><span class="subbrand">CARREIRA</span></div><span class="build">0.3.9 · EXPERIMENTAL</span></div>${save ? nav() : ''}${persistenceNotice()}<div class="page-content">${content}</div></main>`; }
+function appShell(content) { return `<main class="shell ${save ? 'playing' : 'creating'}" ${theme()}><div class="brand"><div><h1>1903</h1><span class="subbrand">CARREIRA</span></div><span class="build">0.3.10 · EXPERIMENTAL</span></div>${save ? nav() : ''}${persistenceNotice()}<div class="page-content">${content}</div></main>`; }
 const navPaths = { career: 'M8 5l10 7-10 7V5Z', player: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM5 21v-2a7 7 0 0 1 14 0v2', stats: 'M5 20V10m7 10V4m7 16v-7', world: 'M4 7h16v13H4V7Zm4 0V4h8v3M4 12h16m-8-2v4' };
 function nav() { return `<nav class="bottom-nav" aria-label="Navegação da carreira"><div class="bottom-nav-inner">${[['career', 'Jogar', 'Jogar'], ['player', 'Jogador', 'Meu jogador'], ['stats', 'Histórico', 'Histórico'], ['world', 'Clube', 'Clube e mercado']].map(([id, label, full]) => `<button class="nav ${tab === id ? 'active' : ''}" data-tab="${id}" aria-label="${full}" aria-current="${tab === id ? 'page' : 'false'}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${navPaths[id]}"/></svg><span>${label}</span></button>`).join('')}</div></nav>`; }
 function persistenceNotice() {

@@ -2,7 +2,7 @@
 
 Jogo de carreira individual no futebol, responsivo para celular e desktop, com funcionamento offline. Começa aos 12 numa escolinha local. As decisões profissionais e de vida conduzem uma biografia sorteada.
 
-Versão experimental 0.3.9: estudos de Ronaldinho, Kaká, Romário, Diego Souza, Rivaldo, Lulinha e Somália aplicados a origem familiar, escola, descoberta, reconversão, transição, afastamentos e longevidade. Ver `docs/CAREER_CASE_STUDIES.md`, `docs/GAME_SPEC.md` e `PROJECT_LOG.md` para decisões, fórmulas, fontes e limites.
+Versão experimental 0.3.10: estudos de Ronaldinho, Kaká, Romário, Diego Souza, Rivaldo, Lulinha e Somália aplicados a origem familiar, escola, descoberta, reconversão, transição, afastamentos e longevidade. Ver `docs/CAREER_CASE_STUDIES.md`, `docs/GAME_SPEC.md` e `PROJECT_LOG.md` para decisões, fórmulas, fontes e limites.
 
 ```bash
 npm ci
@@ -85,3 +85,12 @@ No ataque, partidas sem gol/assistência/criação suficiente têm teto de nota6
 Um gol encerra a seca, mas a produção da janela recente ainda pode custar espaço. Amostra até8 registros, pelo menos6atuações substanciais/360min; ST(G+0,45A)/90>=0,25 e WG(G+A)/90>=0,40 são referências experimentais. Cobranças combinadas pelo maior valor, com criação e intensidade por idade. Chance profissional recebe a penalidade depois do limite esportivo, impedindo que atributos altos absorvam o custo. Não há titularidade ou banco automático, nem concorrente de elenco inventado. Saves mantidos sem novo campo obrigatório; histórico desconhecido não reconstruído.
 
 Verificação: suíte completa,17gruposforma/7integração; gates200carreiras e100DNAs×4políticas. UI isolada390×844/320×740. Diagnóstico exato do relato17j1G0A6,8 não fornecido; fixture equivalente não é o save do usuário.
+
+
+## 0.3.10 — o ano anterior orienta a posição
+
+Após o balanço anual, um ano ruim documentado na escolinha/base abre uma proposta do treinador para experimentar outra posição. Avaliação exige pelo menos8jogos/420minutos, posição única conhecida e categoria juvenil. Usa rendimento e atributos aprendidos, sem consultarDNA. ST/WG têm critério de produção; defensores/goleiros não são julgados por falta de gols.
+
+Você pode aceitar a proposta, testar outra posição ou insistir. Aceitar aplica a adaptação já existente; insistir reduz a chance de começar como titular naquele projeto em8p.p. até13anos,12até15,16até18. A evidência atual pode recuperar espaço com5jogos/240minutos e rendimento suficiente; uma piora posterior pode reabrir a cobrança. Clube/posição/categoria/temporada diferentes encerram essa consequência. Não congela aprendizagem ou potencial. O custo é informado antes do clique e aparece no recibo.
+
+Histórico ausente ou misturado não gera veredito. Eventos legados mantêmIDs/corpo e não recebem custo retroativo. Plano novo é opcional e validado no save; chave/schema mantidos. Testes11grupospuros+4integração, suíte e gates completos. Evidência mobile em fixture isolada; sem Safari físico/playtest4h.

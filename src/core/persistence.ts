@@ -73,7 +73,8 @@ const recentForm:Guard=v=>{
   return observations.every((o,i)=>object(o)&&Number(o.turn)<=Number(v.lastObservedTurn)&&Number(o.minutes)>0&&(i===0||Number(o.turn)>Number(observations[i-1].turn)));
 };
 
-const playerFields=fields({recentForm:optional(recentForm),decisionMemory:optional(decisionMemory),story:optional(story),lastChoiceResult:optional(choiceResult),id:text,name:text,hometown:text,heartClubId:text,currentClubId:nullable(text),
+const youthPositionResponse=fields({season:v=>number(v)&&Number.isSafeInteger(v)&&Number(v)>=0,reviewedSeason:v=>number(v)&&Number.isSafeInteger(v)&&Number(v)>=0,clubId:nullable(text),category,position,recommendedPosition:position,decision:oneOf('INSIST','EXPERIMENT'),penalty:v=>number(v)&&Number(v)>=0&&Number(v)<=.16});
+const playerFields=fields({youthPositionResponse:optional(youthPositionResponse),recentForm:optional(recentForm),decisionMemory:optional(decisionMemory),story:optional(story),lastChoiceResult:optional(choiceResult),id:text,name:text,hometown:text,heartClubId:text,currentClubId:nullable(text),
   ...numeric('birthYear age season seasonTurn careerTurn adaptationDebt positionChanges heightCm weightKg morale confidence pressure mentalFatigue physicalCondition reputation marketValue contractYearsLeft rngState'),
   phase:oneOf('ESCOLINHA','BASE','PROFISSIONAL','AUGE','VETERANO','APOSENTADO'),position:oneOf('IND','GK','CB','FB','DM','CM','AM','WG','ST'),
   transferIntent:oneOf('STAY','OPEN','LEAVE','FORCE'),secondaryPositions:array(position),
@@ -90,6 +91,7 @@ const playerFields=fields({recentForm:optional(recentForm),decisionMemory:option
 const player:Guard=v=>{
   if(!playerFields(v)||!object(v))return false;
   if(object(v.recentForm)&&Number(v.recentForm.lastObservedTurn)>Number(v.careerTurn))return false;
+  if(object(v.youthPositionResponse)){const plan=v.youthPositionResponse;if(!Number.isSafeInteger(plan.season)||Number(plan.season)>Number(v.season)||Number(plan.reviewedSeason)!==Number(plan.season)-1||plan.decision==='EXPERIMENT'&&Number(plan.penalty)!==0||plan.decision==='INSIST'&&(plan.position===plan.recommendedPosition||Number(plan.penalty)<.08))return false;}
   const scouting=object(v.life)&&object(v.life.scouting)?v.life.scouting:null;
   return !scouting||scouting.lastSearchSeason===undefined||Number(scouting.lastSearchSeason)<=Number(v.season);
 };

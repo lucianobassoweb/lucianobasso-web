@@ -228,7 +228,13 @@ export interface DecisionMemory {
   extraLoad?:number;
 }
 
+export interface YouthPositionResponse {
+  season:number; reviewedSeason:number; clubId:string|null; category:CompetitionCategory;
+  position:PlayablePosition; recommendedPosition:PlayablePosition; decision:'INSIST'|'EXPERIMENT'; penalty:number;
+}
+
 export interface PlayerState {
+  youthPositionResponse?:YouthPositionResponse;
   recentForm?:RecentMatchForm;
   decisionMemory?:DecisionMemory;
   story?:StoryState;

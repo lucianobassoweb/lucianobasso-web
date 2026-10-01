@@ -197,3 +197,16 @@ Esta revisão atualiza os tetos da0.3.7: semG/A/xA>=0,5, nota máxima6,3 em>=30m
 Gol encerra seca, mas não elimina avaliação de produção insuficiente na janela realmente observada de até8registros. Pelo menos6partidas>=45min/360minsubstanciais; cameo comgol conta numerador/minutos mas não estabelece amostra. ST referência(G+0,45A)/90=0,25; WG(G+A)/90=0,40. Deficit clamp(1−produção/referência,0,1), alívio de xA min0,35×somaobservadaxA×0,06; máximo com intensidade da seca existente, peso posição/idade e caps anteriores (.30prof,.24amador,.18base). Não somar duaspenalidades oulerDNA. Amostra/estado são derivados dohistórico jápersistido, semnovo schema. Duasproduçõespositivas podem recuperar espaço, semgarantia de titularidade.
 
 No profissional, primeiro limitar chance esportiva em0,08–0,92, depois subtrair forma e limitar novamente. Evita absorção de penalidade por atributos acima do teto. Rampa de estreia/retorno preservada. Banco não gera novo custo individual; feedback pode explicar cobrança anterior. Calendário, ausência de elenco detalhado e ações individuais ainda simplificados.
+
+
+## 0.3.10 — revisão anual da posição na formação
+
+Implementa a recomendação anual aprovada na decisão de sonho/experimentação: após um ano ruim, treinador propõe outra posição; usuário aceita, testa alternativa ou recusa. O sonho inicial persistente e a negociação profissional adulta continuam pendentes.
+
+Elegibilidade: nova temporada13–18, posição ainda não escolhida, YOUTH ou legadoESCOLINHA/BASE, ano imediatamente anterior com posição principal única documentada/categoriajuvenil explícita e8j/420min. ParticipaçãoSENIOR, mistura de posições ou pouca amostra não autorizam um veredito. Maior categoriajuvenil avaliada sem somar categorias. ST(G+0,45A)/90<0,20 e nota<7,2;WG(G+A)/90<0,30 e nota<7,2;outrasnota<6,3/GK6,2. Esses valores são parâmetros experimentais.
+
+Alternativa escolhe maior roleRating+proficiência×0,045−distância×2 entre demais posições, usando atributos atuais aprendidos. NenhumDNA/RNG/compatibilidade natural; repertório relevante é explicado, experiência sem garantia. OitoIDsposition preservados e balanço exibido antes da proposta. Ausência de evidência preserva escolha anual comum.
+
+Aceitar muda posição com custo/proficiência existentes. Insistir preserva posição, registra resposta e reduz chance titularjuvenil em0,08até13/0,12até15/0,16até18, somada à forma antesclamp0,25–0,85. Consequência somente mesma temporada/projeto/clube/posição/categoria, foraSENIOR. Amostra atual>=5j240min com STprodução>=0,25/nota>=6,7,WGprodução>=0,40/nota>=6,7,demaisnota>=6,7 remove custo enquanto sustentar essa evidência; desempenho posterior ruim pode reabrir cobrança. Não é clearance permanente nem escolha que condena potencial. Promoção continua por evidência independente.
+
+Resposta opcional youthPositionResponse, sem trocar chave/schema. Apenas novo evento compayload aplica plano; pendinglegado permaneceigual, sem cobrança nova retroativa. Persistência rejeita valores fora dos limites, temporada futura/reviewanoerrado, INSIST com posição igual à recomendada oupenalty<0,08, EXPERIMENTpenalty nãozero. Recibo informa resposta. Primeiroano/posição misturada desconhecida não inventados.

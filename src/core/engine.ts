@@ -1,3 +1,4 @@
+import {reviewYouthPosition} from './youth-position-review.js';
 import {recordRecentMatchForm,evaluateRecentMatchForm,type FormEvaluation} from './form.js';
 import {evaluateFanMatch} from './fans.js';
 import {buildRoutineDecision, resolveRoutineChoice} from './decisions.js';
@@ -61,7 +62,22 @@ function revealAttribute(p:PlayerState,rng:RNG):keyof VisibleAttributes{
 
 function positionChoiceEvent(p:PlayerState):CareerEvent{
   const ageText=p.age<=13?'Nesta idade, experimentar quase não cobra preço.':p.age<=15?'A especialização começa a importar, mas ainda há espaço para explorar.':p.age<=18?'Agora a escolha pesa: trocar exige adaptação e pode custar rendimento.':'A posição profissional já está consolidada.';
-  return {id:`position-${p.season}`,kind:'CHOICE',title:`Onde você quer jogar aos ${p.age}?`,body:`Escolha a posição principal desta temporada. ${ageText} O jogo não revela qual delas combina melhor com seu DNA.`,tags:['FORMAÇÃO','POSIÇÃO'],choices:POSITIONS.map(pos=>({id:`position:${pos}`,label:POSITION_LABEL[pos],hint:p.position==='IND'?`${POSITION_LABEL[pos]} · experimentar`:p.position===pos?`${POSITION_LABEL[pos]} · experiência ${Math.round(p.positionProficiency[pos])}/100 · continuidade`:`${POSITION_LABEL[pos]} · ${changeCostLabel(changeCostPreview(p,pos))}`}))};
+  const review=reviewYouthPosition(p);
+  const body=review?`Como ${POSITION_LABEL[review.previousPosition]}: ${review.reason} Você pode aceitar, testar outra posição ou insistir. Insistir reduz a chance de começar como titular em ${Math.round(review.opportunityPenalty*100)} pontos percentuais neste projeto, até mostrar uma resposta suficiente em campo. ${ageText}`:`Escolha a posição principal desta temporada. ${ageText}`;
+  return {id:`position-${p.season}`,kind:'CHOICE',title:review?'O treinador propõe outra posição':`Onde você quer jogar aos ${p.age}?`,body,tags:['FORMAÇÃO','POSIÇÃO',...(review?['AVALIAÇÃO DO ANO']:[])],...(review?{payload:{youthPositionReview:review}}:{}),choices:POSITIONS.map(pos=>({id:`position:${pos}`,label:review&&pos===p.position?`Insistir como ${POSITION_LABEL[pos]}`:review&&pos===review.recommendedPosition?`Experimentar ${POSITION_LABEL[pos]} · recomendado`:POSITION_LABEL[pos],hint:review&&pos===p.position?`Chance de titularidade −${Math.round(review.opportunityPenalty*100)} p.p.; pode recuperar espaço com rendimento`:review&&pos!==p.position?`${changeCostLabel(changeCostPreview(p,pos))}; aprender outra posição não garante sucesso`:p.position==='IND'?`${POSITION_LABEL[pos]} · experimentar`:p.position===pos?`${POSITION_LABEL[pos]} · experiência ${Math.round(p.positionProficiency[pos])}/100 · continuidade`:`${POSITION_LABEL[pos]} · ${changeCostLabel(changeCostPreview(p,pos))}`}))};
+}
+
+/** A refused annual experiment costs opportunity in this project until observed performance answers it. */
+function youthPositionOpportunityPenalty(p:PlayerState):number{
+  const plan=p.youthPositionResponse;
+  if(!plan||plan.decision!=='INSIST'||plan.season!==p.season||plan.position!==p.position||plan.clubId!==p.currentClubId||plan.category!==competitionCategory(p)||p.professionalStatus==='SENIOR')return 0;
+  const stats=p.currentSeason.categories?.[plan.category];
+  if(stats&&stats.appearances>=5&&stats.minutes>=240){
+    const rate=(stats.goals+(p.position==='ST'?.45:1)*stats.assists)*90/stats.minutes;
+    const answered=p.position==='ST'?rate>=.25&&stats.avgRating>=6.7:p.position==='WG'?rate>=.40&&stats.avgRating>=6.7:stats.avgRating>=6.7;
+    if(answered)return 0;
+  }
+  return plan.penalty;
 }
 
 function assignYouthClub(p:PlayerState,rng:RNG):CareerEvent{
@@ -154,7 +170,7 @@ function simulateYouthBlock(p:PlayerState,rng:RNG):CareerEvent{
     const stageStandard=32+(p.age-12)*2.5+(p.currentClubId?CLUB_BY_ID[p.currentClubId]!.youth*.07:0);
     const learned=roleRating(p,pos);
     const rating=clamp(6.05+(learned-stageStandard)/14+(g*.8+a*.55)+(comp-1)*1.8-(p.decisionMemory?.extraLoad??0)*.2+rng.normal(0,.42),4.7,9.6);
-    const dummy:MatchResult={opponentId:'youth',home:true,started:rng.chance(clamp(.72-recent.startPenalty,.25,.85)),teamGoals:g+a+rng.int(0,2),oppGoals:rng.int(0,2),minutes:rng.int(42,80),goals:g,assists:a,motm:rating>=8.2,yellow:rng.chance(['CB','DM','FB'].includes(pos) ? .08 : .035),red:false,rating:Number(rating.toFixed(1)),xg:Number((g*.55+rng.float(.01,.18)).toFixed(2)),xa:Number((a*.45+rng.float(.01,.16)).toFixed(2)),saves:pos==='GK'?rng.int(1,5):0,cleanSheet:pos==='GK'&&rng.chance(.34),headline:''};
+    const dummy:MatchResult={opponentId:'youth',home:true,started:rng.chance(clamp(.72-recent.startPenalty-youthPositionOpportunityPenalty(p),.25,.85)),teamGoals:g+a+rng.int(0,2),oppGoals:rng.int(0,2),minutes:rng.int(42,80),goals:g,assists:a,motm:rating>=8.2,yellow:rng.chance(['CB','DM','FB'].includes(pos) ? .08 : .035),red:false,rating:Number(rating.toFixed(1)),xg:Number((g*.55+rng.float(.01,.18)).toFixed(2)),xa:Number((a*.45+rng.float(.01,.16)).toFixed(2)),saves:pos==='GK'?rng.int(1,5):0,cleanSheet:pos==='GK'&&rng.chance(.34),headline:''};
     dummy.cleanSheet=pos==='GK'&&dummy.oppGoals===0;
     if(pos==='GK')dummy.rating=Number(clamp(dummy.rating+dummy.saves*.075+(dummy.cleanSheet?.25:0),4.7,9.6).toFixed(1));else if(['CB','FB','DM'].includes(pos)&&dummy.oppGoals===0)dummy.rating=Number(clamp(dummy.rating+.2,4.7,9.6).toFixed(1));
     // A substitute has less exposure than a full starter in this formation fixture.
@@ -169,7 +185,8 @@ function simulateYouthBlock(p:PlayerState,rng:RNG):CareerEvent{
   const featured=[...youthMatches].sort((a,b)=>b.rating-a.rating)[0]!;
   const form=matchForm(p,featured);if(featured.minutes>=45)applyFormConsequences(p,form,false);
   const fanReaction=applyMatchFanReaction(p,featured,competitionCategory(p),p.currentClubId?CLUB_BY_ID[p.currentClubId]:undefined)+(form.fanText?' '+form.fanText:'');
-  const coachReaction=form.coachText||(featured.rating>=7.4?'A atuação chamou atenção para seu repertório.':'O treinador observa sua evolução sem concluir seu potencial.');
+  const annualPenalty=youthPositionOpportunityPenalty(p);
+  const coachReaction=(annualPenalty?`A recusa da experiência proposta reduz a chance de titularidade nas próximas partidas deste projeto (−${Math.round(annualPenalty*100)} p.p. na chance de titularidade). `:'')+(form.coachText||(featured.rating>=7.4?'A atuação chamou atenção para seu repertório.':'O treinador observa sua evolução sem concluir seu potencial.'));
   return {matchFeedback:{category:competitionCategory(p),opponent:p.age>20?'Equipe do futebol local':p.currentClubId?'Adversário da base':'Equipe local de formação',coachName:p.age>20?'Treinador do futebol local':'Treinador da formação',started:featured.started,minutes:featured.minutes,goals:featured.goals,assists:featured.assists,rating:featured.rating,saves:featured.saves,cleanSheet:featured.cleanSheet,teamGoals:featured.teamGoals,oppGoals:featured.oppGoals,...(featured.ratingReason?{ratingReason:featured.ratingReason}:{}),fanReaction,coachReaction,blockGames:games,blockStarts:youthMatches.filter(m=>m.started).length,blockGoals:goals,blockAssists:assists,blockMinutes:youthMatches.reduce((sum,m)=>sum+m.minutes,0)},id:`y-${p.careerTurn}`,kind:'INFO',title:`${CATEGORY_LABEL[competitionCategory(p)]} · ${featured.teamGoals} × ${featured.oppGoals}`,body:`${CATEGORY_LABEL[competitionCategory(p)]}: ${featured.minutes} minutos nesta partida. ${signal} Os treinadores agora observam melhor: ${ATTRIBUTE_LABELS[key]}.`,tags:[p.age>20?'FUTEBOL LOCAL':'FORMAÇÃO',POSITION_LABEL[pos].toUpperCase()]};
 }
 
@@ -340,7 +357,10 @@ function resolveChoiceInternal(save:SaveGame,choiceId:string):SaveGame{
     else{p.pressure=clamp(p.pressure+8);}
     delete p.injury;log(p,'RETORNO','Retorno ao elenco',choiceId==='comeback:GRADUAL'?'Participação gradual':'Disputar espaço anterior imediatamente');
   }else if(choiceId.startsWith('position:')){
-    const pos=choiceId.split(':')[1] as PlayablePosition;const rec=selectPosition(p,pos);if(!p.currentSeason.appearances)p.currentSeason.primaryPosition=pos;log(p,'POSIÇÃO',`Temporada como ${POSITION_LABEL[pos]}`,rec.previous&&rec.previous!==pos?`Mudança de ${POSITION_LABEL[rec.previous]} para ${POSITION_LABEL[pos]}. ${changeCostLabel(rec.cost)}.`:'Continuidade na função escolhida.');
+    const pos=choiceId.split(':')[1] as PlayablePosition;
+    const review=save.pendingEvent?.payload?.youthPositionReview?reviewYouthPosition(p):null;
+    if(review){const insist=pos===review.previousPosition;p.youthPositionResponse={season:p.season,reviewedSeason:review.previousSeason,clubId:p.currentClubId,category:competitionCategory(p),position:pos,recommendedPosition:review.recommendedPosition,decision:insist?'INSIST':'EXPERIMENT',penalty:insist?review.opportunityPenalty:0};log(p,'EXPERIMENTAÇÃO',insist?'Você decidiu insistir na posição':'Você aceitou experimentar outra posição',insist?`A recomendação após ${review.previousSeason} foi recusada. Chance de titularidade −${Math.round(review.opportunityPenalty*100)} p.p. neste projeto até uma resposta suficiente em campo.`:`Você começa a aprender ${POSITION_LABEL[pos]}; repertório preservado, adaptação e sucesso ainda dependem do percurso.`);}
+    const rec=selectPosition(p,pos);if(!p.currentSeason.appearances)p.currentSeason.primaryPosition=pos;log(p,'POSIÇÃO',`Temporada como ${POSITION_LABEL[pos]}`,(rec.previous&&rec.previous!==pos?`Mudança de ${POSITION_LABEL[rec.previous]} para ${POSITION_LABEL[pos]}. ${changeCostLabel(rec.cost)}.`:'Continuidade na função escolhida.')+(review?pos===review.previousPosition?` Você recusou a experiência proposta: chance de titularidade −${Math.round(review.opportunityPenalty*100)} p.p. neste projeto, recuperável com rendimento.`:' Você começa uma experiência em outra posição; sucesso não é garantido.':''));
   }else if(choiceId.startsWith('after:')){
     const life=ensureLife(p);const path=choiceId.split(':')[1] as 'WORK'|'TECHNICAL'|'DEGREE'|'COACH_COURSE';
     life.secondCareer={path,status:path==='WORK'?'SEEKING_WORK':'IN_TRAINING'};
