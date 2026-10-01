@@ -20,6 +20,18 @@ export interface MatchResult {
   saves: number;
   cleanSheet: boolean;
   headline: string;
+  ratingReason?:string;
+}
+
+/** Offensive notes describe observed output, not the player's underlying skill. */
+export function observedAttackRating(position:PlayerState['position'],m:Pick<MatchResult,'rating'|'minutes'|'goals'|'assists'|'xg'|'xa'>):{rating:number;ratingReason?:string}{
+  if(position!=='ST'&&position!=='WG')return {rating:m.rating};
+  if(m.goals>0)return {rating:m.rating,ratingReason:`${m.goals} gol${m.goals===1?'':'s'} e ${m.assists} assistência${m.assists===1?'':'s'} entram na avaliação ofensiva.`};
+  if(m.assists>0)return {rating:Math.min(m.rating,7.8+m.assists*.3),ratingReason:`Sem gol, mas ${m.assists} assistência${m.assists===1?'':'s'} registra${m.assists===1?'':'m'} contribuição direta ao ataque.`};
+  if(m.xa>=.5)return {rating:Math.min(m.rating,m.xa>=1?7.8:7.2),ratingReason:`Sem participação direta em gol; xA ${m.xa.toFixed(2)} registra criação de oportunidades.`};
+  const waste=m.minutes>=30&&m.xg>=.6;
+  const cap=m.minutes<30?6.8:waste?6.4:6.6;
+  return {rating:Number(Math.min(m.rating,cap).toFixed(1)),ratingReason:`Sem gol ou assistência, com xA ${m.xa.toFixed(2)}${waste?` e xG ${m.xg.toFixed(2)} sem conversão`:''}. ${m.minutes<30?'A participação curta limita a avaliação.':'A nota reflete pouca produção ofensiva registrada.'}`};
 }
 
 function poisson(rng:RNG,lambda:number):number{
@@ -73,7 +85,8 @@ export function simulatePlayerMatch(player:PlayerState,own:Club,opponent:Club,rn
   const defensiveImpact=(pos==='GK' ? saves*.055+(cleanSheet ? .28 : 0) : ['CB','FB','DM'].includes(pos) ? (oppGoals===0 ? .22 : 0) : 0);
   const fitImpact=(eff-1)*2.2;
   const consistencyNoise=rng.normal(0,.48-(player.dna.consistency/100)*.18);
-  const rating=Number(clamp(6.15+resultImpact+goals*.82+assists*.58+defensiveImpact+fitImpact+consistencyNoise+(playerLevel-62)/115,4.0,10).toFixed(1));
+  const rawRating=Number(clamp(6.15+resultImpact+goals*.82+assists*.58+defensiveImpact+fitImpact+consistencyNoise+(playerLevel-62)/115,4.0,10).toFixed(1));
+  const {rating,ratingReason}=observedAttackRating(pos,{rating:rawRating,minutes,goals,assists,xg,xa});
   const motm=rating>=8.0&&rng.chance(clamp(.30+(rating-8)*.34+importance*.02,.25,.92));
   const headline=goals>=3?`Hat-trick: ${own.shortName} tem um protagonista.`:
     goals>0&&assists>0?`${goals} gol${goals>1?'s':''} e ${assists} assistência${assists>1?'s':''}.`:
@@ -81,5 +94,5 @@ export function simulatePlayerMatch(player:PlayerState,own:Club,opponent:Club,rn
     assists>0?`${assists} assistência${assists>1?'s':''}.`:
     pos==='GK'&&cleanSheet?`${saves} defesas e jogo sem sofrer gol.`:
     rating>=7.6?'Atuação de alto nível sem participação direta em gol.':'Partida concluída.';
-  return {opponentId:opponent.id,home,started,teamGoals,oppGoals,minutes,goals,assists,motm,yellow,red,rating,xg,xa,saves,cleanSheet,headline};
+  return {opponentId:opponent.id,home,started,teamGoals,oppGoals,minutes,goals,assists,motm,yellow,red,rating,xg,xa,saves,cleanSheet,headline,...(ratingReason?{ratingReason}:{})};
 }

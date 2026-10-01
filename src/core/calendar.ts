@@ -20,6 +20,11 @@ export function promotionEvidence(p:PlayerState):{eligible:boolean;games:number;
   const categories=records.flatMap(s=>[s.categories?.U20].filter(x=>x!==undefined));
   const games=categories.reduce((sum,s)=>sum+s.appearances,0),minutes=categories.reduce((sum,s)=>sum+s.minutes,0);
   const rating=games?categories.reduce((sum,s)=>sum+s.avgRating*s.appearances,0)/games:0;
-  const threshold=p.position==='GK'?7.05:['CB','FB','DM'].includes(p.position)?6.95:7.2;
-  return {eligible:p.age>=16&&p.age<=20&&!!p.currentClubId&&games>=8&&minutes>=420&&rating>=threshold,games,rating,minutes};
+  // Offensive notes now require match output, so promotion must also read that output.
+  const goals=categories.reduce((sum,s)=>sum+s.goals,0),assists=categories.reduce((sum,s)=>sum+s.assists,0);
+  const outputPer90=(goals+(p.position==='ST'?assists*.45:assists))*90/Math.max(1,minutes);
+  const attacker=p.position==='ST'||p.position==='WG';
+  const threshold=p.position==='GK'?7.05:['CB','FB','DM'].includes(p.position)?6.95:attacker?6.7:7.2;
+  const outputEnough=!attacker||outputPer90>=(p.position==='ST'?.30:.45);
+  return {eligible:p.age>=16&&p.age<=20&&!!p.currentClubId&&games>=8&&minutes>=420&&rating>=threshold&&outputEnough,games,rating,minutes};
 }

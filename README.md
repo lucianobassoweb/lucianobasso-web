@@ -2,7 +2,7 @@
 
 Jogo de carreira individual no futebol, responsivo para celular e desktop, com funcionamento offline. Começa aos 12 numa escolinha local. As decisões profissionais e de vida conduzem uma biografia sorteada.
 
-Versão experimental 0.3.6: estudos de Ronaldinho, Kaká, Romário, Diego Souza, Rivaldo, Lulinha e Somália aplicados a origem familiar, escola, descoberta, reconversão, transição, afastamentos e longevidade. Ver `docs/CAREER_CASE_STUDIES.md`, `docs/GAME_SPEC.md` e `PROJECT_LOG.md` para decisões, fórmulas, fontes e limites.
+Versão experimental 0.3.7: estudos de Ronaldinho, Kaká, Romário, Diego Souza, Rivaldo, Lulinha e Somália aplicados a origem familiar, escola, descoberta, reconversão, transição, afastamentos e longevidade. Ver `docs/CAREER_CASE_STUDIES.md`, `docs/GAME_SPEC.md` e `PROJECT_LOG.md` para decisões, fórmulas, fontes e limites.
 
 ```bash
 npm ci
@@ -64,3 +64,8 @@ Decisões entre partidas variam com a situação e têm efeitos de esforço, des
 ## 0.3.6 — torcida e responsabilidade em campo
 
 Cobrança por setor e reconhecimento individual passam a considerar posição, minutos, placar, nota, defesas, gols/assistências, xG/xA, expulsão, clássico, adversário, expectativa, campanha e memória. A reação modifica relação com a torcida, pressão, moral e confiança; momentos severos podem gerar memória de cobrança e uma resposta posterior pode fechar esse episódio. Sem culpa individual no banco e sem inventar erros pessoais. Base/local têm intensidade menor e linguagem própria. Saves mantêm os eventos já oferecidos. Sonho/experimentação de posição e porta profissional adulta permanecem próximos trabalhos do motor.
+
+
+## 0.3.7 — produção do atacante e disputa por espaço
+
+Nota de ST/WG passa a exigir produção observada: assistência permite boa avaliação sem gol; sem contribuição direta/criação suficiente a nota não sobe apenas pelo repertório. Justificativa visível na partida. Sequência recente no mesmo clube/categoria/posição/temporada pesa na escalação, treinador e torcida; formação recebe menor intensidade. Banco e entradas curtas sem gol não inventam nem apagam a seca. Gol encerra o episódio, assistências/criação atenuam. Critério de promoção ofensiva foi ajustado à nova nota com produção por90minutos e amostra mínima, sem promoção automática por idade. Saves legados mantêm seus eventos/notas: registro recente começa nas próximas atuações, sem inventar partidas antigas.

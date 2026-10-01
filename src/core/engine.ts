@@ -1,3 +1,4 @@
+import {recordRecentMatchForm,evaluateRecentMatchForm,type FormEvaluation} from './form.js';
 import {evaluateFanMatch} from './fans.js';
 import {buildRoutineDecision, resolveRoutineChoice} from './decisions.js';
 import {ensureStories, updateStories, choiceSnapshot, recordChoice} from './stories.js';
@@ -9,7 +10,7 @@ import { RNG, clamp, hashSeed } from './random.js';
 import { generateDNA, initialAttributes, growthStep, updateBody, overall } from './dna.js';
 import { POSITIONS, POSITION_LABEL, changeCostPreview, changeCostLabel, selectPosition, trainPositionStep, trainPositionExperience, effectivePositionRating, observedPositionSuggestion, tacticalRating, roleRating } from './positions.js';
 import { BRAZIL_CLUBS_2026, CLUB_BY_ID } from '../data/clubs-br-2026.js';
-import { simulatePlayerMatch, type MatchResult } from './match.js';
+import { simulatePlayerMatch, observedAttackRating, type MatchResult } from './match.js';
 import type { CareerEvent, Club, CompetitionCategory, FanRelation, PlayerState, PlayablePosition, SaveGame, SeasonStats, TransferIntent, VisibleAttributes, EducationPriority, TacticalRole, WorldFixture } from './types.js';
 
 const VERSION='0.1.0-playable.2';
@@ -123,12 +124,27 @@ function fanEffectsForMatch(p:PlayerState,own:Club,opp:Club,m:MatchResult):strin
   return reaction;
 }
 
+function formContext(p:PlayerState){return {clubId:p.currentClubId,category:competitionCategory(p),position:p.position,season:p.season};}
+function matchForm(p:PlayerState,m?:MatchResult):FormEvaluation{
+  const context=formContext(p);
+  if(m)p.recentForm=recordRecentMatchForm(p.recentForm,context,{turn:p.careerTurn,minutes:m.minutes,goals:m.goals,assists:m.assists,rating:m.rating,xg:m.xg,xa:m.xa});
+  return evaluateRecentMatchForm(p.recentForm,context,p.age);
+}
+function applyFormConsequences(p:PlayerState,form:FormEvaluation,professional:boolean):void{
+  if(!form.startPenalty)return;
+  const intensity=form.startPenalty/(professional?.30:.18);
+  p.pressure=clamp(p.pressure+intensity*.6);p.confidence=clamp(p.confidence-intensity*.2);
+  if(p.currentClubId){const fan=ensureFan(p,p.currentClubId);fan.hate=clamp(fan.hate+intensity*.3);}
+  if(professional&&p.tactical){const bond=coachBond(p,p.tactical.coachId);bond.trust=clamp(bond.trust-intensity*(1+(100-coachProfile(p.tactical.coachId).patience)/100));p.tactical.trust=bond.trust;}
+}
+
 function roleBaseline(p:PlayerState,pos:PlayablePosition):number{
   const a=p.attributes;const vals=Object.values(a) as number[];const avg=vals.reduce((s,v)=>s+v,0)/vals.length;return Math.max(34,avg*.95);
 }
 
 function simulateYouthBlock(p:PlayerState,rng:RNG):CareerEvent{
   observeLocally(p);
+  const recent=matchForm(p);
   const games=1;const pos=(p.position==='IND'?'CM':p.position) as PlayablePosition;const rawComp=clamp(effectivePositionRating(p,pos)/Math.max(35,roleBaseline(p,pos)),.72,1.18);const youthPressure=p.age<=12?.08:p.age===13?.14:p.age===14?.30:.55;const comp=1+(rawComp-1)*youthPressure;let goals=0,assists=0,good=0;const youthMatches:MatchResult[]=[];
   for(let i=0;i<games;i++){
     const attacking=pos==='ST' ? .24 : pos==='WG' ? .19 : pos==='AM' ? .16 : pos==='CM' ? .10 : pos==='FB' ? .07 : pos==='DM' ? .06 : pos==='CB' ? .045 : .008;
@@ -138,18 +154,23 @@ function simulateYouthBlock(p:PlayerState,rng:RNG):CareerEvent{
     const stageStandard=32+(p.age-12)*2.5+(p.currentClubId?CLUB_BY_ID[p.currentClubId]!.youth*.07:0);
     const learned=roleRating(p,pos);
     const rating=clamp(6.05+(learned-stageStandard)/14+(g*.8+a*.55)+(comp-1)*1.8-(p.decisionMemory?.extraLoad??0)*.2+rng.normal(0,.42),4.7,9.6);
-    const dummy:MatchResult={opponentId:'youth',home:true,started:rng.chance(.72),teamGoals:g+a+rng.int(0,2),oppGoals:rng.int(0,2),minutes:rng.int(42,80),goals:g,assists:a,motm:rating>=8.2,yellow:rng.chance(['CB','DM','FB'].includes(pos) ? .08 : .035),red:false,rating:Number(rating.toFixed(1)),xg:Number((g*.55+rng.float(.01,.18)).toFixed(2)),xa:Number((a*.45+rng.float(.01,.16)).toFixed(2)),saves:pos==='GK'?rng.int(1,5):0,cleanSheet:pos==='GK'&&rng.chance(.34),headline:''};
+    const dummy:MatchResult={opponentId:'youth',home:true,started:rng.chance(clamp(.72-recent.startPenalty,.25,.85)),teamGoals:g+a+rng.int(0,2),oppGoals:rng.int(0,2),minutes:rng.int(42,80),goals:g,assists:a,motm:rating>=8.2,yellow:rng.chance(['CB','DM','FB'].includes(pos) ? .08 : .035),red:false,rating:Number(rating.toFixed(1)),xg:Number((g*.55+rng.float(.01,.18)).toFixed(2)),xa:Number((a*.45+rng.float(.01,.16)).toFixed(2)),saves:pos==='GK'?rng.int(1,5):0,cleanSheet:pos==='GK'&&rng.chance(.34),headline:''};
     dummy.cleanSheet=pos==='GK'&&dummy.oppGoals===0;
     if(pos==='GK')dummy.rating=Number(clamp(dummy.rating+dummy.saves*.075+(dummy.cleanSheet?.25:0),4.7,9.6).toFixed(1));else if(['CB','FB','DM'].includes(pos)&&dummy.oppGoals===0)dummy.rating=Number(clamp(dummy.rating+.2,4.7,9.6).toFixed(1));
-    youthMatches.push(dummy);addMatchStats(p,dummy,false);goals+=g;assists+=a;if(rating>=7.4)good++;
+    // A substitute has less exposure than a full starter in this formation fixture.
+    if(!dummy.started){dummy.minutes=Math.max(12,Math.round(dummy.minutes*.45));dummy.xg=Number((dummy.xg*.45).toFixed(2));dummy.xa=Number((dummy.xa*.45).toFixed(2));}
+    Object.assign(dummy,observedAttackRating(pos,dummy));dummy.motm=dummy.rating>=8.2;
+    youthMatches.push(dummy);addMatchStats(p,dummy,false);goals+=g;assists+=a;if(dummy.rating>=7.4)good++;
   }
   if(p.decisionMemory?.extraLoad)p.decisionMemory.extraLoad=Math.max(0,p.decisionMemory.extraLoad-1);
   trainPositionExperience(p,calendarScale(p));const key=revealAttribute(p,rng);
   p.morale=clamp(p.morale+(good>=2?2:0)+rng.int(-1,2));p.confidence=clamp(p.confidence+goals*2+assists+good*.5);
   const signal=goals+assists?`${goals} gol${goals===1?'':'s'} e ${assists} assistência${assists===1?'':'s'} nesta partida.`:good?`${good} boas atuações nesta partida.`:'Partida sem destaque estatístico.';
   const featured=[...youthMatches].sort((a,b)=>b.rating-a.rating)[0]!;
-  const fanReaction=applyMatchFanReaction(p,featured,competitionCategory(p),p.currentClubId?CLUB_BY_ID[p.currentClubId]:undefined);
-  return {matchFeedback:{category:competitionCategory(p),opponent:p.age>20?'Equipe do futebol local':p.currentClubId?'Adversário da base':'Equipe local de formação',coachName:p.age>20?'Treinador do futebol local':'Treinador da formação',started:featured.started,minutes:featured.minutes,goals:featured.goals,assists:featured.assists,rating:featured.rating,saves:featured.saves,cleanSheet:featured.cleanSheet,teamGoals:featured.teamGoals,oppGoals:featured.oppGoals,fanReaction,coachReaction:featured.rating>=7.4?'A atuação chamou atenção para seu repertório.':'O treinador observa sua evolução sem concluir seu potencial.',blockGames:games,blockStarts:youthMatches.filter(m=>m.started).length,blockGoals:goals,blockAssists:assists,blockMinutes:youthMatches.reduce((sum,m)=>sum+m.minutes,0)},id:`y-${p.careerTurn}`,kind:'INFO',title:`${CATEGORY_LABEL[competitionCategory(p)]} · ${featured.teamGoals} × ${featured.oppGoals}`,body:`${CATEGORY_LABEL[competitionCategory(p)]}: ${featured.minutes} minutos nesta partida. ${signal} Os treinadores agora observam melhor: ${ATTRIBUTE_LABELS[key]}.`,tags:[p.age>20?'FUTEBOL LOCAL':'FORMAÇÃO',POSITION_LABEL[pos].toUpperCase()]};
+  const form=matchForm(p,featured);if(featured.minutes>=45)applyFormConsequences(p,form,false);
+  const fanReaction=applyMatchFanReaction(p,featured,competitionCategory(p),p.currentClubId?CLUB_BY_ID[p.currentClubId]:undefined)+(form.fanText?' '+form.fanText:'');
+  const coachReaction=form.coachText||(featured.rating>=7.4?'A atuação chamou atenção para seu repertório.':'O treinador observa sua evolução sem concluir seu potencial.');
+  return {matchFeedback:{category:competitionCategory(p),opponent:p.age>20?'Equipe do futebol local':p.currentClubId?'Adversário da base':'Equipe local de formação',coachName:p.age>20?'Treinador do futebol local':'Treinador da formação',started:featured.started,minutes:featured.minutes,goals:featured.goals,assists:featured.assists,rating:featured.rating,saves:featured.saves,cleanSheet:featured.cleanSheet,teamGoals:featured.teamGoals,oppGoals:featured.oppGoals,...(featured.ratingReason?{ratingReason:featured.ratingReason}:{}),fanReaction,coachReaction,blockGames:games,blockStarts:youthMatches.filter(m=>m.started).length,blockGoals:goals,blockAssists:assists,blockMinutes:youthMatches.reduce((sum,m)=>sum+m.minutes,0)},id:`y-${p.careerTurn}`,kind:'INFO',title:`${CATEGORY_LABEL[competitionCategory(p)]} · ${featured.teamGoals} × ${featured.oppGoals}`,body:`${CATEGORY_LABEL[competitionCategory(p)]}: ${featured.minutes} minutos nesta partida. ${signal} Os treinadores agora observam melhor: ${ATTRIBUTE_LABELS[key]}.`,tags:[p.age>20?'FUTEBOL LOCAL':'FORMAÇÃO',POSITION_LABEL[pos].toUpperCase()]};
 }
 
 function opponentPool(own:Club):Club[]{
@@ -160,7 +181,8 @@ function opponentPool(own:Club):Club[]{
 function simulateProfessionalBlock(p:PlayerState,rng:RNG,fixtures:WorldFixture[]):CareerEvent{
   const own=CLUB_BY_ID[p.currentClubId!]!;const games=fixtures.length;const level=playerEffectiveLevel(p,own);const standard=clubLevel(own);
   const transition=transitionLoad(p);p.pressure=clamp(p.pressure+transition.pressure*calendarScale(p));
-  const baseStart=clamp((.35+(level-standard)/35+(p.confidence-50)/180+opportunityAdjustment(p)+(p.careerApproach==='RESPONSIBILITY'?.06:0))*transition.starts-(p.comebackBlocks&&p.comebackPlan==='GRADUAL'?.15:0),.08,.92);
+  const recent=matchForm(p);
+  const baseStart=clamp((.35+(level-standard)/35+(p.confidence-50)/180+opportunityAdjustment(p)+(p.careerApproach==='RESPONSIBILITY'?.06:0))*transition.starts-(p.comebackBlocks&&p.comebackPlan==='GRADUAL'?.15:0)-recent.startPenalty,.08,.92);
   if(p.comebackBlocks)p.comebackBlocks=Math.max(0,p.comebackBlocks-1);
   const firstAppearance=!p.debut&&p.careerStats.appearances===0;
   const results:{m:MatchResult;opp:Club;fanReaction:string;coachReaction:string}[]=[];
@@ -170,15 +192,15 @@ function simulateProfessionalBlock(p:PlayerState,rng:RNG,fixtures:WorldFixture[]
     const opp=CLUB_BY_ID[fixture.homeId===own.id?fixture.awayId:fixture.homeId]!;const importance=(own.rivals.includes(opp.id)||opp.rivals.includes(own.id))?1.35:rng.chance(.08)?1.25:1;
 
     const m=simulatePlayerMatch(p,own,opp,rng,started,importance,{home:fixture.homeId===own.id,teamGoals:fixture.homeId===own.id?fixture.homeGoals:fixture.awayGoals,oppGoals:fixture.homeId===own.id?fixture.awayGoals:fixture.homeGoals,...(p.careerStats.minutes<120?{minutes:rng.int(6,18)}:{})});if(!p.debut)p.debut={season:p.season,age:p.age,clubId:own.id,opponentId:opp.id,minutes:m.minutes};
-    performanceFeedback(p,m.rating,m.red);addMatchStats(p,m,true);const fanReaction=fanEffectsForMatch(p,own,opp,m);
+    performanceFeedback(p,m.rating,m.red);addMatchStats(p,m,true);const form=matchForm(p,m);if(m.minutes>=45)applyFormConsequences(p,form,true);const fanReaction=fanEffectsForMatch(p,own,opp,m)+(form.fanText?' '+form.fanText:'');
     const profile=coachProfile(p.tactical!.coachId);
 
-    const coachReaction=m.red?'A expulsão trouxe cobrança e perda de confiança profissional.':m.rating>=8?'O treinador destacou sua atuação e reforçou a confiança.':m.rating>=7?'Sua atuação sustentou a confiança profissional.':m.rating<6.2?(profile.patience>=60?'O treinador reconhece a dificuldade e oferece tempo para responder.':'O treinador cobra uma resposta após a atuação abaixo do esperado.'):'O treinador mantém a avaliação e observa sua continuidade.';
+    const coachReaction=(form.coachText?form.coachText+' ':'')+(m.red?'A expulsão trouxe cobrança e perda de confiança profissional.':m.rating>=8?'O treinador destacou sua atuação e reforçou a confiança.':m.rating>=7?'Sua atuação sustentou a confiança profissional.':m.rating<6.2?(profile.patience>=60?'O treinador reconhece a dificuldade e oferece tempo para responder.':'O treinador cobra uma resposta após a atuação abaixo do esperado.'):'O treinador mantém a avaliação e observa sua continuidade.');
     results.push({m,opp,fanReaction,coachReaction});
     const result=m.teamGoals>m.oppGoals?1:m.teamGoals<m.oppGoals?-1:0;p.morale=clamp(p.morale+result*1.2+m.goals*.9+m.assists*.5-(m.red?2:0));p.confidence=clamp(p.confidence+result*.7+m.goals*1.8+m.assists*1.1+(m.motm?1.8:0));
   }
   trainPositionExperience(p,calendarScale(p)*Math.max(1,results.length));p.physicalCondition=clamp(p.physicalCondition+(-rng.float(1.5,4.5)+2.4)*calendarScale(p),65,100);
-  if(!results.length){p.confidence=clamp(p.confidence-.5);const fixture=fixtures[0],opponent=fixture?CLUB_BY_ID[fixture.homeId===own.id?fixture.awayId:fixture.homeId]:null;const gf=fixture?(fixture.homeId===own.id?fixture.homeGoals:fixture.awayGoals):0,ga=fixture?(fixture.homeId===own.id?fixture.awayGoals:fixture.homeGoals):0;return {id:`bench-${p.careerTurn}`,kind:'INFO',title:fixture?`${own.shortName} ${gf} × ${ga} ${opponent!.shortName} · você ficou no banco`:'Sem partida profissional nesta rodada',body:`Você acompanhou esta partida sem entrar. A disputa por espaço pesa mais do que qualquer treino.`,matchFeedback:{category:'SENIOR',showScore:!!fixture,opponent:opponent?.shortName??'Profissional · banco de reservas',coachName:coachName(p.tactical!.coachId),started:false,minutes:0,goals:0,assists:0,rating:0,saves:0,cleanSheet:false,teamGoals:gf,oppGoals:ga,fanReaction:'Sem atuação para uma nova avaliação individual.',coachReaction:'Seu espaço segue em disputa; não houve avaliação em campo.',blockGames:0,blockStarts:0,blockGoals:0,blockAssists:0,blockMinutes:0},tags:['BANCO',POSITION_LABEL[p.position as PlayablePosition].toUpperCase()]};}
+  if(!results.length){p.recentForm=recordRecentMatchForm(p.recentForm,formContext(p),{turn:p.careerTurn,minutes:0,goals:0,assists:0,rating:0,xg:0,xa:0});p.confidence=clamp(p.confidence-.5);const fixture=fixtures[0],opponent=fixture?CLUB_BY_ID[fixture.homeId===own.id?fixture.awayId:fixture.homeId]:null;const gf=fixture?(fixture.homeId===own.id?fixture.homeGoals:fixture.awayGoals):0,ga=fixture?(fixture.homeId===own.id?fixture.awayGoals:fixture.homeGoals):0;return {id:`bench-${p.careerTurn}`,kind:'INFO',title:fixture?`${own.shortName} ${gf} × ${ga} ${opponent!.shortName} · você ficou no banco`:'Sem partida profissional nesta rodada',body:`Você acompanhou esta partida sem entrar. A disputa por espaço pesa mais do que qualquer treino.`,matchFeedback:{category:'SENIOR',showScore:!!fixture,opponent:opponent?.shortName??'Profissional · banco de reservas',coachName:coachName(p.tactical!.coachId),started:false,minutes:0,goals:0,assists:0,rating:0,saves:0,cleanSheet:false,teamGoals:gf,oppGoals:ga,fanReaction:'Sem atuação para uma nova avaliação individual.',coachReaction:'Seu espaço segue em disputa; não houve avaliação em campo.',blockGames:0,blockStarts:0,blockGoals:0,blockAssists:0,blockMinutes:0},tags:['BANCO',POSITION_LABEL[p.position as PlayablePosition].toUpperCase()]};}
   const highlight=[...results].sort((a,b)=>(b.m.goals*2+b.m.assists+(b.m.motm?1.5:0)+b.m.rating/10)-(a.m.goals*2+a.m.assists+(a.m.motm?1.5:0)+a.m.rating/10))[0]!;
   const goals=results.reduce((s,x)=>s+x.m.goals,0),assists=results.reduce((s,x)=>s+x.m.assists,0),starts=results.filter(x=>x.m.started).length;
   const avgBlock=results.reduce((s,x)=>s+x.m.rating,0)/results.length;
@@ -186,7 +208,7 @@ function simulateProfessionalBlock(p:PlayerState,rng:RNG,fixtures:WorldFixture[]
   if(p.careerStats.minutes<1800&&avgBlock<6.4){p.confidence=clamp(p.confidence-(1+expectation/40)*(p.professionalTransition?.mode==='PROTECTED'?.5:1));p.mentalFatigue=clamp(p.mentalFatigue+transition.pressure*calendarScale(p));}else if(avgBlock>=7){p.pressure=clamp(p.pressure-1);p.mentalFatigue=clamp(p.mentalFatigue-1);}
   p.reputation=clamp(p.reputation+(avgBlock-6.55)*.42*calendarScale(p)+goals*.07+assists*.05+results.filter(x=>x.m.motm).length*.12,1,100);
   const m=highlight.m,opp=highlight.opp;const prefix=`Profissional · ${p.careerStats.minutes<450?'Início gradual da trajetória.':'Participação nesta rodada.'} `;
-  return {id:`m-${p.careerTurn}`,kind:firstAppearance?'MILESTONE':'MATCH',title:`${firstAppearance?'Sua estreia no profissional · ':''}${own.shortName} ${m.teamGoals} × ${m.oppGoals} ${opp.shortName}`,matchFeedback:{category:'SENIOR',opponent:opp.shortName,coachName:coachName(p.tactical!.coachId),started:m.started,minutes:m.minutes,goals:m.goals,assists:m.assists,rating:m.rating,saves:m.saves,cleanSheet:m.cleanSheet,teamGoals:m.teamGoals,oppGoals:m.oppGoals,fanReaction:highlight.fanReaction,coachReaction:highlight.coachReaction,blockGames:results.length,blockStarts:starts,blockGoals:goals,blockAssists:assists,blockMinutes:results.reduce((sum,x)=>sum+x.m.minutes,0)},body:`${prefix}${m.headline} Nota ${m.rating.toFixed(1)} · ${m.minutes} min · xG ${m.xg} · xA ${m.xa}.`,tags:['PROFISSIONAL',...(firstAppearance?['ESTREIA']:[]),m.motm?'MELHOR DO JOGO':'PARTIDA',m.red?'EXPULSO':m.goals?`${m.goals} GOL${m.goals>1?'S':''}`:POSITION_LABEL[p.position as PlayablePosition].toUpperCase()].filter(Boolean)};
+  return {id:`m-${p.careerTurn}`,kind:firstAppearance?'MILESTONE':'MATCH',title:`${firstAppearance?'Sua estreia no profissional · ':''}${own.shortName} ${m.teamGoals} × ${m.oppGoals} ${opp.shortName}`,matchFeedback:{category:'SENIOR',opponent:opp.shortName,coachName:coachName(p.tactical!.coachId),started:m.started,minutes:m.minutes,goals:m.goals,assists:m.assists,rating:m.rating,saves:m.saves,cleanSheet:m.cleanSheet,teamGoals:m.teamGoals,oppGoals:m.oppGoals,...(m.ratingReason?{ratingReason:m.ratingReason}:{}),fanReaction:highlight.fanReaction,coachReaction:highlight.coachReaction,blockGames:results.length,blockStarts:starts,blockGoals:goals,blockAssists:assists,blockMinutes:results.reduce((sum,x)=>sum+x.m.minutes,0)},body:`${prefix}${m.headline} Nota ${m.rating.toFixed(1)} · ${m.minutes} min · xG ${m.xg} · xA ${m.xa}.`,tags:['PROFISSIONAL',...(firstAppearance?['ESTREIA']:[]),m.motm?'MELHOR DO JOGO':'PARTIDA',m.red?'EXPULSO':m.goals?`${m.goals} GOL${m.goals>1?'S':''}`:POSITION_LABEL[p.position as PlayablePosition].toUpperCase()].filter(Boolean)};
 }
 
 function seniorStats(p:PlayerState){return p.currentSeason.categories?.SENIOR??(p.currentSeason.categories?{appearances:0,minutes:0,goals:0,assists:0,avgRating:0}:p.currentSeason);}

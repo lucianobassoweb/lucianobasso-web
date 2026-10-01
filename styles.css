@@ -83,3 +83,5 @@ summary{min-height:44px;display:list-item;align-content:center}
 
 /* 0.3.4: facts of this career and the decision ahead. */
 .match-context p+p{margin-top:12px}.match-context .context-next{border-left:2px solid var(--accent);padding:10px 14px;background:#ffffff04;margin-top:16px}.context-next b{display:block;font-size:13px;color:var(--accent);margin-bottom:5px}
+
+.rating-reason{font-size:14px;line-height:1.65;color:var(--muted);margin:14px 0 0}

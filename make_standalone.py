@@ -54,9 +54,9 @@ for path in order:
 js='\n'.join(chunks)
 css=(ROOT/'styles.css').read_text()
 out=f'''<!doctype html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#0b0d10"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><title>1903</title><style>{css}</style></head><body><div id="app"></div><script>{js}</script></body></html>'''
-(PROJECT/'1903-playable-0.3.6.html').write_text(out)
+(PROJECT/'1903-playable-0.3.7.html').write_text(out)
 (PROJECT/'index.html').write_text(out)
 (PROJECT/'standalone-bundle.js').write_text(js)
 worker=PROJECT/'sw.js'
-worker.write_text(re.sub(r"const CACHE='[^']+';", "const CACHE='1903-standalone-0.3.6-"+hashlib.sha256(out.encode()).hexdigest()[:12]+"';",worker.read_text(),count=1))
+worker.write_text(re.sub(r"const CACHE='[^']+';", "const CACHE='1903-standalone-0.3.7-"+hashlib.sha256(out.encode()).hexdigest()[:12]+"';",worker.read_text(),count=1))
 print('modules',len(order),'html_bytes',len(out.encode()),'js_bytes',len(js.encode()))

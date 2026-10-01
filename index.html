@@ -83,6 +83,8 @@ summary{min-height:44px;display:list-item;align-content:center}
 
 /* 0.3.4: facts of this career and the decision ahead. */
 .match-context p+p{margin-top:12px}.match-context .context-next{border-left:2px solid var(--accent);padding:10px 14px;background:#ffffff04;margin-top:16px}.context-next b{display:block;font-size:13px;color:var(--accent);margin-bottom:5px}
+
+.rating-reason{font-size:14px;line-height:1.65;color:var(--muted);margin:14px 0 0}
 </style></head><body><div id="app"></div><script>const __modules = Object.create(null);
 __modules['data/clubs-br-2026.js'] = (() => {
 
@@ -370,8 +372,13 @@ function promotionEvidence(p) {
     const categories = records.flatMap(s => [s.categories?.U20].filter(x => x !== undefined));
     const games = categories.reduce((sum, s) => sum + s.appearances, 0), minutes = categories.reduce((sum, s) => sum + s.minutes, 0);
     const rating = games ? categories.reduce((sum, s) => sum + s.avgRating * s.appearances, 0) / games : 0;
-    const threshold = p.position === 'GK' ? 7.05 : ['CB', 'FB', 'DM'].includes(p.position) ? 6.95 : 7.2;
-    return { eligible: p.age >= 16 && p.age <= 20 && !!p.currentClubId && games >= 8 && minutes >= 420 && rating >= threshold, games, rating, minutes };
+    // Offensive notes now require match output, so promotion must also read that output.
+    const goals = categories.reduce((sum, s) => sum + s.goals, 0), assists = categories.reduce((sum, s) => sum + s.assists, 0);
+    const outputPer90 = (goals + (p.position === 'ST' ? assists * .45 : assists)) * 90 / Math.max(1, minutes);
+    const attacker = p.position === 'ST' || p.position === 'WG';
+    const threshold = p.position === 'GK' ? 7.05 : ['CB', 'FB', 'DM'].includes(p.position) ? 6.95 : attacker ? 6.7 : 7.2;
+    const outputEnough = !attacker || outputPer90 >= (p.position === 'ST' ? .30 : .45);
+    return { eligible: p.age >= 16 && p.age <= 20 && !!p.currentClubId && games >= 8 && minutes >= 420 && rating >= threshold && outputEnough, games, rating, minutes };
 }
 
 return {ensureProfessionalStatus, competitionCategory, CATEGORY_LABEL, seasonGames, calendarScale, promotionEvidence};
@@ -2210,6 +2217,89 @@ function leagueTitle(p) {
 
 return {coachName, coachProfile, ensureCoaching, ensureCoachJob, coachBond, syncCoachContext, standings, jobStability, objective, bondLabel, coachDossier, roleProspect, opportunityAdjustment, rememberCoach, performanceFeedback, evaluateCoachJob, simulateWorldBlock, reviewWorldCoaches, coachChangeEvent, coachDiscussionEvent, resolveCoachChoice, leagueTitle};
 })();
+__modules['core/form.js'] = (() => {
+
+const finite = (n, fallback = 0) => Number.isFinite(n) ? n : fallback;
+const clamp = (n, low, high) => Math.max(low, Math.min(high, finite(n)));
+const sameContext = (a, b) => a.clubId === b.clubId && a.category === b.category && a.position === b.position && a.season === b.season;
+const cleanObservation = (o) => ({
+    turn: Math.floor(clamp(o.turn, 0, Number.MAX_SAFE_INTEGER)),
+    minutes: clamp(o.minutes, 0, 120),
+    goals: Math.floor(clamp(o.goals, 0, 20)),
+    assists: Math.floor(clamp(o.assists, 0, 20)),
+    rating: clamp(o.rating, 0, 10),
+    xg: clamp(o.xg, 0, 20),
+    xa: clamp(o.xa, 0, 20),
+});
+/** A changed club, category, position or season starts a new, genuinely observed history. */
+function recordRecentMatchForm(previous, context, observation) {
+    const current = previous && sameContext(previous.context, context) ? previous : undefined;
+    if (!Number.isFinite(observation.turn) || observation.turn < 0) {
+        return current ?? { context: { ...context }, observations: [], lastObservedTurn: -1 };
+    }
+    const clean = cleanObservation(observation);
+    if (current && clean.turn <= current.lastObservedTurn)
+        return current;
+    // Bench dates carry no personal performance and cannot wash out an existing drought.
+    const observations = (current?.observations ?? []).map(cleanObservation);
+    // Short scoreless cameos must not evict the substantial evidence used for selection.
+    if (clean.minutes >= 45 || clean.minutes > 0 && clean.goals > 0)
+        observations.push(clean);
+    return { context: { ...context }, observations: observations.slice(-8), lastObservedTurn: clean.turn };
+}
+/** Goal exposure is a positional duty, not a guess at natural aptitude or a quality ceiling. */
+function evaluateRecentMatchForm(form, context, age) {
+    const empty = {
+        known: false, dryMatches: 0, dryMinutes: 0, assists: 0, xa: 0,
+        severity: 0, startPenalty: 0, coachText: '', fanText: '',
+    };
+    if (!form || !sameContext(form.context, context))
+        return empty;
+    const observations = form.observations.slice(-8).map(cleanObservation);
+    const result = { ...empty, known: observations.length > 0 };
+    if (context.position !== 'ST' && context.position !== 'WG')
+        return result;
+    // A goal in any real appearance ends the drought. Short cameos cannot establish one.
+    for (let i = observations.length - 1; i >= 0; i--) {
+        const match = observations[i];
+        if (match.minutes <= 0)
+            continue;
+        if (match.goals > 0)
+            break;
+        if (match.minutes < 45)
+            continue;
+        result.dryMatches++;
+        result.dryMinutes += match.minutes;
+        result.assists += match.assists;
+        result.xa += match.xa;
+    }
+    if (result.dryMatches < 3 || result.dryMinutes < 180)
+        return result;
+    // Three substantial matches/180 minutes begin the consequence; six/360 reach full exposure.
+    const exposure = Math.min(1, result.dryMatches / 6, result.dryMinutes / 360);
+    const progression = clamp((exposure - 0.25) / 0.75, 0, 1);
+    // Creation is valuable, but six long appearances without a striker goal still cost space.
+    const contributionRelief = Math.min(0.55, result.assists * 0.12 + result.xa * 0.06);
+    const roleWeight = context.position === 'ST' ? 1 : 0.5;
+    const ageWeight = age <= 12 ? 0.5 : age <= 13 ? 0.7 : age <= 15 ? 0.85 : 1;
+    const cap = context.category === 'SENIOR' ? 0.30 : context.category === 'AMATEUR' ? 0.24 : 0.18;
+    result.severity = progression * (1 - contributionRelief) * roleWeight;
+    result.startPenalty = cap * ageWeight * result.severity;
+    const evidence = `${result.dryMatches} atuações de pelo menos 45 minutos e ${Math.round(result.dryMinutes)} minutos sem gol`;
+    const creation = result.assists > 0 || result.xa >= 0.5
+        ? ' A participação na criação atenua a cobrança, mas a sequência sem gol ainda pesa.' : '';
+    const formative = context.category !== 'SENIOR' && context.category !== 'AMATEUR';
+    result.coachText = formative
+        ? `Na formação, o treinador acompanha ${evidence} e passa a considerar rodar a titularidade.${creation}`
+        : `O treinador acompanha ${evidence}; a titularidade perde força pela produção recente.${creation}`;
+    result.fanText = formative
+        ? `Quem acompanha a formação espera uma resposta após ${evidence}.${creation}`
+        : `A torcida cobra mais presença no placar após ${evidence}.${creation}`;
+    return result;
+}
+
+return {recordRecentMatchForm, evaluateRecentMatchForm};
+})();
 __modules['core/fans.js'] = (() => {
 
 const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
@@ -2934,6 +3024,20 @@ const {clamp} = __modules['core/random.js'];
 const {tacticalRating, roleRating} = __modules['core/positions.js'];
 
 
+/** Offensive notes describe observed output, not the player's underlying skill. */
+function observedAttackRating(position, m) {
+    if (position !== 'ST' && position !== 'WG')
+        return { rating: m.rating };
+    if (m.goals > 0)
+        return { rating: m.rating, ratingReason: `${m.goals} gol${m.goals === 1 ? '' : 's'} e ${m.assists} assistência${m.assists === 1 ? '' : 's'} entram na avaliação ofensiva.` };
+    if (m.assists > 0)
+        return { rating: Math.min(m.rating, 7.8 + m.assists * .3), ratingReason: `Sem gol, mas ${m.assists} assistência${m.assists === 1 ? '' : 's'} registra${m.assists === 1 ? '' : 'm'} contribuição direta ao ataque.` };
+    if (m.xa >= .5)
+        return { rating: Math.min(m.rating, m.xa >= 1 ? 7.8 : 7.2), ratingReason: `Sem participação direta em gol; xA ${m.xa.toFixed(2)} registra criação de oportunidades.` };
+    const waste = m.minutes >= 30 && m.xg >= .6;
+    const cap = m.minutes < 30 ? 6.8 : waste ? 6.4 : 6.6;
+    return { rating: Number(Math.min(m.rating, cap).toFixed(1)), ratingReason: `Sem gol ou assistência, com xA ${m.xa.toFixed(2)}${waste ? ` e xG ${m.xg.toFixed(2)} sem conversão` : ''}. ${m.minutes < 30 ? 'A participação curta limita a avaliação.' : 'A nota reflete pouca produção ofensiva registrada.'}` };
+}
 function poisson(rng, lambda) {
     const L = Math.exp(-lambda);
     let k = 0, p = 1;
@@ -2990,7 +3094,8 @@ function simulatePlayerMatch(player, own, opponent, rng, started = true, importa
     const defensiveImpact = (pos === 'GK' ? saves * .055 + (cleanSheet ? .28 : 0) : ['CB', 'FB', 'DM'].includes(pos) ? (oppGoals === 0 ? .22 : 0) : 0);
     const fitImpact = (eff - 1) * 2.2;
     const consistencyNoise = rng.normal(0, .48 - (player.dna.consistency / 100) * .18);
-    const rating = Number(clamp(6.15 + resultImpact + goals * .82 + assists * .58 + defensiveImpact + fitImpact + consistencyNoise + (playerLevel - 62) / 115, 4.0, 10).toFixed(1));
+    const rawRating = Number(clamp(6.15 + resultImpact + goals * .82 + assists * .58 + defensiveImpact + fitImpact + consistencyNoise + (playerLevel - 62) / 115, 4.0, 10).toFixed(1));
+    const { rating, ratingReason } = observedAttackRating(pos, { rating: rawRating, minutes, goals, assists, xg, xa });
     const motm = rating >= 8.0 && rng.chance(clamp(.30 + (rating - 8) * .34 + importance * .02, .25, .92));
     const headline = goals >= 3 ? `Hat-trick: ${own.shortName} tem um protagonista.` :
         goals > 0 && assists > 0 ? `${goals} gol${goals > 1 ? 's' : ''} e ${assists} assistência${assists > 1 ? 's' : ''}.` :
@@ -2998,24 +3103,26 @@ function simulatePlayerMatch(player, own, opponent, rng, started = true, importa
                 assists > 0 ? `${assists} assistência${assists > 1 ? 's' : ''}.` :
                     pos === 'GK' && cleanSheet ? `${saves} defesas e jogo sem sofrer gol.` :
                         rating >= 7.6 ? 'Atuação de alto nível sem participação direta em gol.' : 'Partida concluída.';
-    return { opponentId: opponent.id, home, started, teamGoals, oppGoals, minutes, goals, assists, motm, yellow, red, rating, xg, xa, saves, cleanSheet, headline };
+    return { opponentId: opponent.id, home, started, teamGoals, oppGoals, minutes, goals, assists, motm, yellow, red, rating, xg, xa, saves, cleanSheet, headline, ...(ratingReason ? { ratingReason } : {}) };
 }
 
-return {simulatePlayerMatch};
+return {observedAttackRating, simulatePlayerMatch};
 })();
 __modules['core/engine.js'] = (() => {
+const {recordRecentMatchForm, evaluateRecentMatchForm} = __modules['core/form.js'];
 const {evaluateFanMatch} = __modules['core/fans.js'];
 const {buildRoutineDecision, resolveRoutineChoice} = __modules['core/decisions.js'];
 const {ensureStories, updateStories, choiceSnapshot, recordChoice} = __modules['core/stories.js'];
 const {ensureProfessionalStatus, competitionCategory, CATEGORY_LABEL, seasonGames, calendarScale, promotionEvidence} = __modules['core/calendar.js'];
-const {ensureCoaching, syncCoachContext, simulateWorldBlock, reviewWorldCoaches, coachChangeEvent, resolveCoachChoice, coachDossier, roleProspect, opportunityAdjustment, performanceFeedback, rememberCoach, coachProfile, leagueTitle, coachDiscussionEvent, coachName} = __modules['core/coaches.js'];
+const {ensureCoaching, syncCoachContext, simulateWorldBlock, reviewWorldCoaches, coachChangeEvent, resolveCoachChoice, coachDossier, roleProspect, opportunityAdjustment, performanceFeedback, rememberCoach, coachProfile, leagueTitle, coachDiscussionEvent, coachName, coachBond} = __modules['core/coaches.js'];
 const {ensureTransition, transitionEvent, transitionLoad, maybeInjury, injuryBlock, comebackEvent, legacyNarrative} = __modules['core/transitions.js'];
 const {generateLife, ensureLife, observeLocally, scoutingCandidates, trialProbability, finishEducationYear, accrueEducation} = __modules['core/pathways.js'];
 const {RNG, clamp, hashSeed} = __modules['core/random.js'];
 const {generateDNA, initialAttributes, growthStep, updateBody, overall} = __modules['core/dna.js'];
 const {POSITIONS, POSITION_LABEL, changeCostPreview, changeCostLabel, selectPosition, trainPositionExperience, effectivePositionRating, observedPositionSuggestion, tacticalRating, roleRating} = __modules['core/positions.js'];
 const {BRAZIL_CLUBS_2026, CLUB_BY_ID} = __modules['data/clubs-br-2026.js'];
-const {simulatePlayerMatch} = __modules['core/match.js'];
+const {simulatePlayerMatch, observedAttackRating} = __modules['core/match.js'];
+
 
 
 
@@ -3199,6 +3306,29 @@ function fanEffectsForMatch(p, own, opp, m) {
         oppFan.hate = clamp(oppFan.hate + 1);
     return reaction;
 }
+function formContext(p) { return { clubId: p.currentClubId, category: competitionCategory(p), position: p.position, season: p.season }; }
+function matchForm(p, m) {
+    const context = formContext(p);
+    if (m)
+        p.recentForm = recordRecentMatchForm(p.recentForm, context, { turn: p.careerTurn, minutes: m.minutes, goals: m.goals, assists: m.assists, rating: m.rating, xg: m.xg, xa: m.xa });
+    return evaluateRecentMatchForm(p.recentForm, context, p.age);
+}
+function applyFormConsequences(p, form, professional) {
+    if (!form.startPenalty)
+        return;
+    const intensity = form.startPenalty / (professional ? .30 : .18);
+    p.pressure = clamp(p.pressure + intensity * .6);
+    p.confidence = clamp(p.confidence - intensity * .2);
+    if (p.currentClubId) {
+        const fan = ensureFan(p, p.currentClubId);
+        fan.hate = clamp(fan.hate + intensity * .3);
+    }
+    if (professional && p.tactical) {
+        const bond = coachBond(p, p.tactical.coachId);
+        bond.trust = clamp(bond.trust - intensity * (1 + (100 - coachProfile(p.tactical.coachId).patience) / 100));
+        p.tactical.trust = bond.trust;
+    }
+}
 function roleBaseline(p, pos) {
     const a = p.attributes;
     const vals = Object.values(a);
@@ -3207,6 +3337,7 @@ function roleBaseline(p, pos) {
 }
 function simulateYouthBlock(p, rng) {
     observeLocally(p);
+    const recent = matchForm(p);
     const games = 1;
     const pos = (p.position === 'IND' ? 'CM' : p.position);
     const rawComp = clamp(effectivePositionRating(p, pos) / Math.max(35, roleBaseline(p, pos)), .72, 1.18);
@@ -3222,17 +3353,25 @@ function simulateYouthBlock(p, rng) {
         const stageStandard = 32 + (p.age - 12) * 2.5 + (p.currentClubId ? CLUB_BY_ID[p.currentClubId].youth * .07 : 0);
         const learned = roleRating(p, pos);
         const rating = clamp(6.05 + (learned - stageStandard) / 14 + (g * .8 + a * .55) + (comp - 1) * 1.8 - (p.decisionMemory?.extraLoad ?? 0) * .2 + rng.normal(0, .42), 4.7, 9.6);
-        const dummy = { opponentId: 'youth', home: true, started: rng.chance(.72), teamGoals: g + a + rng.int(0, 2), oppGoals: rng.int(0, 2), minutes: rng.int(42, 80), goals: g, assists: a, motm: rating >= 8.2, yellow: rng.chance(['CB', 'DM', 'FB'].includes(pos) ? .08 : .035), red: false, rating: Number(rating.toFixed(1)), xg: Number((g * .55 + rng.float(.01, .18)).toFixed(2)), xa: Number((a * .45 + rng.float(.01, .16)).toFixed(2)), saves: pos === 'GK' ? rng.int(1, 5) : 0, cleanSheet: pos === 'GK' && rng.chance(.34), headline: '' };
+        const dummy = { opponentId: 'youth', home: true, started: rng.chance(clamp(.72 - recent.startPenalty, .25, .85)), teamGoals: g + a + rng.int(0, 2), oppGoals: rng.int(0, 2), minutes: rng.int(42, 80), goals: g, assists: a, motm: rating >= 8.2, yellow: rng.chance(['CB', 'DM', 'FB'].includes(pos) ? .08 : .035), red: false, rating: Number(rating.toFixed(1)), xg: Number((g * .55 + rng.float(.01, .18)).toFixed(2)), xa: Number((a * .45 + rng.float(.01, .16)).toFixed(2)), saves: pos === 'GK' ? rng.int(1, 5) : 0, cleanSheet: pos === 'GK' && rng.chance(.34), headline: '' };
         dummy.cleanSheet = pos === 'GK' && dummy.oppGoals === 0;
         if (pos === 'GK')
             dummy.rating = Number(clamp(dummy.rating + dummy.saves * .075 + (dummy.cleanSheet ? .25 : 0), 4.7, 9.6).toFixed(1));
         else if (['CB', 'FB', 'DM'].includes(pos) && dummy.oppGoals === 0)
             dummy.rating = Number(clamp(dummy.rating + .2, 4.7, 9.6).toFixed(1));
+        // A substitute has less exposure than a full starter in this formation fixture.
+        if (!dummy.started) {
+            dummy.minutes = Math.max(12, Math.round(dummy.minutes * .45));
+            dummy.xg = Number((dummy.xg * .45).toFixed(2));
+            dummy.xa = Number((dummy.xa * .45).toFixed(2));
+        }
+        Object.assign(dummy, observedAttackRating(pos, dummy));
+        dummy.motm = dummy.rating >= 8.2;
         youthMatches.push(dummy);
         addMatchStats(p, dummy, false);
         goals += g;
         assists += a;
-        if (rating >= 7.4)
+        if (dummy.rating >= 7.4)
             good++;
     }
     if (p.decisionMemory?.extraLoad)
@@ -3243,8 +3382,12 @@ function simulateYouthBlock(p, rng) {
     p.confidence = clamp(p.confidence + goals * 2 + assists + good * .5);
     const signal = goals + assists ? `${goals} gol${goals === 1 ? '' : 's'} e ${assists} assistência${assists === 1 ? '' : 's'} nesta partida.` : good ? `${good} boas atuações nesta partida.` : 'Partida sem destaque estatístico.';
     const featured = [...youthMatches].sort((a, b) => b.rating - a.rating)[0];
-    const fanReaction = applyMatchFanReaction(p, featured, competitionCategory(p), p.currentClubId ? CLUB_BY_ID[p.currentClubId] : undefined);
-    return { matchFeedback: { category: competitionCategory(p), opponent: p.age > 20 ? 'Equipe do futebol local' : p.currentClubId ? 'Adversário da base' : 'Equipe local de formação', coachName: p.age > 20 ? 'Treinador do futebol local' : 'Treinador da formação', started: featured.started, minutes: featured.minutes, goals: featured.goals, assists: featured.assists, rating: featured.rating, saves: featured.saves, cleanSheet: featured.cleanSheet, teamGoals: featured.teamGoals, oppGoals: featured.oppGoals, fanReaction, coachReaction: featured.rating >= 7.4 ? 'A atuação chamou atenção para seu repertório.' : 'O treinador observa sua evolução sem concluir seu potencial.', blockGames: games, blockStarts: youthMatches.filter(m => m.started).length, blockGoals: goals, blockAssists: assists, blockMinutes: youthMatches.reduce((sum, m) => sum + m.minutes, 0) }, id: `y-${p.careerTurn}`, kind: 'INFO', title: `${CATEGORY_LABEL[competitionCategory(p)]} · ${featured.teamGoals} × ${featured.oppGoals}`, body: `${CATEGORY_LABEL[competitionCategory(p)]}: ${featured.minutes} minutos nesta partida. ${signal} Os treinadores agora observam melhor: ${ATTRIBUTE_LABELS[key]}.`, tags: [p.age > 20 ? 'FUTEBOL LOCAL' : 'FORMAÇÃO', POSITION_LABEL[pos].toUpperCase()] };
+    const form = matchForm(p, featured);
+    if (featured.minutes >= 45)
+        applyFormConsequences(p, form, false);
+    const fanReaction = applyMatchFanReaction(p, featured, competitionCategory(p), p.currentClubId ? CLUB_BY_ID[p.currentClubId] : undefined) + (form.fanText ? ' ' + form.fanText : '');
+    const coachReaction = form.coachText || (featured.rating >= 7.4 ? 'A atuação chamou atenção para seu repertório.' : 'O treinador observa sua evolução sem concluir seu potencial.');
+    return { matchFeedback: { category: competitionCategory(p), opponent: p.age > 20 ? 'Equipe do futebol local' : p.currentClubId ? 'Adversário da base' : 'Equipe local de formação', coachName: p.age > 20 ? 'Treinador do futebol local' : 'Treinador da formação', started: featured.started, minutes: featured.minutes, goals: featured.goals, assists: featured.assists, rating: featured.rating, saves: featured.saves, cleanSheet: featured.cleanSheet, teamGoals: featured.teamGoals, oppGoals: featured.oppGoals, ...(featured.ratingReason ? { ratingReason: featured.ratingReason } : {}), fanReaction, coachReaction, blockGames: games, blockStarts: youthMatches.filter(m => m.started).length, blockGoals: goals, blockAssists: assists, blockMinutes: youthMatches.reduce((sum, m) => sum + m.minutes, 0) }, id: `y-${p.careerTurn}`, kind: 'INFO', title: `${CATEGORY_LABEL[competitionCategory(p)]} · ${featured.teamGoals} × ${featured.oppGoals}`, body: `${CATEGORY_LABEL[competitionCategory(p)]}: ${featured.minutes} minutos nesta partida. ${signal} Os treinadores agora observam melhor: ${ATTRIBUTE_LABELS[key]}.`, tags: [p.age > 20 ? 'FUTEBOL LOCAL' : 'FORMAÇÃO', POSITION_LABEL[pos].toUpperCase()] };
 }
 function opponentPool(own) {
     const same = BRAZIL_CLUBS_2026.filter(c => c.division === own.division && c.id !== own.id);
@@ -3258,7 +3401,8 @@ function simulateProfessionalBlock(p, rng, fixtures) {
     const standard = clubLevel(own);
     const transition = transitionLoad(p);
     p.pressure = clamp(p.pressure + transition.pressure * calendarScale(p));
-    const baseStart = clamp((.35 + (level - standard) / 35 + (p.confidence - 50) / 180 + opportunityAdjustment(p) + (p.careerApproach === 'RESPONSIBILITY' ? .06 : 0)) * transition.starts - (p.comebackBlocks && p.comebackPlan === 'GRADUAL' ? .15 : 0), .08, .92);
+    const recent = matchForm(p);
+    const baseStart = clamp((.35 + (level - standard) / 35 + (p.confidence - 50) / 180 + opportunityAdjustment(p) + (p.careerApproach === 'RESPONSIBILITY' ? .06 : 0)) * transition.starts - (p.comebackBlocks && p.comebackPlan === 'GRADUAL' ? .15 : 0) - recent.startPenalty, .08, .92);
     if (p.comebackBlocks)
         p.comebackBlocks = Math.max(0, p.comebackBlocks - 1);
     const firstAppearance = !p.debut && p.careerStats.appearances === 0;
@@ -3276,9 +3420,12 @@ function simulateProfessionalBlock(p, rng, fixtures) {
             p.debut = { season: p.season, age: p.age, clubId: own.id, opponentId: opp.id, minutes: m.minutes };
         performanceFeedback(p, m.rating, m.red);
         addMatchStats(p, m, true);
-        const fanReaction = fanEffectsForMatch(p, own, opp, m);
+        const form = matchForm(p, m);
+        if (m.minutes >= 45)
+            applyFormConsequences(p, form, true);
+        const fanReaction = fanEffectsForMatch(p, own, opp, m) + (form.fanText ? ' ' + form.fanText : '');
         const profile = coachProfile(p.tactical.coachId);
-        const coachReaction = m.red ? 'A expulsão trouxe cobrança e perda de confiança profissional.' : m.rating >= 8 ? 'O treinador destacou sua atuação e reforçou a confiança.' : m.rating >= 7 ? 'Sua atuação sustentou a confiança profissional.' : m.rating < 6.2 ? (profile.patience >= 60 ? 'O treinador reconhece a dificuldade e oferece tempo para responder.' : 'O treinador cobra uma resposta após a atuação abaixo do esperado.') : 'O treinador mantém a avaliação e observa sua continuidade.';
+        const coachReaction = (form.coachText ? form.coachText + ' ' : '') + (m.red ? 'A expulsão trouxe cobrança e perda de confiança profissional.' : m.rating >= 8 ? 'O treinador destacou sua atuação e reforçou a confiança.' : m.rating >= 7 ? 'Sua atuação sustentou a confiança profissional.' : m.rating < 6.2 ? (profile.patience >= 60 ? 'O treinador reconhece a dificuldade e oferece tempo para responder.' : 'O treinador cobra uma resposta após a atuação abaixo do esperado.') : 'O treinador mantém a avaliação e observa sua continuidade.');
         results.push({ m, opp, fanReaction, coachReaction });
         const result = m.teamGoals > m.oppGoals ? 1 : m.teamGoals < m.oppGoals ? -1 : 0;
         p.morale = clamp(p.morale + result * 1.2 + m.goals * .9 + m.assists * .5 - (m.red ? 2 : 0));
@@ -3287,6 +3434,7 @@ function simulateProfessionalBlock(p, rng, fixtures) {
     trainPositionExperience(p, calendarScale(p) * Math.max(1, results.length));
     p.physicalCondition = clamp(p.physicalCondition + (-rng.float(1.5, 4.5) + 2.4) * calendarScale(p), 65, 100);
     if (!results.length) {
+        p.recentForm = recordRecentMatchForm(p.recentForm, formContext(p), { turn: p.careerTurn, minutes: 0, goals: 0, assists: 0, rating: 0, xg: 0, xa: 0 });
         p.confidence = clamp(p.confidence - .5);
         const fixture = fixtures[0], opponent = fixture ? CLUB_BY_ID[fixture.homeId === own.id ? fixture.awayId : fixture.homeId] : null;
         const gf = fixture ? (fixture.homeId === own.id ? fixture.homeGoals : fixture.awayGoals) : 0, ga = fixture ? (fixture.homeId === own.id ? fixture.awayGoals : fixture.homeGoals) : 0;
@@ -3307,7 +3455,7 @@ function simulateProfessionalBlock(p, rng, fixtures) {
     p.reputation = clamp(p.reputation + (avgBlock - 6.55) * .42 * calendarScale(p) + goals * .07 + assists * .05 + results.filter(x => x.m.motm).length * .12, 1, 100);
     const m = highlight.m, opp = highlight.opp;
     const prefix = `Profissional · ${p.careerStats.minutes < 450 ? 'Início gradual da trajetória.' : 'Participação nesta rodada.'} `;
-    return { id: `m-${p.careerTurn}`, kind: firstAppearance ? 'MILESTONE' : 'MATCH', title: `${firstAppearance ? 'Sua estreia no profissional · ' : ''}${own.shortName} ${m.teamGoals} × ${m.oppGoals} ${opp.shortName}`, matchFeedback: { category: 'SENIOR', opponent: opp.shortName, coachName: coachName(p.tactical.coachId), started: m.started, minutes: m.minutes, goals: m.goals, assists: m.assists, rating: m.rating, saves: m.saves, cleanSheet: m.cleanSheet, teamGoals: m.teamGoals, oppGoals: m.oppGoals, fanReaction: highlight.fanReaction, coachReaction: highlight.coachReaction, blockGames: results.length, blockStarts: starts, blockGoals: goals, blockAssists: assists, blockMinutes: results.reduce((sum, x) => sum + x.m.minutes, 0) }, body: `${prefix}${m.headline} Nota ${m.rating.toFixed(1)} · ${m.minutes} min · xG ${m.xg} · xA ${m.xa}.`, tags: ['PROFISSIONAL', ...(firstAppearance ? ['ESTREIA'] : []), m.motm ? 'MELHOR DO JOGO' : 'PARTIDA', m.red ? 'EXPULSO' : m.goals ? `${m.goals} GOL${m.goals > 1 ? 'S' : ''}` : POSITION_LABEL[p.position].toUpperCase()].filter(Boolean) };
+    return { id: `m-${p.careerTurn}`, kind: firstAppearance ? 'MILESTONE' : 'MATCH', title: `${firstAppearance ? 'Sua estreia no profissional · ' : ''}${own.shortName} ${m.teamGoals} × ${m.oppGoals} ${opp.shortName}`, matchFeedback: { category: 'SENIOR', opponent: opp.shortName, coachName: coachName(p.tactical.coachId), started: m.started, minutes: m.minutes, goals: m.goals, assists: m.assists, rating: m.rating, saves: m.saves, cleanSheet: m.cleanSheet, teamGoals: m.teamGoals, oppGoals: m.oppGoals, ...(m.ratingReason ? { ratingReason: m.ratingReason } : {}), fanReaction: highlight.fanReaction, coachReaction: highlight.coachReaction, blockGames: results.length, blockStarts: starts, blockGoals: goals, blockAssists: assists, blockMinutes: results.reduce((sum, x) => sum + x.m.minutes, 0) }, body: `${prefix}${m.headline} Nota ${m.rating.toFixed(1)} · ${m.minutes} min · xG ${m.xg} · xA ${m.xa}.`, tags: ['PROFISSIONAL', ...(firstAppearance ? ['ESTREIA'] : []), m.motm ? 'MELHOR DO JOGO' : 'PARTIDA', m.red ? 'EXPULSO' : m.goals ? `${m.goals} GOL${m.goals > 1 ? 'S' : ''}` : POSITION_LABEL[p.position].toUpperCase()].filter(Boolean) };
 }
 function seniorStats(p) { return p.currentSeason.categories?.SENIOR ?? (p.currentSeason.categories ? { appearances: 0, minutes: 0, goals: 0, assists: 0, avgRating: 0 } : p.currentSeason); }
 function valuation(p) {
@@ -3909,7 +4057,7 @@ const coaching = fields({ ...numeric('season completedBlocks seed'), progress: o
     changes: array(coachChange), pendingChange: nullable(coachChange) });
 const feedback = fields({ opponent: text, coachName: text, fanReaction: text, coachReaction: text, started: boolean, cleanSheet: boolean,
     ...numeric('minutes goals assists rating saves teamGoals oppGoals blockGames blockStarts blockGoals blockAssists blockMinutes'),
-    category: optional(category), showScore: optional(boolean) });
+    category: optional(category), showScore: optional(boolean), ratingReason: optional(text) });
 const decisionFamily = oneOf('LOAD', 'SPACE', 'SERVICE', 'RIVALRY', 'PRESSURE', 'ADAPTATION', 'PATH');
 const event = fields({ decisionContext: optional(text), decisionFamily: optional(decisionFamily), id: text, kind: oneOf('INFO', 'CHOICE', 'MATCH', 'SEASON_END', 'MARKET', 'MILESTONE'), title: text, body: text, tags: array(text),
     choices: optional(array(fields({ id: text, label: text, hint: optional(text) }))), payload: optional(object), matchFeedback: optional(feedback) });
@@ -3922,7 +4070,16 @@ const archivedChapter = v => chapter(v) && fields({ endedSeason: natural, endedT
 const story = fields({ active: nullable(chapter), archive: array(archivedChapter), lastObservedTurn: natural, sequence: natural });
 const choiceResult = fields({ eventId: text, choiceId: text, label: text, season: natural, turn: natural, summary: text, effects: array(text) });
 const decisionMemory = fields({ recent: v => Array.isArray(v) && v.length <= 3 && v.every(fields({ family: decisionFamily, turn: natural })), lastOffered: v => object(v) && Object.keys(v).length <= 7 && Object.entries(v).every(([key, value]) => decisionFamily(key) && natural(value)), lastExtraTurn: optional(natural), lastResolvedEvent: optional(text), extraLoad: optional(v => natural(v) && Number(v) <= 2) });
-const player = fields({ decisionMemory: optional(decisionMemory), story: optional(story), lastChoiceResult: optional(choiceResult), id: text, name: text, hometown: text, heartClubId: text, currentClubId: nullable(text),
+const bounded = (lo, hi) => v => number(v) && Number(v) >= lo && Number(v) <= hi;
+const formContext = fields({ clubId: nullable(text), category, position: oneOf('IND', 'GK', 'CB', 'FB', 'DM', 'CM', 'AM', 'WG', 'ST'), season: natural });
+const formObservation = fields({ turn: natural, minutes: bounded(0, 120), goals: v => natural(v) && Number(v) <= 20, assists: v => natural(v) && Number(v) <= 20, rating: bounded(0, 10), xg: bounded(0, 20), xa: bounded(0, 20) });
+const recentForm = v => {
+    if (!fields({ context: formContext, lastObservedTurn: v => number(v) && Number.isSafeInteger(v) && Number(v) >= -1, observations: v => Array.isArray(v) && v.length <= 8 && v.every(formObservation) })(v) || !object(v) || !Array.isArray(v.observations))
+        return false;
+    const observations = v.observations;
+    return observations.every((o, i) => object(o) && Number(o.turn) <= Number(v.lastObservedTurn) && Number(o.minutes) > 0 && (i === 0 || Number(o.turn) > Number(observations[i - 1].turn)));
+};
+const playerFields = fields({ recentForm: optional(recentForm), decisionMemory: optional(decisionMemory), story: optional(story), lastChoiceResult: optional(choiceResult), id: text, name: text, hometown: text, heartClubId: text, currentClubId: nullable(text),
     ...numeric('birthYear age season seasonTurn careerTurn adaptationDebt positionChanges heightCm weightKg morale confidence pressure mentalFatigue physicalCondition reputation marketValue contractYearsLeft rngState'),
     phase: oneOf('ESCOLINHA', 'BASE', 'PROFISSIONAL', 'AUGE', 'VETERANO', 'APOSENTADO'), position: oneOf('IND', 'GK', 'CB', 'FB', 'DM', 'CM', 'AM', 'WG', 'ST'),
     transferIntent: oneOf('STAY', 'OPEN', 'LEAVE', 'FORCE'), secondaryPositions: array(position),
@@ -3936,6 +4093,7 @@ const player = fields({ decisionMemory: optional(decisionMemory), story: optiona
     history: array(fields({ ...numeric('turn season age'), type: text, headline: text, detail: text })),
     life: optional(life), tactical: optional(fields({ coachId: text, role: oneOf('BALANCED', 'MOBILE', 'HOLD'), support: number, trust: number, discussedFor: nullable(number) })),
     professionalStatus: optional(oneOf('YOUTH', 'INVITED', 'SENIOR')), coaching: optional(coaching) });
+const player = v => playerFields(v) && object(v) && (!object(v.recentForm) || Number(v.recentForm.lastObservedTurn) <= Number(v.careerTurn));
 /** The original mandatory fields are retained; later fields may be absent on legacy saves. */
 const saveShape = fields({ version: oneOf('0.1.0-playable.2'), createdAt: text, updatedAt: text, player, pendingEvent: nullable(event) });
 function finiteValues(value, ancestors = new Set()) {
@@ -4071,7 +4229,7 @@ function theme() {
     const colors = c?.colors ?? ['#7bbcff', '#e8eef4'];
     return `style="--club:${colors[0]};--club2:${colors[1]};"`;
 }
-function appShell(content) { return `<main class="shell ${save ? 'playing' : 'creating'}" ${theme()}><div class="brand"><div><h1>1903</h1><span class="subbrand">CARREIRA</span></div><span class="build">0.3.6 · EXPERIMENTAL</span></div>${save ? nav() : ''}${persistenceNotice()}<div class="page-content">${content}</div></main>`; }
+function appShell(content) { return `<main class="shell ${save ? 'playing' : 'creating'}" ${theme()}><div class="brand"><div><h1>1903</h1><span class="subbrand">CARREIRA</span></div><span class="build">0.3.7 · EXPERIMENTAL</span></div>${save ? nav() : ''}${persistenceNotice()}<div class="page-content">${content}</div></main>`; }
 const navPaths = { career: 'M8 5l10 7-10 7V5Z', player: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM5 21v-2a7 7 0 0 1 14 0v2', stats: 'M5 20V10m7 10V4m7 16v-7', world: 'M4 7h16v13H4V7Zm4 0V4h8v3M4 12h16m-8-2v4' };
 function nav() { return `<nav class="bottom-nav" aria-label="Navegação da carreira"><div class="bottom-nav-inner">${[['career', 'Jogar', 'Jogar'], ['player', 'Jogador', 'Meu jogador'], ['stats', 'Histórico', 'Histórico'], ['world', 'Clube', 'Clube e mercado']].map(([id, label, full]) => `<button class="nav ${tab === id ? 'active' : ''}" data-tab="${id}" aria-label="${full}" aria-current="${tab === id ? 'page' : 'false'}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="${navPaths[id]}"/></svg><span>${label}</span></button>`).join('')}</div></nav>`; }
 function persistenceNotice() {
@@ -4094,7 +4252,7 @@ function feedbackCard(e) {
     const f = e.matchFeedback;
     if (!f)
         return '';
-    return `<section class="performance-card" aria-label="Quadro da atuação"><div class="performance-heading"><span class="eyebrow">${f.blockGames ? 'ATUAÇÃO NA PARTIDA' : 'SEM PARTICIPAÇÃO'}<small class="match-category">${esc(f.category ? CATEGORY_LABEL[f.category] : 'Categoria não registrada')}</small></span><strong>${f.rating ? f.rating.toFixed(1) : '—'}<small>NOTA</small></strong></div><div class="match-scoreboard"><span>${esc(getClub(save.player.currentClubId)?.shortName ?? save.player.life?.localSchool ?? 'Seu time')}</span>${f.blockGames || f.showScore ? `<b aria-label="Placar ${f.teamGoals} a ${f.oppGoals}">${f.teamGoals}<i>:</i>${f.oppGoals}</b>` : '<b>×</b>'}<span>${esc(f.opponent)}</span></div><div class="performance-metrics ${save.player.position === 'GK' ? 'goalkeeper' : ''}"><div><b>${f.minutes}</b><span>MINUTOS</span></div><div><b>${f.goals}</b><span>GOLS</span></div><div><b>${f.assists}</b><span>ASSIST.</span></div>${save.player.position === 'GK' ? `<div><b>${f.saves}</b><span>DEFESAS</span></div>` : ''}</div><div class="minutes-track" aria-label="${f.minutes} minutos em 90"><i style="width:${f.minutes / 90 * 100}%"></i></div><small>${f.blockGames ? (f.started ? 'Começou como titular' : 'Entrou durante a partida') : 'Não entrou em campo'}</small><section class="reaction-details" aria-label="Reações da torcida e do treinador"><div class="performance-reactions"><div><span>TORCIDA</span><p>${esc(f.fanReaction)}</p></div><div><span>TREINADOR · ${esc(f.coachName).toUpperCase()}</span><p>${esc(f.coachReaction)}</p></div></div></section><div class="performance-block">Uma partida neste turno · ${f.minutes} minutos em campo</div></section>`;
+    return `<section class="performance-card" aria-label="Quadro da atuação"><div class="performance-heading"><span class="eyebrow">${f.blockGames ? 'ATUAÇÃO NA PARTIDA' : 'SEM PARTICIPAÇÃO'}<small class="match-category">${esc(f.category ? CATEGORY_LABEL[f.category] : 'Categoria não registrada')}</small></span><strong>${f.rating ? f.rating.toFixed(1) : '—'}<small>NOTA</small></strong></div><div class="match-scoreboard"><span>${esc(getClub(save.player.currentClubId)?.shortName ?? save.player.life?.localSchool ?? 'Seu time')}</span>${f.blockGames || f.showScore ? `<b aria-label="Placar ${f.teamGoals} a ${f.oppGoals}">${f.teamGoals}<i>:</i>${f.oppGoals}</b>` : '<b>×</b>'}<span>${esc(f.opponent)}</span></div><div class="performance-metrics ${save.player.position === 'GK' ? 'goalkeeper' : ''}"><div><b>${f.minutes}</b><span>MINUTOS</span></div><div><b>${f.goals}</b><span>GOLS</span></div><div><b>${f.assists}</b><span>ASSIST.</span></div>${save.player.position === 'GK' ? `<div><b>${f.saves}</b><span>DEFESAS</span></div>` : ''}</div><div class="minutes-track" aria-label="${f.minutes} minutos em 90"><i style="width:${f.minutes / 90 * 100}%"></i></div><small>${f.blockGames ? (f.started ? 'Começou como titular' : 'Entrou durante a partida') : 'Não entrou em campo'}</small>${f.ratingReason ? `<p class="rating-reason">${esc(f.ratingReason)}</p>` : ''}<section class="reaction-details" aria-label="Reações da torcida e do treinador"><div class="performance-reactions"><div><span>TORCIDA</span><p>${esc(f.fanReaction)}</p></div><div><span>TREINADOR · ${esc(f.coachName).toUpperCase()}</span><p>${esc(f.coachReaction)}</p></div></div></section><div class="performance-block">Uma partida neste turno · ${f.minutes} minutos em campo</div></section>`;
 }
 function seasonPosition(s) {
     const positions = s.positionsPlayed ?? [];

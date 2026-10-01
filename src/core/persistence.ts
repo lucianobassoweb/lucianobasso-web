@@ -51,7 +51,7 @@ const coaching=fields({...numeric('season completedBlocks seed'),progress:option
   changes:array(coachChange),pendingChange:nullable(coachChange)});
 const feedback=fields({opponent:text,coachName:text,fanReaction:text,coachReaction:text,started:boolean,cleanSheet:boolean,
   ...numeric('minutes goals assists rating saves teamGoals oppGoals blockGames blockStarts blockGoals blockAssists blockMinutes'),
-  category:optional(category),showScore:optional(boolean)});
+  category:optional(category),showScore:optional(boolean),ratingReason:optional(text)});
 const decisionFamily=oneOf('LOAD','SPACE','SERVICE','RIVALRY','PRESSURE','ADAPTATION','PATH');
 const event=fields({decisionContext:optional(text),decisionFamily:optional(decisionFamily),id:text,kind:oneOf('INFO','CHOICE','MATCH','SEASON_END','MARKET','MILESTONE'),title:text,body:text,tags:array(text),
   choices:optional(array(fields({id:text,label:text,hint:optional(text)}))),payload:optional(object),matchFeedback:optional(feedback)});
@@ -64,7 +64,16 @@ const archivedChapter:Guard=v=>chapter(v)&&fields({endedSeason:natural,endedTurn
 const story=fields({active:nullable(chapter),archive:array(archivedChapter),lastObservedTurn:natural,sequence:natural});
 const choiceResult=fields({eventId:text,choiceId:text,label:text,season:natural,turn:natural,summary:text,effects:array(text)});
 const decisionMemory=fields({recent:v=>Array.isArray(v)&&v.length<=3&&v.every(fields({family:decisionFamily,turn:natural})),lastOffered:v=>object(v)&&Object.keys(v).length<=7&&Object.entries(v).every(([key,value])=>decisionFamily(key)&&natural(value)),lastExtraTurn:optional(natural),lastResolvedEvent:optional(text),extraLoad:optional(v=>natural(v)&&Number(v)<=2)});
-const player=fields({decisionMemory:optional(decisionMemory),story:optional(story),lastChoiceResult:optional(choiceResult),id:text,name:text,hometown:text,heartClubId:text,currentClubId:nullable(text),
+const bounded=(lo:number,hi:number):Guard=>v=>number(v)&&Number(v)>=lo&&Number(v)<=hi;
+const formContext=fields({clubId:nullable(text),category,position:oneOf('IND','GK','CB','FB','DM','CM','AM','WG','ST'),season:natural});
+const formObservation=fields({turn:natural,minutes:bounded(0,120),goals:v=>natural(v)&&Number(v)<=20,assists:v=>natural(v)&&Number(v)<=20,rating:bounded(0,10),xg:bounded(0,20),xa:bounded(0,20)});
+const recentForm:Guard=v=>{
+  if(!fields({context:formContext,lastObservedTurn:v=>number(v)&&Number.isSafeInteger(v)&&Number(v)>=-1,observations:v=>Array.isArray(v)&&v.length<=8&&v.every(formObservation)})(v)||!object(v)||!Array.isArray(v.observations))return false;
+  const observations=v.observations;
+  return observations.every((o,i)=>object(o)&&Number(o.turn)<=Number(v.lastObservedTurn)&&Number(o.minutes)>0&&(i===0||Number(o.turn)>Number(observations[i-1].turn)));
+};
+
+const playerFields=fields({recentForm:optional(recentForm),decisionMemory:optional(decisionMemory),story:optional(story),lastChoiceResult:optional(choiceResult),id:text,name:text,hometown:text,heartClubId:text,currentClubId:nullable(text),
   ...numeric('birthYear age season seasonTurn careerTurn adaptationDebt positionChanges heightCm weightKg morale confidence pressure mentalFatigue physicalCondition reputation marketValue contractYearsLeft rngState'),
   phase:oneOf('ESCOLINHA','BASE','PROFISSIONAL','AUGE','VETERANO','APOSENTADO'),position:oneOf('IND','GK','CB','FB','DM','CM','AM','WG','ST'),
   transferIntent:oneOf('STAY','OPEN','LEAVE','FORCE'),secondaryPositions:array(position),
@@ -78,6 +87,7 @@ const player=fields({decisionMemory:optional(decisionMemory),story:optional(stor
   history:array(fields({...numeric('turn season age'),type:text,headline:text,detail:text})),
   life:optional(life),tactical:optional(fields({coachId:text,role:oneOf('BALANCED','MOBILE','HOLD'),support:number,trust:number,discussedFor:nullable(number)})),
   professionalStatus:optional(oneOf('YOUTH','INVITED','SENIOR')),coaching:optional(coaching)});
+const player:Guard=v=>playerFields(v)&&object(v)&&(!object(v.recentForm)||Number(v.recentForm.lastObservedTurn)<=Number(v.careerTurn));
 /** The original mandatory fields are retained; later fields may be absent on legacy saves. */
 const saveShape=fields({version:oneOf('0.1.0-playable.2'),createdAt:text,updatedAt:text,player,pendingEvent:nullable(event)});
 function finiteValues(value:unknown,ancestors=new Set<object>()):boolean{

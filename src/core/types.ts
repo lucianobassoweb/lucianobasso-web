@@ -1,3 +1,4 @@
+import type {RecentMatchForm} from './form.js';
 export type Division = 'A' | 'B' | 'C' | 'D';
 export type Foot = 'D' | 'E';
 export type CareerPhase = 'ESCOLINHA' | 'BASE' | 'PROFISSIONAL' | 'AUGE' | 'VETERANO' | 'APOSENTADO';
@@ -228,6 +229,7 @@ export interface DecisionMemory {
 }
 
 export interface PlayerState {
+  recentForm?:RecentMatchForm;
   decisionMemory?:DecisionMemory;
   story?:StoryState;
   lastChoiceResult?:ChoiceResult;
@@ -300,7 +302,7 @@ export interface MatchFeedback {
   showScore?:boolean;
   opponent:string; coachName:string; started:boolean; minutes:number; goals:number; assists:number; rating:number;
   saves:number; cleanSheet:boolean; teamGoals:number; oppGoals:number;
-  fanReaction:string; coachReaction:string;
+  fanReaction:string; coachReaction:string; ratingReason?:string;
   blockGames:number; blockStarts:number; blockGoals:number; blockAssists:number; blockMinutes:number;
 }
 export interface CareerEvent {
