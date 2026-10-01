@@ -9,7 +9,7 @@ function sum(matches){return matches.reduce((s,m)=>{if(m.minutes){s.apps++;s.sta
 let groups=0;const check=(name,fn)=>{fn();groups++;console.log('PASS',name);};
 const outcomes=[];
 check('100 careers /all8positions finish54 actual fixtures with exact stats and eighteen-round calendar',()=>{
- assert.equal(CLUBS.length,10);assert.equal(POSITIONS.length,8);
+ assert.equal(CLUBS.length,44);assert.equal(POSITIONS.length,8);
  for(let seed=1;seed<=100;seed++){const g=complete(createGame('Amostra',POSITIONS[(seed-1)%8].id,seed),{market:seed%3?'stay':'move',style:seed%3});outcomes.push(g);assert.equal(g.age,21);assert.equal(g.playedMatches.length,54);assert.equal(g.yearStats.length,3);assert.deepEqual(g.totalstats,sum(g.playedMatches));assert.ok(g.decisions<=39);assert.equal(g.choicesLog.length,g.decisions);assert.ok(g.choicesLog.every(c=>c.label&&c.id&&c.eventId));
  for(const s of g.yearStats){const matches=g.playedMatches.filter(m=>m.season===s.season),counts={};assert.equal(matches.length,18);for(const m of matches)counts[m.opponentId]=(counts[m.opponentId]??0)+1;assert.equal(Object.keys(counts).length,9);assert.ok(Object.values(counts).every(v=>v===2));assert.deepEqual(Object.fromEntries(Object.keys(g.totalstats).map(k=>[k,s[k]])),sum(matches));}
  for(let i=1;i<g.playedMatches.length;i++)assert.notEqual(g.playedMatches[i].opponentId,g.playedMatches[i-1].opponentId);
