@@ -144,3 +144,7 @@ Saves existentes sem narrativa iniciam o registro daqui em diante. Não reconstr
 ## Atualização aprovada — informações diretas na partida (0.3.3)
 
 A pedido do usuário, reações da torcida e do treinador, contexto e próximos passos devem estar sempre visíveis, sem clique para abrir. Esta decisão substitui a descrição anterior que os tornava expansíveis. São seções estáticas antes das decisões, com leitura por rolagem no celular.
+
+## 0.3.4 — contexto baseado na carreira
+
+O contexto deve interpretar fatos observados, selecionar as tensões relevantes e explicar o próximo passo vinculado às escolhas disponíveis. A variedade vem da situação e da trajetória: participação, fase de formação/transição, adaptação de posição, relação profissional, campanha, escola ou propostas. Não preencher espaço com frases genéricas nem apenas repetir o quadro estatístico. Não revelar DNA, inventar acontecimentos ou prometer resultados futuros. Informações ausentes devem reduzir o texto. Esta camada de leitura não altera a simulação nem grava campos novos no save.

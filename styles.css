@@ -80,3 +80,6 @@ summary{min-height:44px;display:list-item;align-content:center}
 .biography-list{max-height:540px;overflow:auto}.biography-list article{border-top:1px solid var(--line);padding:16px 0}.biography-list article>div{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
 .biography-list article h4{font-size:16px;margin:10px 0 6px}.biography-list article p{color:#d5dfe5;font-size:14px;line-height:1.6;margin:0}
 @media(max-width:600px){.career-situation{scroll-margin-top:14px}.choice-result{padding:10px 12px;margin-bottom:12px}.chapter-card,.chapter-payoff{padding:14px;margin-bottom:12px}.chapter-card h3{font-size:22px}.chapter-heading{flex-wrap:wrap;gap:4px}.chapter-evidence{gap:5px 12px}.biography-card{padding:18px}}
+
+/* 0.3.4: facts of this career and the decision ahead. */
+.match-context p+p{margin-top:12px}.match-context .context-next{border-left:2px solid var(--accent);padding:10px 14px;background:#ffffff04;margin-top:16px}.context-next b{display:block;font-size:13px;color:var(--accent);margin-bottom:5px}
