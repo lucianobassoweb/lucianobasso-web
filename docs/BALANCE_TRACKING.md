@@ -66,3 +66,10 @@ A comparação exige que todas as coortes da baseline existam; apenas a nova coo
 ## Checkpoint07: catálogoA–D e até25
 
 D0050/A0032 aprova extensão preservando o REVIEW contra06:54drifts adultos/0juvenis/0bloqueios, maior12,593. Motor224926279cc2a6f80f2b2dd2ffb2ffc55f46d7565f6ca581f4133ecb1f9defa2. Adulto768carreiras/16128blocos até126partidas cada, entradaB/C/D separada. Formação16384caminhos mantém6912originais. Comparar adulto por temporada/período: DONE21 antigo coincide com final da temporada20; novos21–24 não têm referência06 e não entram no drift. C/D nunca são misturados aB. Default07;06permanece acessível para comparação histórica. Crescimento/sobrecarga/bem-estar não ganharam multiplicadores. Alterar catálogo muda futuras oportunidades/RNG: quantificar, não exigir identidade de partidas depois de adoção. Nova baseline usa criação exclusiva e repetição; PASS local significa repetibilidade, não calibração científica/diversão.
+
+
+## 07.1 — repercussão do desempenho e participação de promessas
+
+Referência07 permanece imutável e continua default. Comparação do motor053902e3a8a96204cd60e1b47056f5bafacb7045ffe07529e8b1f83e35d1e3ac: REVIEW,333 desvios adultos deP95,0juvenis/0bloqueios, mesma amostra16384caminhos/768carreiras/16128blocos. Mudança de interesse/peso por desempenho altera projetos, concorrência, cobrança e RNG futuro; não houve novo multiplicador de aprendizado. Maior drift23,887 em stressDM/focoD, aos22 no segundo período. Separar esse resultado de certificação de equilíbrio.
+
+D0051/A0033 mantém a regra experimental e os limiares, com alertas explícitos; não cria checkpoint novo para ocultar a mudança. Formação originalST aos18 permanece P95 55,081/máximo61,414. A observação humana seguinte deve comparar subir cedo paraA/reserva e permanecer com minutos, capacidade de recuperar espaço e custo de cobrança. Comparações futuras continuam exigindo revisar o REVIEW, com relatório datado/hash e sem modificar07.

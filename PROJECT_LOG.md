@@ -1116,3 +1116,50 @@ FluxoCUA originisolada8918, carreira descartávelST Date.now normal; save real n
 DONE25:121participações/103starts/8365min/114G1A/nota7,7/OVR69, finalização89,7 adulta. Último anoA13apps/8starts/11G versus18apps/15starts/21G naD anterior; banco e custo de concorrência presentes. Felicidade91/descanso95/stress0/condição94/cobrança54/trust62. Reload pós-contrato eDONE preserva valores/decisão; deltas transitórios desaparecem como previsto. História18–24 acessível.390/320semoverflow, warnings/errorscapturados vazios. Não certificarSafari/iPhonefísico. Artefatos emoutputs, relatório/publicSHA preenchidos após publicação. Fontes privadas e rascunho0.4 fora do commit; branch experimental/PRdraft, semmain/merge/Pages.
 
 Checkpoint07 criado exclusivamente e repetição contra07 PASS/exit0,0warnings/0violations, mesmos hashes/coortes/métricas. Relatórios REVIEW06 ePASS07 separados emoutputs. Sintaxeapp/engine/monitor e diffcheck restritoPASS. Publicação preparada apenas nos20arquivos enumerados do protótipo/docs/testes/monitor; nenhuma inclusão do rascunhoTS0.4 ou dos exports privados.
+
+## D0051 / A0033 — decisão, evolução e contratação de promessa (07.1)
+
+### Pedido, hipótese e execução
+
+Usuário pede salto D→A de promessa com poucos minutos, diagnostica 12 gols/15 jogos e só contato C e corrige UX: gols/treino/skills/estados precisam ficar junto da decisão, resultado no mesmo viewport e evolução por temporada fácil. Hipótese: oportunidade de desenvolvimento difere de prontidão; produção individual precisa de grau de repercussão e interface deve expor causas/resultados. Protocolo/spec/log lidos, typecheck prévio PASS. Principal aplicou frontend-design/responsive-design, mantendo fonte nativa/títulos compactos. Dois trabalhadores Sol6.1 delimitados: motor e revisão/gates. Principal integra UI/build/docs/monitor/log/publicação. Rascunho TS0.4 permanece local.
+
+### Diagnóstico privado e correção causal
+
+Dois uploads têm bytes idênticos. Replay integral reproduziu exatamente estado/RNG/história do07; arquivo imutável, não publicado nem usado como fixture. AM/22/CearáB: 15 participações,14 titularidades,1146min,12G2A/nota7,5,11boas; pendingINTEREST, não proposta contratual concreta. Antes: score69=OVR63+repcap6, proof boolean true; produção AM25 omitia G/A. Lista já tinha2A/2B/2C; Bragantino/Grêmio falharam no interesse, VoltaRedondaC passou. Não afirmar que A estava excluída nem converter bom ano em destino livre.
+
+marketEvidence pondera minutos/adversários, confiança da amostra, boas atuações, produção contra metas históricas normalizadas e G/A de todos os jogadores de linha; GK mantém defesas/intervenções. Bônus até12 soma ao OVR+repcap6. Pesos favorecem projetos igual/maior conforme repercussão, reduzindo inferior sem zerar. Mantidos seis observados/dois contatos, necessidade/concorrência/fracasso/silêncio. Leitura pura do export no novo modelo:14 qualificados/1127min, nota ponderada7,556/ajustada7,630, taxa boa0,786, razão papel1,930,12G2A/GA90=1,118; bônus12/score81, sem mutação. Contato pendente não é rerrolado; efeito na próxima janela gerada. Evidência privada emoutputs, fora da publicação.
+
+### Promessa, prova e causa da trava no banco
+
+observedPromise usa idade18–21, seis atuações35min/450min, nota ponderada7+, quatro boas, ganho adultoOVR3+ e último período positivo; sem DNA/potencial cap. Amplia A atéOVR+25, PROSPECT somente com gap concorrente8+. Peso×0,5/interesse≤16%/fechamento≤48%; jovem perto da prontidão permaneceREADY. participation compartilha previsão/partida: integração por prontidão relativa e mérito observado; piso inicial5%/banco/cameos6–16, evoluindo atéREADY conforme prontidão/prova. GK tem contingência rara, sem reserva jogando sempre. Salário/aprendizado global/bem-estar/infância/calendário/duração preservados.
+
+Revisão encontrou causa adicional: prontidão negativa antes do clamp anulava boas entradas, e janela12/600min tornava prova inalcançável por cameos16min. Corrigido clamp separado da prontidão e prova cumulativa no projeto:35min, ou10min/nota7+, ou feito excepcional; min(1,minutos/600)×min(1,boas/4), peso0,65. Liberação completa ainda exige prontidão. Busca natural128ST encontrou12PROSPECT; SãoPaulo/21/OVR61/rival72 chegou integração0,65/OVR66/1260minA; casos com gap maior seguem reservas, com mérito agora influente. Não garantir que toda contratação progrida. Caso naturalST: ManausD→SãoPauloOFFER19/OVR51/rival70,5%/0–19min/estrutura90. Assinatura na temporada seguinte, sem apagar ano19.
+
+### Compatibilidade e UI
+
+Mesma chave1903.prototype10.v2/schema2; promiseRevision1/marketRevision1 opcionais. ENTRY/janelas futuras adotam; pendingROUTINE/ENTRY/PLAN/INTEREST/CONTACT/OFFER07 conservam decisões/fatos; últimoPLAN adota somente novo mercado. DONE25 imutável. Contexto/perfilPROSPECT exigem classificação compatível; remoção/mutação rejeitada antes da escolha. Previsão inicial congelada, vínculo usa previsão atual sem reescrever contrato.
+
+Layout grid100dvh/cabeçalho fixo/centro rolável/rodapé fixo. Topo: nome/idade/posição/clube, treino contratado/100, temporadaJ/titular/min/G/A/nota, últimosseisG/A, três fundamentos de bem-estar/quatro estados esportivos e seis skills coloridas com deltas. Botões numerados no rodapé correspondem às opções do centro; artigos de ganhos/custos não executam decisões. Clique retorna centro ao resultado factual compacto: participações/min/G/A e reações; próxima decisão permanece na mesma superfície. Assinatura/rotina/formação distinguem efeito de simulação. Reações completas/partidas/metas continuam por rolagem, sem disclosure obrigatório.
+
+Evolução e história abre SVG de OVR registrado e tabela anualJ/G/A/nota/OVR, clube/idade; seasonStats parcial inclui banco sem participações. OVR vem do último progression por temporada; dado ausente mostra travessão. Render sem RNG/escrita. Fonte nativa, títulos contidos, cores com valores/deltas, safe areas e toques44px. Nenhuma biblioteca nova necessária.
+
+### Monitor e decisão explícita
+
+Motor final053902e3a8a96204cd60e1b47056f5bafacb7045ffe07529e8b1f83e35d1e3ac; catálogo96e50466e24387a44ff10602da38d18bb17dd9a3ae6b39863ef2f7c4c22973c1. Mesma amostra16384caminhos juvenis/768adultos/16128blocos/96768partidas. Contra07: REVIEW333 desvios adultos,0juvenis/0bloqueios;96FOCUSED/67FOCUSED_C/69FOCUSED_D/15OVERLOAD/26OVERLOAD_C/60OVERLOAD_D. Maior23,887 stressDM/focoD aos22/período2. FormaçãoSToriginalP95/máximo18=55,081/61,414;14=36,657/38,123;16=45,874/50,937, idênticos07. Sem estado natural15; probe15/80 existente.16120blocos têm perda de alguma skill,6356 da principal.
+
+Intermediário promessa-only teve132avisos; repercussão/ponderação do mercado elevou a333, conservados após correção de mérito. Projetos/concorrência/cobrança/RNG alteram oportunidade/carga/progressão sem novo multiplicador de aprendizado. ST aos25/focoB/C/D OVRmédio73,750/73,875/73,688; sobrecarga11,188/10,688/4,063. São políticas selecionadas, não incidência real; espiral de sobrecarga é risco conhecido.
+
+**Decisão do principal: manter regra experimental, limiares e REVIEW explícito.** Não criar checkpoint novo para esconder drifts;07/default permanece imutável. Não chamar resultado dePASS nem certificar diversão/calibração. Próximo playtest: subir jovem paraA/banco versus permanecer com minutos, repercussão após ano forte, recuperar espaço e legibilidade dos custos. Diagnóstico futuro deve considerar produção/amostra/projeto/minutos, não apenasOVR.
+
+
+### Gates, adaptação justificada e entrega
+
+QA anterior ao ajuste estreito de mérito/atomicidade (motor1b25932c): engine9/agência14/correções15/bem-estar10/retomada8 PASS, Brazil6/7; não chamar esse conjunto de63PASS. Falha Brazil era cobertura153/156 no probe forte com1024RNG, pois nova repercussão reduz peso inferior. Adapter autorizado apenas orçamento1024→4096, seeds sequenciais/mesmas156identidades/silêncio/falha/transferência intactos. No motorfinal053902e3 Brazil7/7PASS:156destinos após2529RNG,70silêncios/803falhas/1656transferências. Esse probe controlado forte não é incidência natural de mercado.
+
+Promessas8/8 no hashfinal: frozen07ENTRY/ROUTINE/PLAN/INTEREST/CONTACT/OFFER exatos/DONE25imutável; ST1/GK3naturaisD→A,READYexato,128carreiras/256pares previsão/participação,16forgeriesrejeitadas semmutação, integração natural por mérito e liberação por prontidão emcontrole. Mercado760pares públicos (95histórias selecionadas por evidência antes dajanela×8RNG) comhabilidade alinhada:398contatos maisfortesvs296/175silênciosvs183. Não garantir melhoria emcadaRNGnem tratar diferença deaprendizado posterior como efeito puro do mercado.
+
+PrincipalUI27/27 no hashfinal: fluxo inteiro126partidas até25/sete anos, tabela com númerosreais/OVR/ano parcial, headergols/treino/seis skills/bem-estar, handlers somente rodapé, rendersemgravação, quota/corrupção/reload/duploclick, promessa/adaptação. Sintaxe e diffcheck restritos PASS. Standalone158677bytes, semdependências.
+
+CUA originisolada8920 usa fixturepúblicanatural/replay21IDsST1, nunca exportprivado/savereal. Comparou ofertaSãoPaulo19, assinou20: treino63→90/100/concorrente70/cobrança sobe/trustreseta48; rivalearn→REST→ATTACK simulou6jogos,1participação14min/0G0A/nota6,2, próxima recuperação na mesma tela. Resultado e headergols/skills acessíveis junto aosbotões. Reload preserva números/decisão; deltas transitórios deestadoresetam como previsto, skills mantêmúltimoavanço. Tabela18/19/20parcial usa17/18/0G eOVR48/51/51.
+
+390×844/320×740/1200×900 semoverflow. Header/rodapé dentroviewport antes/depois da rolagem; só centro rola, botões≥44px. Tabela320 tem300px e seiscolunas, semrolagemhorizontal. Warning/error capturados vazios. Overrideviewportresetado. Não certificar Safari/iPhonefísico/addressbar/offline/diversão. Tela emoutputs/1903_PROTO07_1_TELA.png; evolução1903_PROTO07_1_EVOLUCAO.png; standalone1903_PROTO07_1.html; relatório1903_PROTO07_1_VALIDACAO.md. PRdraft existente recebe apenasprotótipo/docs/gates, semmain/merge/Pages, exportprivado ouTS0.4. SHA/link apóspublicação constamno relatório externo.

@@ -1,4 +1,4 @@
-# 1903 · Brasil — Séries A–D · Protótipo07
+# 1903 · Brasil — Séries A–D · Protótipo07.1
 
 Recorte independente: três etapas de formação12–18, sete temporadas profissionais18–24 e encerramento aos25. Cada temporada tem18 partidas internas, total126; cada plano resolve seis partidas. Formação representa dois anos por escolha, não uma sessão. Não é aposentadoria nem a carreira completa de quatro horas.
 
@@ -9,7 +9,7 @@ Abra index.html em HTTPS. HTML standalone, sem bibliotecas, servidor de aplicaç
 -156 participantes de2026:20A/20B/20C/96D. Identidades/UF/divisão/gruposD conferidos na CBF em02/10/2026; nomes disambiguados preservam os IDs antigos. Força, prestígio, salário, estrutura e elencos são parâmetros ficcionais.
 - Todos podem ser clube dos sonhos, adversário ou destino elegível. Escolher sonho não concede contrato. Primeiro clube vem de três projetos interessados D/C/B; uma entrada forte pode receber A como terceiro projeto. Compare salário, estrutura, cobrança, concorrente e previsão inicial de minutos, sem vaga garantida.
 - A/B/C: amostra de nove adversários da própria divisão, ida/volta. D: cinco adversários do grupo oficial e quatro de sua chave geográfica pareada, ida/volta. **18 jogos experimentais**, sem alegar o calendário oficial de dez rodadas da primeira faseD ou mata-mata/acesso/rebaixamento.
-- Mercado considera nível, produção, necessidade e concorrência; no máximo dois contatos por janela e seis projetos observados internamente. Cadastro maior não oferece todos os clubes nem contratação automática. Projetos C/D também podem abrir reconstrução.
+- Mercado considera nível, produção, necessidade e concorrência; no máximo dois contatos por janela e seis projetos observados internamente. Cadastro maior não oferece todos os clubes nem contratação automática. Projetos C/D também podem abrir reconstrução. Não há escada obrigatória entre divisões: uma promessa pode ir diretamente daD paraA. O clube pode apostar na evolução observada, oferecendo banco e entradas curtas inicialmente; ficar em projeto menor favorece minutos. Um jovem já pronto para o nível do concorrente disputa a vaga normalmente.
 
 ## Aprendizado e rotina
 
@@ -17,9 +17,15 @@ Estrutura melhora aquisição, mas prática, minutos, técnica/proficiência, es
 
 Finalização melhora alvo/conversão quando há chutes; função, intenção e abastecimento determinam acesso. Metas exigem contribuição observada. Torcida/treinador reagem diretamente; história guarda escolhas, aprendizado, temporadas e contatos.
 
+## Tela de jogo
+
+Cabeçalho fixo com idade, posição, clube, treino do projeto atual, estatísticas da temporada (incluindo gols), contribuição do último bloco, bem-estar e seis habilidades coloridas com variação. Somente o conteúdo central rola. Resultado resumido do último clique e contexto ficam nessa área; reações completas e partidas permanecem acessíveis sem abrir detalhes.
+
+Decisões numeradas ficam no rodapé, com as mesmas opções descritas no centro. “Evolução e história” abre gráfico de overall registrado e tabela por temporada: jogos, gols, assistências, nota e overall. Ano em andamento é identificado como parcial; valores históricos não registrados não são inventados.
+
 ## Saves
 
-Mesma chave1903.prototype10.v2/schema2. Campos opcionais nationalRevision1 e careerEndAge25 identificam novos projetos e duração. Saves anteriores mantêm decisão pendente, calendário, perfis e fatos; adoção prospectiva em nova ENTRY/temporada. DONE antigo aos21 permanece fechado até clicar em “Continuar até os25anos”. A retomada usa uma cópia validada, conserva o passado e começa a temporada21; não inventa a janela20 que a versão antiga encerrou. Sem reescrever habilidade, estatística, DNA ou salário passado. Exportar antes de Recomeçar permite preservar a carreira. Não há importação de arquivos neste recorte.
+Mesma chave1903.prototype10.v2/schema2. Campos opcionais promiseRevision1, marketRevision1, nationalRevision1 e careerEndAge25 identificam novos projetos e duração. Saves anteriores mantêm decisão pendente, calendário, perfis e fatos; adoção prospectiva em nova ENTRY/temporada; regras novas de mercado entram na próxima janela gerada. Contato/proposta já pendentes não são sorteados novamente. DONE antigo aos21 permanece fechado até clicar em “Continuar até os25anos”. A retomada usa uma cópia validada, conserva o passado e começa a temporada21; não inventa a janela20 que a versão antiga encerrou. Sem reescrever habilidade, estatística, DNA ou salário passado. Exportar antes de Recomeçar permite preservar a carreira. Não há importação de arquivos neste recorte.
 
 ## Gates
 
@@ -33,8 +39,9 @@ node tests/dez-clubes-v2-brazil.mjs
 node tests/dez-clubes-v2-lower-divisions.mjs
 node tests/dez-clubes-v2-wellbeing.mjs
 node tests/dez-clubes-v2-ui.mjs
+node tests/dez-clubes-v2-promises.mjs
 node scripts/prototype-balance.mjs --output-dir ../../outputs/1903-equilibrio --baseline docs/balance/prototype07.json
 python3 prototypes/dez-clubes-v2/build.py
 ```
 
-Regras: docs/PROTOTYPE07_BRAZIL_CD.md e docs/PROTOTYPE06_WELLBEING.md. Equilíbrio: docs/BALANCE_TRACKING.md e PROJECT_LOG. Testes técnicos não comprovam diversão, números do futebol real ou Safari físico.
+Regras: docs/PROTOTYPE07_1_PROMISES.md, docs/PROTOTYPE07_BRAZIL_CD.md e docs/PROTOTYPE06_WELLBEING.md. Equilíbrio: docs/BALANCE_TRACKING.md e PROJECT_LOG. Testes técnicos não comprovam diversão, números do futebol real ou Safari físico.

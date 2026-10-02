@@ -280,3 +280,12 @@ A pedido do usuário, felicidade, descanso físico e stress mental passam a ser 
 Pedido do usuário amplia protótipo independente a156clubes2026(20A/20B/20C/96D) e sete temporadas18–24, encerrando25 com126partidas internas/21metas. Formação12–18 preservada. Entrada ofereceD/C/B e possibilidadeA em formaçãoforte, sempre com escolha entre interessados. Calendário experimental18jogos/ano; D guarda grupo oficial e usa rivais da chave pareada, sem reproduzir regulamento/acesso/rebaixamento. Motor de aprendizado/bem-estar06 continua.
 
 Saves antigos conservam pending/contratos/passado; adoção prospectiva. DONE21 fica fechado até botão explícito “Continuar até os25anos”, que valida nova cópia e inicia21 sem inventar janela20. Regras docs/PROTOTYPE07_BRAZIL_CD.md; checkpoint/logD0050/A0032. Extensão não é aposentadoria nem certificação de quatro horas.
+
+
+## Atualização experimental07.1 — promessa, mérito e superfície de decisão, 02/10/2026
+
+Jovem promessa pode saltar de D diretamente para A; contratação para desenvolvimento é distinta de prontidão para ser titular. Evolução e atuações observadas sustentam interesse, sem consultar DNA oculto ou impor sequência de divisões. Banco e entradas curtas têm custo de oportunidade; mérito no projeto e prontidão podem ampliar espaço. Desempenho no mercado considera adversários, amostra e produção da função, incluindo gols/assistências de todos os jogadores de linha. Não transforma números bons em contrato obrigatório nem recalcula contato/proposta pendente.
+
+A tela do protótipo mantém cabeçalho e rodapé no viewport. Idade, posição, clube, estrutura do treino, gols/assistências/jogos/minutos/nota da temporada, resultado do último bloco, felicidade, descanso, stress e habilidades ficam junto das ações. Área central mostra efeito factual do último clique, contexto e ganhos/custos das opções; reações completas permanecem acessíveis por rolagem. Somente essa área central rola. Navegação fixa oferece evolução, exportação e recomeço.
+
+Evolução por temporada usa registros adquiridos: gráfico de overall e tabela de jogos, gols, assistências, nota e overall, com ano atual parcial. Não inventar dados para save antigo incompleto. Fonte nativa, títulos pequenos, cores com números e variações; ações com alvo de toque de pelo menos44px. Compatibilidade usa mesma chave/schema; layout não grava nem muda o motor durante renderização.

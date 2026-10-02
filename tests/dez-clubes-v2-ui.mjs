@@ -106,4 +106,54 @@ const resumeQuota=fixture(done06,{denyWrite:true});resumeQuota.nodes.get('#proto
 assert.equal(resumeQuota.map.get(key),oldBytes);assert.equal(resumeQuota.writes.length,0);
 assert.ok(resumeQuota.root.innerHTML.includes('O navegador não permitiu salvar'));checks++;
 
+
+// A public natural career finds an A investment offer without modifying skills or DNA.
+const promise=engine.createGame('Promessa UI pública','ST',1),bare=c=>c.id.split('@')[0];
+for(let guard=0;guard<180&&!(promise.event.kind==='OFFER'&&promise.offer.profile?.recruitment==='PROSPECT');guard++){
+ const kind=promise.event.kind;
+ assert.notEqual(kind,'DONE','public young-promise route disappeared');
+ const action=kind==='FORMATION'?'formation:technique':kind==='ENTRY'?null:kind==='RIVALRY'?'rival:challenge':kind==='ROUTINE'?'routine:REST':kind==='PLAN'?'intent:ATTACK':kind==='RECOVERY'?'recovery:READ':kind==='DECISIVE'?'decisive:safe':kind==='INTEREST'?'market:stay':null;
+ const c=kind==='ENTRY'?promise.event.choices.find(c=>c.profile.division==='D'):kind==='INTEREST'?promise.event.choices.find(c=>c.profile?.recruitment==='PROSPECT')??promise.event.choices.find(c=>bare(c)==='market:stay'):promise.event.choices.find(c=>bare(c)===action)??promise.event.choices[0];
+ assert.ok(engine.choose(promise,c.id));
+}
+assert.equal(promise.event.kind,'OFFER');assert.equal(promise.offer.profile.recruitment,'PROSPECT');
+const promiseRaw=JSON.stringify(promise),promiseUI=fixture(promise);
+for(const copy of ['Aposta no seu desenvolvimento','banco e entradas curtas','média inclui banco','chance inicial de titularidade'])assert.ok(promiseUI.root.innerHTML.includes(copy));
+assert.equal(JSON.stringify(promise),promiseRaw);assert.equal(promiseUI.writes.length,0);checks++;
+promiseUI.buttons[0].handlers.click();const signedPromise=JSON.parse(promiseUI.map.get(key));
+assert.ok(engine.validGame(signedPromise));assert.equal(signedPromise.clubProject.recruitment,'PROSPECT');
+assert.ok(promiseUI.root.innerHTML.includes('Contratado como promessa'));assert.ok(promiseUI.root.innerHTML.includes('Previsão atual'));
+const live=engine.projectProfile(signedPromise,signedPromise.clubId);
+assert.ok(promiseUI.root.innerHTML.includes(Math.round(live.starterChance*100)+'% de titularidade'));
+const reloadPromise=fixture(signedPromise);assert.equal(reloadPromise.writes.length,0);
+assert.ok(reloadPromise.root.innerHTML.includes('Contratado como promessa'));reloadPromise.history();
+assert.ok(reloadPromise.root.innerHTML.includes('Observação como promessa'));checks++;
+
+// Header evidence, footer binding and yearly evolution must refer to actual records.
+const board=fixture(game),boardRaw=JSON.stringify(game),html=board.root.innerHTML;
+const header=html.match(/<header class="game-header">([\s\S]*?)<\/header>/)[1];
+assert.ok(header.includes('gols')&&header.includes('assistências'));
+assert.ok(header.includes('Treino '+Math.round(game.clubProject.trainingQuality)+'/100'));
+assert.equal((header.match(/class="skill /g)??[]).length,6);
+assert.ok(header.includes('Felicidade')&&header.includes('Descanso físico')&&header.includes('Stress mental'));
+assert.ok(html.includes('class="game-body"')&&html.includes('class="game-footer"'));
+assert.equal(board.buttons.length,0);assert.equal(board.writes.length,0);checks++;
+const decisions=fixture(signedPromise),decisionHTML=decisions.root.innerHTML;
+assert.equal(decisions.buttons.length,signedPromise.event.choices.length);
+assert.equal((decisionHTML.match(/class="choice choice-info"/g)??[]).length,signedPromise.event.choices.length);
+assert.ok(decisionHTML.indexOf('class="turn-result"')<decisionHTML.indexOf('class="decision"'));
+assert.ok(decisionHTML.includes('Efeito da última decisão'));checks++;
+board.history();const history=board.root.innerHTML;
+assert.ok(history.includes('class="evolution-chart"')&&history.includes('<table>'));
+const table=history.match(/<tbody>([\s\S]*?)<\/tbody>/)[1];
+assert.equal((table.match(/<tr>/g)??[]).length,7);
+const annualRows=[...table.matchAll(/<tr>[\s\S]*?<\/tr>/g)].map(m=>m[0]);
+for(const y of game.yearStats){const row=annualRows.find(r=>r.startsWith('<tr><th scope="row">'+y.age+' anos'));assert.ok(row);assert.ok(row.includes('<td>'+y.goals+'</td>'));assert.ok(row.includes('<td>'+y.assists+'</td>'));const p=game.progression.filter(p=>p.season===y.season&&p.period>0).at(-1);assert.ok(p&&row.includes(String(Math.round(p.afterOverall))));}
+assert.equal(board.map.get(key),boardRaw);assert.equal(board.writes.length,0);checks++;
+const partialGame=structuredClone(signedPromise);
+while(!partialGame.seasonStats.apps&&partialGame.phase==='PRO'){assert.ok(engine.choose(partialGame,partialGame.event.choices[0].id));}
+assert.ok(partialGame.seasonStats.apps);const partial=fixture(partialGame),partialRaw=JSON.stringify(partialGame);partial.history();
+assert.ok(partial.root.innerHTML.includes('parcial'));
+assert.equal(partial.map.get(key),partialRaw);assert.equal(partial.writes.length,0);checks++;
+
 console.log(JSON.stringify({checks,phases:[...seen],result:'PASS',originalStorageTouched:false}));

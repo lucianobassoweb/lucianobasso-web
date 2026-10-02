@@ -93,6 +93,53 @@ function routineEvent(g){event(g,'ROUTINE',`${g.season} anos · rotina do ${g.pe
 function effectiveLevel(g){const composure=(g.confidence-60)*(.025+g.pressure*.0007);return overall(g)+composure-Math.max(0,80-g.condition)*.1-Math.max(0,g.fatigue-30)*.1-Math.max(0,g.pressure-45)*.065-wellbeing(g).executionPenalty;}
 function observedForm(g,id){const matches=g.playedMatches.filter(m=>m.clubId===id&&(m.minutes>=35||m.exceptional)).slice(-6),weight=matches.reduce((n,m)=>n+(m.minutes>=35?1:.5),0);return weight?matches.reduce((n,m)=>n+m.rating*(m.minutes>=35?1:.5),0)/weight:6.7;}
 function starterProbability(g,id,rivalQuality,rivalForm=6.7){return clamp(.51+(effectiveLevel(g)-rivalQuality)*.035+(g.trust-50)*.004+(observedForm(g,id)-rivalForm)*.10+((g.fanMemory[id]?.respect??50)-50)*.0005,.05,.90);}
+/** Recruitment evidence is acquired and recorded, never inferred from DNA. */
+export function observedPromise(g){
+ const matches=g.playedMatches.filter(m=>m.season===g.season&&m.minutes>=35),minutes=matches.reduce((n,m)=>n+m.minutes,0);
+ const rating=minutes?matches.reduce((n,m)=>n+m.rating*m.minutes,0)/minutes:0,good=matches.filter(m=>m.good).length;
+ const learning=g.progression.filter(p=>p.season===g.season&&p.period>0),learningTrend=learning.reduce((n,p)=>n+p.afterOverall-p.beforeOverall,0);
+ const advancing=(learning.at(-1)?.afterOverall??0)>(learning.at(-1)?.beforeOverall??0);
+ return {eligible:g.age>=18&&g.age<=21&&matches.length>=6&&minutes>=450&&rating>=7&&good>=4&&learningTrend>=3&&advancing,apps:matches.length,minutes,rating,good,learningTrend,advancing};
+}
+/** Observable season evidence for market selection; all outfield roles receive G/A credit. */
+export function marketEvidence(g){
+ const matches=g.playedMatches.filter(m=>m.season===g.season&&m.minutes>=35),qualifiedMinutes=matches.reduce((n,m)=>n+m.minutes,0);
+ const confidence=Math.min(1,qualifiedMinutes/900),rating=qualifiedMinutes?matches.reduce((n,m)=>n+m.rating*m.minutes,0)/qualifiedMinutes:0;
+ const opponentLevel=qualifiedMinutes?matches.reduce((n,m)=>n+(CLUBS.find(c=>c.id===m.opponentId)?.level??55)*m.minutes,0)/qualifiedMinutes:55;
+ const competitionAdjustment=clamp((opponentLevel-55)/50,-.3,.5),adjustedRating=rating+competitionAdjustment;
+ const goodRate=matches.length?matches.filter(m=>m.good||m.exceptional).length/matches.length:0;
+ let roleOutput=0,roleExpected=0;
+ for(const m of matches){
+  const recorded=g.objectiveHistory.find(o=>o.season===m.season&&o.clubId===m.clubId&&o.period===Math.ceil(m.round/6));
+  const metric=recorded?.revision===1?recorded.metric:metricFor({...g,recoveryWork:null},m.strategy)??metricFor({...g,recoveryWork:null},intents(g)[0]);
+  roleOutput+=outputFor(g,m,recorded??{revision:1,metric});
+  const target=recorded?.target??targetForMetric(g.position,metric,false);
+  roleExpected+=target.output*m.minutes/target.minutes;
+ }
+ const roleRatio=roleExpected?roleOutput/roleExpected:0,goals=matches.reduce((n,m)=>n+m.goals,0),assists=matches.reduce((n,m)=>n+m.assists,0);
+ const gaPer90=g.position!=='GK'&&qualifiedMinutes?(goals+assists)*90/qualifiedMinutes:0;
+ const bonus=confidence*clamp(8*(adjustedRating-6.8)+4*(goodRate-.4)+2*clamp(roleRatio-1,0,1)+3*clamp(gaPer90-.3,0,1),0,12);
+ const baseScore=overall(g)+Math.min(6,g.reputation*.15);
+ return {qualifiedApps:matches.length,qualifiedMinutes,confidence,rating,opponentLevel,competitionAdjustment,adjustedRating,goodRate,roleOutput,roleExpected,roleRatio,goals,assists,gaPer90,bonus,baseScore,score:baseScore+bonus};
+}
+/** Shared selection and minutes model for the live forecast and actual appearances. */
+export function participation(g,id,rivalQuality,rivalForm=6.7,recruitment='READY'){
+ const base=starterProbability(g,id,rivalQuality,rivalForm);
+ let integration=1;
+ if(recruitment==='PROSPECT'){
+  const qualified=g.playedMatches.filter(m=>m.clubId===id&&(m.minutes>=35||m.minutes>=10&&m.rating>=7||m.exceptional));
+  const minutes=qualified.reduce((n,m)=>n+m.minutes,0),good=qualified.filter(m=>m.rating>=7||m.exceptional).length;
+  const proof=Math.min(1,minutes/600)*Math.min(1,good/4);
+  const readiness=clamp((effectiveLevel(g)-rivalQuality+12)/12,0,1);
+  integration=clamp(readiness+proof*.65,0,1);
+ }
+ const starterChance=clamp(base*(.3+.7*integration),.05,.90);
+ const substituteChance=g.position==='GK'?.015+.025*integration:.28+.46*integration;
+ const substituteMin=g.position==='GK'?15:Math.round(6+8*integration),substituteMax=g.position==='GK'?60:Math.round(16+18*integration);
+ const starterMin=g.position==='GK'?90:66,starterMax=90;
+ const mean=starterChance*(starterMin+starterMax)/2+(1-starterChance)*substituteChance*(substituteMin+substituteMax)/2;
+ return {starterChance,substituteChance,substituteMin,substituteMax,starterMin,starterMax,integration,mean,minutesEstimate:{min:Math.max(0,Math.round(mean-12)),max:Math.min(90,Math.round(mean+12))}};
+}
 function demand(g,id){let hash=g.seed>>>0;for(const ch of id+g.position)hash=(Math.imul(hash,31)+ch.charCodeAt(0))>>>0;return (hash%5)-2;}
 export function projectProfile(g,id){
  const c=resolveClub(g,id);if(!c)throw new Error('Projeto desconhecido');
@@ -100,15 +147,14 @@ export function projectProfile(g,id){
  const pressure=clamp(26+c.prestige*.32),trainingQuality=Math.round(clamp(45+c.prestige*.55,0,98));
  const mentalDemand=pressure;
  const state=current?g:{...g,trust:48,pressure};
- const starterChance=starterProbability(state,id,quality,current?g.rival?.form??6.7:6.7);
- const mean=g.position==='GK'?starterChance*90+(1-starterChance)*.04*37.5:starterChance*78+(1-starterChance)*.74*24;
- const minutesEstimate={min:Math.max(0,Math.round(mean-12)),max:Math.min(90,Math.round(mean+12))};
+ const recruitment=current?g.clubProject?.recruitment??'READY':g.marketContexts?.[id]?.recruitment??'READY';
+ const opportunity=participation(state,id,quality,current?g.rival?.form??6.7:6.7,recruitment),{starterChance,minutesEstimate}=opportunity;
  const monthly=current&&g.salary!==undefined?g.salary:Math.round((1500+c.prestige*180+Math.max(0,overall(g)-35)*350)/50)*50;
- const role=starterChance>=.58?'Disputa por titularidade':starterChance>=.3?'Rotação com disputa':'Entrada gradual e banco';
- return {clubId:id,name:c.name,division:c.division,...(g.nationalRevision===1?{nationalRevision:1,...(c.division==='D'?{group:c.group}:{})}:{}),...(g.wellbeingRevision===1?{mentalDemand}:{}),monthly,rivalQuality:quality,trainingQuality,pressure,starterChance,minutesEstimate,role,playerLevel:overall(g),benefit:`Salário ficcional R$ ${monthly.toLocaleString('pt-BR')}/mês; estrutura ${trainingQuality}/100 e ${divisionText(c)}.`,cost:`Concorrente ${num(quality)}; ${minutesEstimate.min}–${minutesEstimate.max} min estimados por partida, sujeitos à atuação. Pressão de projeto ${Math.round(pressure)}/100.${g.wellbeingRevision===1?' A cobrança mantém stress; compare este valor com outros projetos.':''}`};
+ const role=recruitment==='PROSPECT'&&opportunity.integration<.65?'Promessa · banco e entradas curtas':starterChance>=.58?'Disputa por titularidade':starterChance>=.3?'Rotação com disputa':'Entrada gradual e banco';
+ return {clubId:id,name:c.name,division:c.division,...(g.promiseRevision===1?{recruitment}:{}),...(g.nationalRevision===1?{nationalRevision:1,...(c.division==='D'?{group:c.group}:{})}:{}),...(g.wellbeingRevision===1?{mentalDemand}:{}),monthly,rivalQuality:quality,trainingQuality,pressure,starterChance,minutesEstimate,role,playerLevel:overall(g),benefit:`${recruitment==='PROSPECT'?'Investimento em desenvolvimento observado; compare a estrutura, sem vaga imediata. ':''}Salário ficcional R$ ${monthly.toLocaleString('pt-BR')}/mês; estrutura ${trainingQuality}/100 e ${divisionText(c)}.`,cost:`${recruitment==='PROSPECT'?(opportunity.integration<.65?'Banco e entradas curtas; prontidão e atuações qualificadas no clube podem ampliar o espaço. ':'O projeto de desenvolvimento ampliou o espaço conforme prontidão e atuações observadas; a disputa continua. '):''}Concorrente ${num(quality)}; ${minutesEstimate.min}–${minutesEstimate.max} min estimados por partida, sujeitos à atuação. Pressão de projeto ${Math.round(pressure)}/100.${g.wellbeingRevision===1?' A cobrança mantém stress; compare este valor com outros projetos.':''}`};
 }
 function entryEvent(g){
- g.nationalRevision=1;g.careerEndAge=25;g.age=18;g.phase='ENTRY';
+ g.nationalRevision=1;g.careerEndAge=25;g.promiseRevision=1;g.age=18;g.phase='ENTRY';
  const level=overall(g),pick=(division,max,offset)=>{
   const pool=CLUBS.filter(c=>c.division===division&&c.level<=max);
   if(!pool.length)throw new Error(`Sem projeto elegível na Série ${division}`);
@@ -127,7 +173,7 @@ const TECHNICAL={GK:['goalkeeping','passing'],CB:['defending','passing'],FB:['pa
 function formationEvent(g){adoptWellbeing(g);g.age=[12,14,16][g.formation];g.objective={title:'Aprender sua posição',body:'Três etapas de formação antes do primeiro projeto adulto.',progress:{stages:g.formation},target:{stages:3},progressText:`${g.formation}/3 etapas`,targetText:'3 etapas; escolha onde acumular experiência',status:'ACTIVE'};event(g,'FORMATION',`Seu jogo aos ${g.age}`,`Como ${POSITIONS.find(p=>p.id===g.position).label.toLowerCase()}, você ainda constrói habilidade e experiência. Esta etapa registra aprendizado; o adulto não começa pronto.`,[option('formation:technique','Lapidar a técnica da posição','Melhora as habilidades relevantes para sua função.'),option('formation:reading','Especializar a leitura de jogo','Prioriza leitura e experiência; a técnica terá menos prática nesta etapa.'),option('formation:athletic','Ganhar ritmo e solidez','Trabalha velocidade/defesa e experiência.'),option('formation:balanced','Equilibrar futebol, escola e lazer','Menor prática técnica durante dois anos; descanso até +10, stress até −12, felicidade até +10 e condição até +5.')]);}
 export function createGame(name,position,seed=Date.now()>>>0){
  if(!POSITIONS.some(p=>p.id===position))throw new Error('Posição inválida');
- const g={schema:2,careerEndAge:25,nationalRevision:1,rulesRevision:1,calendarRevision:1,mechanicsRevision:1,wellbeingRevision:1,happiness:72,mentalStress:16,routine:null,name:String(name||'Jogador').slice(0,60),age:12,position,clubId:null,condition:85,fatigue:10,pressure:15,confidence:60,trust:48,skills:{},proficiency:28,dna:{learning:0,aptitudes:{}},rng:Number(seed)>>>0,seed:Number(seed)>>>0,round:0,season:18,period:0,formation:0,phase:'FORMATION',serial:0,decisions:0,totalstats:stat(),seasonStats:stat(),yearStats:[],playedMatches:[],lastMatches:[],history:[],log:[],fanMemory:{},reputation:0,rival:null,market:[],resolved:[],choicesLog:[],progression:[],objective:null,objectiveHistory:[],lastOutcome:null,roleEvidence:null,recoveryUsed:false,recoveryWork:null,recoveryArc:null,decisiveUsed:false,decisive:null,schedule:[],event:null};
+ const g={schema:2,marketRevision:1,promiseRevision:1,careerEndAge:25,nationalRevision:1,rulesRevision:1,calendarRevision:1,mechanicsRevision:1,wellbeingRevision:1,happiness:72,mentalStress:16,routine:null,name:String(name||'Jogador').slice(0,60),age:12,position,clubId:null,condition:85,fatigue:10,pressure:15,confidence:60,trust:48,skills:{},proficiency:28,dna:{learning:0,aptitudes:{}},rng:Number(seed)>>>0,seed:Number(seed)>>>0,round:0,season:18,period:0,formation:0,phase:'FORMATION',serial:0,decisions:0,totalstats:stat(),seasonStats:stat(),yearStats:[],playedMatches:[],lastMatches:[],history:[],log:[],fanMemory:{},reputation:0,rival:null,market:[],resolved:[],choicesLog:[],progression:[],objective:null,objectiveHistory:[],lastOutcome:null,roleEvidence:null,recoveryUsed:false,recoveryWork:null,recoveryArc:null,decisiveUsed:false,decisive:null,schedule:[],event:null};
  g.dna.learning=.85+random(g)*.55;for(const k of KEYS){g.dna.aptitudes[k]=.8+random(g)*.55;g.skills[k]=14+random(g)*9;}formationEvent(g);return g;
 }
 function schedule(g){
@@ -221,8 +267,9 @@ function simulate(g,intent){
  const weights=recent.reduce((v,m)=>v+(m.minutes>=35?1:.5),0),form=weights?recent.reduce((v,m)=>v+m.rating*(m.minutes>=35?1:.5),0)/weights:6.7;
  const rivalForm=g.rival.form??6.7;
  const starterChance=clamp(.47+(effective-g.rival.quality)*.026+(g.trust-50)*.004+(form-rivalForm)*.12+(fans-50)*.0005,.10,.86);
- const selection=modern?projectProfile(g,c.id).starterChance:starterChance;const started=roll(g,selection),keeperSub=!started&&g.position==='GK'&&roll(g,.04);
- const minutes=started?(g.position==='GK'?90:integer(g,66,90)):g.position==='GK'?(keeperSub?integer(g,15,60):0):roll(g,.74)?integer(g,14,34):0,share=minutes/90;
+ const recruitment=g.clubProject?.recruitment??'READY',opportunity=participation(g,c.id,g.rival.quality,g.rival.form??6.7,recruitment);
+ const selection=modern?opportunity.starterChance:starterChance;const started=roll(g,selection),keeperSub=!started&&g.position==='GK'&&roll(g,opportunity.substituteChance);
+ const minutes=started?(g.position==='GK'?90:integer(g,opportunity.starterMin,opportunity.starterMax)):g.position==='GK'?(keeperSub?integer(g,opportunity.substituteMin,opportunity.substituteMax):0):roll(g,opportunity.substituteChance)?integer(g,opportunity.substituteMin,opportunity.substituteMax):0,share=minutes/90;
  let posture=null;if(g.decisive){g.decisive.remaining--;if(minutes>=45){posture=g.decisive.kind;g.decisive=null;}else if(g.decisive.remaining===0){memory(g,'A janela especial acabou sem participação de 45 minutos; nenhuma prova decisiva foi atribuída.',0,true);g.decisive=null;}}
  const m={season:g.season,round:g.round+1,clubId:c.id,opponent:opponent.name,opponentId:opponent.id,gf:0,ga:0,minutes,started,goals:0,assists:0,rating:0,saves:0,result:'D',coach:'',fans:'',moment:'',strategy:intent,teamChances:0,oppChances:0,shots:0,shotsOnTarget:0,chancesCreated:0,keyPasses:0,passAttempts:0,completedPasses:0,interventions:0,failedInterventions:0,good:false,exceptional:false,progressions:0,goalsConceded:0,keeperShots:0,keeperMinutesReason:keeperSub?'CONTINGENCY':g.position==='GK'&&started?'START':'NONE'};
  if(modern){m.mechanicsRevision=1;m.shotOpportunity=0;m.shotAccess=0;m.starterChance=selection;}
@@ -318,32 +365,36 @@ function playPeriod(g,intent){if(g.objective.revision===1){g.objective=objective
  assessObjective(g);const good=part.filter(m=>m.good||m.exceptional).length,starts=g.lastMatches.filter(m=>m.started).length;g.coachReaction=part.length?`${good} atuações positivas em ${part.length} oportunidades. ${periodDemand(g.objective)} ${g.rival.name} sustenta nota recente ${num(g.rival.form??6.7)} na concorrência.`:`Nenhuma oportunidade neste período: ${g.rival.name} foi preferido. Seu trabalho segue possível, mas falta evidência em campo.`;g.fanReaction=`Em seis partidas, ${g.lastMatches.filter(m=>m.result==='W').length} vitórias e ${g.lastMatches.filter(m=>m.result==='L').length} derrotas do ${club(g).name}. ${good?'A torcida reconheceu '+good+' contribuições positivas':'A torcida segue esperando uma contribuição observável'}; ${starts} titularidades e ${g.roleEvidence.goals} gols/${g.roleEvidence.assists} assistências. Respeito acumulado ${Math.round(g.fanMemory[g.clubId]?.respect??50)}.`;log(g,`${club(g).name}: intenção ${intent}, OVR ${beforeOverall}→${overall(g)}, ${g.roleEvidence.description}`);nextPeriod(g);
 }
 function marketEvent(g){
+ g.promiseRevision??=1;g.marketRevision??=1;
  const c=club(g),matches=g.playedMatches.filter(m=>m.season===g.season&&m.minutes>0),rating=g.seasonStats.apps?g.seasonStats.ratingSum/g.seasonStats.apps:0;
- const good=matches.filter(m=>m.good||m.exceptional).length,score=overall(g)+Math.min(6,g.reputation*.15),proof=g.seasonStats.minutes>=400&&good>=3&&rating>=6.75;
+ const evidence=marketEvidence(g),good=matches.filter(m=>m.good||m.exceptional).length,score=evidence.score,proof=g.seasonStats.minutes>=400&&good>=3&&rating>=6.75;
  g.market=[];g.marketModes={};g.marketContexts={};
- const production=matches.reduce((s,m)=>s+(g.position==='ST'||g.position==='WG'?m.goals+m.assists:g.position==='GK'?m.saves+m.interventions:m.chancesCreated+m.interventions),0);
+ const production=matches.reduce((s,m)=>s+(g.position==='ST'||g.position==='WG'?m.goals+m.assists:g.position==='GK'?m.saves+m.interventions:m.chancesCreated+m.interventions+m.goals+m.assists),0);
  // Sample projects before rolling interest: a larger catalog must not buy certainty.
- const eligible=catalog(g).filter(x=>eligibleNational(g,x)&&x.id!==c.id&&x.level<=score+7&&x.level>=c.level-14);
+ const promise=g.promiseRevision===1?observedPromise(g):null;
+ const eligible=catalog(g).filter(x=>eligibleNational(g,x)&&x.id!==c.id&&x.level>=c.level-14&&(x.level<=score+7||promise?.eligible&&x.division==='A'&&x.level<=overall(g)+25));
+ const isProspect=destination=>promise?.eligible&&destination.division==='A'&&Math.round(destination.level*.94+demand(g,destination.id))-overall(g)>=8;
  const shortlist=eligible.map(destination=>{
   const remembered=g.fanMemory[destination.id]?.respect??50;
-  const weight=clamp(1-Math.abs(destination.level-score)/35,.18,1.1)*(destination.division===c.division?1.08:1)*clamp(1+(remembered-50)*.005,.75,1.25);
+  const selectivity=destination.level>=c.level?1+evidence.bonus*.18:Math.max(.08,1-evidence.bonus*.07);
+  const weight=selectivity*(isProspect(destination)?.5:1)*clamp(1-Math.abs(destination.level-score)/35,.18,1.1)*(destination.division===c.division?1.08:1)*clamp(1+(remembered-50)*.005,.75,1.25);
   return {destination,key:-Math.log(Math.max(random(g),1/4294967296))/weight};
  }).sort((a,b)=>a.key-b.key).slice(0,6).map(x=>x.destination);
  for(const destination of shortlist){
   const need=.18+random(g)*.72,fit=clamp(.55+(overall(g)-destination.level)*.018+(production/Math.max(1,g.seasonStats.minutes/90)-1)*.05,.1,.95);
   const observed=g.seasonStats.minutes>=180,competition=random(g),remembered=g.fanMemory[destination.id]?.respect??50;
-  const appeal=clamp(need*fit*(proof?.85:.24)+(remembered-50)*.001,.02,.7);
-  if(observed&&roll(g,appeal)&&g.market.length<2){g.market.push(destination.id);g.marketModes[destination.id]=proof?'OFFER':'ASSESSMENT';g.marketContexts[destination.id]={need,fit,observed,competition,role:destination.level>c.level+4?'DISPUTE':'ROTATION',closeProbability:clamp(.25+need*.28+fit*.28-competition*.25+(proof?.1:0),.15,.82)};}
+  const prospect=isProspect(destination),appeal=prospect?clamp(need*(.12+Math.min(6,promise.learningTrend)*.015)+Math.max(0,remembered-50)*.0005,.02,.16):clamp(need*fit*(proof?.85:.24)+(remembered-50)*.001,.02,.7);
+  if(observed&&roll(g,appeal)&&g.market.length<2){g.market.push(destination.id);g.marketModes[destination.id]=proof?'OFFER':'ASSESSMENT';g.marketContexts[destination.id]={...(g.promiseRevision===1?{recruitment:prospect?'PROSPECT':'READY'}:{}),need,fit,observed,competition,role:destination.level>c.level+4?'DISPUTE':'ROTATION',closeProbability:prospect?clamp(.2+need*.2+Math.min(6,promise.learningTrend)*.02-competition*.18,.15,.48):clamp(.25+need*.28+fit*.28-competition*.25+(proof?.1:0),.15,.82)};}
  }
  // A weak season can reopen a modest project through an uncertain assessment.
  if(!g.market.length&&!proof&&g.seasonStats.minutes>=60&&roll(g,.58)){
   const modest=catalog(g).filter(x=>x.id!==c.id&&(g.nationalRevision===1?national(x)&&x.division!=='A':eligibleNational(g,c)?x.division==='B':LEGACY_CLUB_IDS.includes(x.id))&&x.level<=Math.max(c.level,g.mechanicsRevision===1?54:50));
   const destination=modest.length?modest[integer(g,0,modest.length-1)]:null;
-  if(destination){g.market=[destination.id];g.marketModes[destination.id]='ASSESSMENT';g.marketContexts[destination.id]={need:.55,fit:clamp(.5+(overall(g)-destination.level)*.02,.15,.9),observed:true,competition:.5,role:'REBUILD',closeProbability:clamp(.35+(overall(g)-destination.level)*.015,.18,.7)};}
+  if(destination){g.market=[destination.id];g.marketModes[destination.id]='ASSESSMENT';g.marketContexts[destination.id]={...(g.promiseRevision===1?{recruitment:'READY'}:{}),need:.55,fit:clamp(.5+(overall(g)-destination.level)*.02,.15,.9),observed:true,competition:.5,role:'REBUILD',closeProbability:clamp(.35+(overall(g)-destination.level)*.015,.18,.7)};}
  }
  if(g.mechanicsRevision===1){g.marketHistory??=[];g.marketHistory.push({season:g.season,clubId:g.clubId,contacts:g.market.map(id=>({clubId:id,mode:g.marketModes[id],profile:projectProfile(g,id)})),status:'OBSERVED'});g.marketHistory=g.marketHistory.slice(-(endAge(g)-19));}
- const evidence=`${g.seasonStats.apps} participações, ${g.seasonStats.minutes} minutos, ${good} contribuições positivas e nota ${num(rating)}.`;
- event(g,'INTEREST','O que sua temporada fez aparecer',g.market.length?`${evidence} ${g.market.map(id=>{const x=resolveClub(g,id);return `${x.name} (${divisionText(x)})`;}).join(' e ')} observam um encaixe. A necessidade e a concorrência ainda podem impedir uma proposta.`:`${evidence} Não surgiu contato com necessidade e encaixe suficientes neste ano; continuar e mudar a resposta esportiva permanece possível.`,[...g.market.map(id=>option(`contact:${id}`,`${g.marketModes[id]==='ASSESSMENT'?'Ouvir uma avaliação no':'Conversar com'} ${CLUBS.find(c=>c.id===id).name} (${divisionText(resolveClub(g,id))})`,g.marketModes[id]==='ASSESSMENT'?'Avaliação para reconstrução, com aprovação incerta.':'Interesse observado; a negociação e o espaço permanecem incertos.',g.mechanicsRevision===1?projectProfile(g,id):undefined)),option('market:stay',`Continuar no ${c.name}`,'Mantém o projeto; a temporada encerrada fica preservada.')]);
+ const summary=`${g.seasonStats.apps} participações, ${g.seasonStats.minutes} minutos, ${good} contribuições positivas e nota ${num(rating)}. ${g.position==='GK'?`${matches.reduce((n,m)=>n+m.saves+m.interventions,0)} defesas/intervenções observadas`:`${g.seasonStats.goals} gols e ${g.seasonStats.assists} assistências, além das ações do papel`}; ${evidence.qualifiedMinutes} minutos de amostra qualificada. A produção e o nível dos adversários ampliaram a avaliação em ${num(evidence.bonus)} pontos; necessidade e concorrência ainda decidem.`;
+ event(g,'INTEREST','O que sua temporada fez aparecer',g.market.length?`${summary} ${g.market.map(id=>{const x=resolveClub(g,id);return `${x.name} (${divisionText(x)})`;}).join(' e ')} observam um encaixe. A necessidade e a concorrência ainda podem impedir uma proposta.`:`${summary} Não surgiu contato com necessidade e encaixe suficientes neste ano; continuar e mudar a resposta esportiva permanece possível.`,[...g.market.map(id=>option(`contact:${id}`,`${g.marketModes[id]==='ASSESSMENT'?'Ouvir uma avaliação no':'Conversar com'} ${CLUBS.find(c=>c.id===id).name} (${divisionText(resolveClub(g,id))})`,g.marketModes[id]==='ASSESSMENT'?'Avaliação para reconstrução, com aprovação incerta.':'Interesse observado; a negociação e o espaço permanecem incertos.',g.mechanicsRevision===1?projectProfile(g,id):undefined)),option('market:stay',`Continuar no ${c.name}`,'Mantém o projeto; a temporada encerrada fica preservada.')]);
 }
 function endSeason(g){g.yearStats.push({age:g.season,season:g.season,clubId:g.clubId,...g.seasonStats});log(g,`${g.season} anos: ${g.seasonStats.apps} participações, ${g.seasonStats.starts} titularidades, OVR ${overall(g)}.`);if(g.season===endAge(g)-1){g.age=endAge(g);g.phase='DONE';event(g,'DONE',`Uma trajetória até os ${endAge(g)}`,`O recorte termina, não sua carreira. ${g.totalstats.apps} participações, ${g.totalstats.starts} titularidades e ${g.totalstats.minutes} minutos. Seu trabalho e suas metas ficam nos registros abaixo.`);return;}marketEvent(g);}
 function finishMarket(g){if(g.marketHistory?.at(-1)?.status==='OBSERVED'||g.marketHistory?.at(-1)?.status==='CONTACT')g.marketHistory.at(-1).status='STAY';g.season++;startSeason(g);}
@@ -469,6 +520,7 @@ export function validGame(g){
  if(g.event.kind==='PLAN'&&(!g.objective.metric||g.objective.status!=='ACTIVE'||g.objective.clubId!==g.clubId||g.objective.season!==g.season||g.objective.period!==g.period+1))return false;
  if(['CONTACT','OFFER'].includes(g.event.kind)&&(!knownClub(g.contactClub)||!g.market.includes(g.contactClub)||!g.marketModes||!['OFFER','ASSESSMENT'].includes(g.marketModes[g.contactClub])))return false;
  if(g.event.kind==='OFFER'&&(!g.offer||g.offer.clubId!==g.contactClub||!bound(g.offer.monthly,1,1e7)))return false;
+ if(g.event.kind==='OFFER'&&(g.offer.profile?.recruitment==='PROSPECT'||g.marketContexts?.[g.offer.clubId]?.recruitment!==undefined)&&g.offer.profile?.recruitment!==g.marketContexts?.[g.offer.clubId]?.recruitment)return false;
  // New well-being states are optional on legacy saves, and adoption is prospective.
  if(g.wellbeingRevision!==undefined&&g.wellbeingRevision!==1)return false;
  if(g.wellbeingRevision===1){
@@ -480,6 +532,8 @@ export function validGame(g){
   if(g.event.kind==='PLAN'&&(!g.routine||g.routine.season!==g.season||g.routine.period!==g.period+1))return false;
  }else if(g.happiness!==undefined||g.mentalStress!==undefined||g.routine!==undefined||g.event.kind==='ROUTINE')return false;
  // Optional revision fields never reconstruct past matches or goals.
+ if(g.marketRevision!==undefined&&(g.marketRevision!==1||g.promiseRevision!==1))return false;
+ if(g.promiseRevision!==undefined&&g.promiseRevision!==1)return false;
  if(g.nationalRevision!==undefined&&g.nationalRevision!==1)return false;
  if(g.scheduleNationalRevision!==undefined&&g.scheduleNationalRevision!==1)return false;
  if(g.calendarRevision!==undefined&&g.calendarRevision!==1)return false;
@@ -505,25 +559,27 @@ export function validGame(g){
  if(g.salary!==undefined&&!integer(g.salary,1,1e7))return false;
  const profileKeys=['clubId','name','division','monthly','rivalQuality','trainingQuality','pressure','starterChance','minutesEstimate','role','playerLevel','benefit','cost'];
  const validProfile=(p,accepted=false)=>{
-  if(!p||Array.isArray(p)||!knownClub(p.clubId)||!Object.keys(p).every(k=>profileKeys.includes(k)||['mentalDemand','nationalRevision','group'].includes(k)||accepted&&['origin','signedSeason'].includes(k))||!profileKeys.every(k=>Object.hasOwn(p,k)))return false;
+  if(!p||Array.isArray(p)||!knownClub(p.clubId)||!Object.keys(p).every(k=>profileKeys.includes(k)||['mentalDemand','nationalRevision','group','recruitment'].includes(k)||accepted&&['origin','signedSeason'].includes(k))||!profileKeys.every(k=>Object.hasOwn(p,k)))return false;
   const actual=CLUBS.find(c=>c.id===p.clubId),c=p.nationalRevision===1?actual:legacyClub(actual);
   if(p.nationalRevision!==undefined&&(p.nationalRevision!==1||g.nationalRevision!==1))return false;
+  if(p.recruitment!==undefined&&(g.promiseRevision!==1||!['READY','PROSPECT'].includes(p.recruitment)||p.recruitment==='PROSPECT'&&p.division!=='A'))return false;
   if(p.nationalRevision===1&&p.division==='D'){if(p.group!==c.group)return false;}else if(p.group!==undefined)return false;
   if(p.nationalRevision===undefined&&![...LEGACY_NATIONAL_IDS,...LEGACY_REGIONAL_IDS].includes(p.clubId))return false;
   if(p.mentalDemand!==undefined&&(!bound(p.mentalDemand,0,100)||p.mentalDemand!==p.pressure))return false;
   if(p.name!==c.name||p.division!==c.division||!integer(p.monthly,1,1e7)||!bound(p.rivalQuality,0,99)||!bound(p.trainingQuality,0,100)||p.trainingQuality!==Math.round(clamp(45+c.prestige*.55,0,98))||!bound(p.pressure,0,100)||!bound(p.starterChance,.05,.90)||!integer(p.playerLevel,0,99)||!text(p.role)||!text(p.benefit)||!p.benefit.length||!text(p.cost)||!p.cost.length)return false;
   if(!p.minutesEstimate||Object.keys(p.minutesEstimate).sort().join(',')!=='max,min'||!integer(p.minutesEstimate.min,0,90)||!integer(p.minutesEstimate.max,p.minutesEstimate.min,90))return false;
+  if(accepted&&p.recruitment==='PROSPECT'&&(p.origin!=='MARKET'||!integer(p.signedSeason,19,22)))return false;
   if(accepted&&(!['ENTRY','MARKET','CONTINUITY','LEGACY_CONTEXT'].includes(p.origin)||(p.origin==='LEGACY_CONTEXT'?p.signedSeason!==null:!integer(p.signedSeason,18,g.season))))return false;
   return true;
  };
- if(g.entryOffers!==undefined&&(!Array.isArray(g.entryOffers)||g.entryOffers.length!==3||new Set(g.entryOffers.map(p=>p?.clubId)).size!==3||!g.entryOffers.every(p=>validProfile(p)&&national(p)&&(p.division!=='A'||p.playerLevel>=50))))return false;
+ if(g.entryOffers!==undefined&&(!Array.isArray(g.entryOffers)||g.entryOffers.length!==3||new Set(g.entryOffers.map(p=>p?.clubId)).size!==3||!g.entryOffers.every(p=>validProfile(p)&&p.recruitment!=='PROSPECT'&&national(p)&&(p.division!=='A'||p.playerLevel>=50))))return false;
  if(g.clubProject!==undefined&&(!validProfile(g.clubProject,true)||g.clubProject.clubId!==g.clubId||g.clubProject.origin!=='LEGACY_CONTEXT'&&g.salary!==g.clubProject.monthly))return false;
  if(g.offer?.profile!==undefined&&(!validProfile(g.offer.profile)||g.offer.profile.clubId!==g.offer.clubId||g.offer.monthly!==g.offer.profile.monthly))return false;
  for(const c of g.event.choices){
   if(c.benefit!==undefined&&(!text(c.benefit)||!c.benefit.length)||c.cost!==undefined&&(!text(c.cost)||!c.cost.length))return false;
-  if(c.profile!==undefined&&(!validProfile(c.profile)||!['ENTRY','INTEREST','OFFER'].includes(g.event.kind)))return false;
+  if(c.profile!==undefined&&(!validProfile(c.profile)||g.event.kind==='ENTRY'&&c.profile.recruitment==='PROSPECT'||!['ENTRY','INTEREST','OFFER'].includes(g.event.kind)))return false;
   if(c.profile&&g.event.kind==='OFFER'&&(c.profile.clubId!==g.offer?.clubId||JSON.stringify(c.profile)!==JSON.stringify(g.offer.profile)))return false;
-  if(c.profile&&g.event.kind==='INTEREST'&&c.id!==`contact:${c.profile.clubId}@${g.serial}`)return false;
+  if(c.profile&&g.event.kind==='INTEREST'&&(c.id!==`contact:${c.profile.clubId}@${g.serial}`||(c.profile.recruitment==='PROSPECT'||g.marketContexts?.[c.profile.clubId]?.recruitment!==undefined)&&c.profile.recruitment!==g.marketContexts?.[c.profile.clubId]?.recruitment))return false;
  }
  if(g.phase==='ENTRY'){
   if(g.nationalRevision===1){
@@ -566,7 +622,7 @@ export function validGame(g){
  if(g.event.kind==='DECISIVE'&&(!g.decisiveUsed||g.decisive!==null))return false;
  if(g.rival){for(const key of ['form','recentRating'])if(g.rival[key]!==undefined&&!bound(g.rival[key],0,10))return false;for(const key of ['apps','goals','minutes'])if(g.rival[key]!==undefined&&!integer(g.rival[key],0,key==='minutes'?Math.max(5000,maxMatches*90):finish===25?key==='apps'?maxMatches:maxMatches*9:100))return false;}
  if(g.marketModes!==undefined&&(!g.marketModes||Array.isArray(g.marketModes)||!Object.entries(g.marketModes).every(([id,mode])=>g.market.includes(id)&&['OFFER','ASSESSMENT'].includes(mode))))return false;
- if(g.marketContexts!==undefined){if(!g.marketContexts||Array.isArray(g.marketContexts)||!Object.entries(g.marketContexts).every(([id,m])=>g.market.includes(id)&&m&&['need','fit','competition','closeProbability'].every(k=>bound(m[k],0,1))&&typeof m.observed==='boolean'&&['DISPUTE','ROTATION','REBUILD'].includes(m.role)))return false;}
+ if(g.marketContexts!==undefined){if(!g.marketContexts||Array.isArray(g.marketContexts)||!Object.entries(g.marketContexts).every(([id,m])=>g.market.includes(id)&&m&&(m.recruitment===undefined||g.promiseRevision===1&&['READY','PROSPECT'].includes(m.recruitment)&&(m.recruitment!=='PROSPECT'||CLUBS.find(c=>c.id===id)?.division==='A'))&&['need','fit','competition','closeProbability'].every(k=>bound(m[k],0,1))&&typeof m.observed==='boolean'&&['DISPUTE','ROTATION','REBUILD'].includes(m.role)))return false;}
  for(const m of g.playedMatches){
   if(m.good!==(m.minutes>=35&&m.rating>=7))return false;
   if(m.exceptional!==undefined&&(typeof m.exceptional!=='boolean'||m.exceptional!==(m.minutes>0&&(m.goals>=2||m.goals+m.assists>=2||g.position==='GK'&&m.saves>=4&&m.goalsConceded===0))))return false;
