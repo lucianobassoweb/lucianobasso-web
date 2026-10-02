@@ -1,0 +1,55 @@
+# 1903 — acompanhamento do equilíbrio
+
+## Escopo e unidade
+
+Monitor reproduzível do protótipo Brasil A/B 05, em `scripts/prototype-balance.mjs`. Usa carreiras sintéticas públicas; não lê exports, localStorage ou DNA do usuário. Não modifica o motor ou saves. A revisão visual 05.1 explicita o tempo que já era simulado.
+
+- Formação: 12→14, 14→16, 16→18. Cada escolha estabelece uma prioridade por **dois anos**, não uma sessão.
+- Adulto: cada registro de evolução acumula **seis partidas**. Escolher intenção, recuperação e teste decisivo pode preparar o mesmo bloco; esses cliques não são três créditos independentes de treino.
+- Habilidades: pontos na escala adulta 0–99. +11 significa onze pontos nessa escala, não melhora relativa de 11% ou efeito equivalente na produção esportiva.
+- `overallGain` e `primaryGain`: diferença observada por avanço, com período definido acima. A habilidade principal monitorada depende da posição; seis atributos adquiridos também são medidos individualmente.
+- Aos 15 não há estado natural neste recorte, que salta de 14 para 16. Nenhuma interpolação é apresentada como medição. O caso sintético 15/80 exercita a regra de alerta.
+
+## Referências de design
+
+| Idade / momento | P95 de cada habilidade | Máximo a revisar |
+|---|---:|---:|
+| 12 | 25 | 30 |
+| 14 | 42 | 50 |
+| 15, quando existir observação | 50 | 60 |
+| 16 | 55 | 65 |
+| 18, entrada após formação | 62 | 70 |
+
+São referências do jogo, não tabelas científicas, limites de potencial nem caps implementados. Os valores aos 18 avaliam a entrada; não todos os blocos profissionais seguintes. Os limites podem ser revistos com evidência e decisão no Log. Nenhum jogador fica condenado por teto individual oculto.
+
+**BLOCKED:** alguma habilidade ≥80 em estado observado antes dos 18; o processo de aprovação do balanceamento deve parar. O script sai com código 1. **REVIEW:** referência acima excedida ou P95 muda mais de cinco pontos em atributo/OVR/ganho na mesma coorte; código 2, com causa e decisão obrigatórias no Log. **PASS:** nenhum alerta; código 0. PASS não prova diversão, realismo ou a calibração da carreira principal. Esse gate é um comando de verificação; não foi ligado automaticamente ao workflow de hospedagem.
+
+## Amostra fixa e comparação
+
+32 seeds públicos × oito posições × todas as 27 combinações de três escolhas: 6.912 caminhos completos. Os estágios intermediários têm 32, 96, 288 e 864 configurações por posição. Configurações compartilham DNA; não são jogadores independentes nem incidências no futebol real.
+
+Adulto: 16 seeds × oito posições × duas políticas (foco/recuperação e intensidade/sobrecarga): 256 carreiras, 54 partidas por carreira, 2.304 blocos de seis jogos. Formação adulta usa as três prioridades, entrada no primeiro projeto interessado e permanência; este monitor não mede todas as políticas de mercado. As alternativas dependem do contexto e podem não ocorrer igualmente em todas as carreiras.
+
+Por idade, posição, momento e política: mínimo, média, P50, P95 e máximo dos seis atributos, OVR, condição, fadiga, pressão, ganho de OVR e ganho principal. Também contar blocos com qualquer perda e com perda principal. Uma perda de habilidade secundária não demonstra por si só sobrecarga relevante; separar perda principal. Reportar valores adquiridos e carga, evitando comparar somente OVR final.
+
+Registrar hashes do motor e catálogo, versão do monitor, seeds e coortes. A baseline aprovada está em `docs/balance/prototype05.json`. A comparação exige versão, seeds e grupos iguais. Mudança na amostra exige baseline nova e decisão explícita; arquivo aprovado não deve ser sobrescrito. `--record-baseline` usa criação exclusiva e recusa relatório com alertas.
+
+## Comando obrigatório para alterações de progressão
+
+Na raiz do repositório:
+
+```sh
+node scripts/prototype-balance.mjs --output-dir ../../outputs/1903-equilibrio --baseline docs/balance/prototype05.json
+```
+
+O diretório de saída é ajustável; resultados são `report.md` e `report.json`. O JSON contém todas as coortes; Markdown resume finalização do atacante e alertas. O relatório informa intervalo de dois anos/seis partidas, sem dividir o ganho por uma quantidade de treinos que o motor não simula.
+
+Antes de publicar alteração relevante, acrescentar ao PROJECT_LOG: hipótese causal; parâmetros alterados; estado inicial/versão de regras; baseline e hashes; resultados por idade e ganhos por intervalo; exceções/perdas; status do gate; manter/revisar/reverter e por quê; próximo playtest. Comparar a mesma amostra antes/depois. Observar saves legados separadamente, com versão de regras, sem rescalonar passado para fazer a medição passar.
+
+## Primeiro checkpoint
+
+Motor 05: `8a97705eb4ba3051ba951b588655365fa530d60cf08ad7883aae3f8724b7d6a6`. Finalização ST P95 / máximo: 12 anos 22,747 / 22,968; 14 anos 36,657 / 38,123; 16 anos 45,874 / 50,937; entrada aos 18 55,202 / 61,467. Zero estados bloqueados e zero referências excedidas na amostra. Maior ganho de finalização dos 12 aos 14: 16,355 pontos acumulados em dois anos; mediana 9,129. Esse é um intervalo comprimido, não uma sessão de treino.
+
+Controle negativo com motor 04 congelado e a mesma amostra: BLOCKED, 56 estados com alguma habilidade ≥80 antes dos 18 e 101 avisos. Finalização ST máxima aos 16: 75,717; entrada18: 99. Não há observação natural aos15 em nenhuma das duas versões. A verificação detecta a inflação anterior sem inventar medição para essa idade.
+
+Na amostra adulta atual, 2.304 blocos têm alguma perda e 381 têm perda principal. Essa seleção inclui uma política intensa e não é taxa populacional. Curva adulta, frequência de extremos e interesse pela carreira ainda exigem playtest; alertas juvenis não certificam o restante do jogo.

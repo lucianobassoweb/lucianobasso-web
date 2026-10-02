@@ -1,4 +1,4 @@
-# 1903 · Brasil — Séries A e B · Protótipo 05
+# 1903 · Brasil — Séries A e B · Protótipo 05.1
 
 Recorte independente: três etapas entre 12–18 anos e três temporadas profissionais, 54 partidas internas, encerramento aos 21. Não é aposentadoria nem a carreira completa planejada. A revisão 05 mantém os 40 participantes A/B de 2026 e acrescenta escolha do primeiro contrato, ganhos/custos, projetos esportivos comparáveis, progressão calibrada e acesso às finalizações.
 
@@ -51,3 +51,15 @@ python3 prototypes/dez-clubes-v2/build.py
 ```
 
 Nomes e divisões dos 40 clubes de 2026 contextualizam competições resumidas. Forças, calendário, salários, concorrentes e curvas são parâmetros experimentais. Não há garantia de contrato, OVR 70 ou chegada ao clube dos sonhos. Testes técnicos não demonstram diversão nem calibração com futebol real.
+
+## 05.1 — tempo de formação e acompanhamento
+
+A UI mostra o intervalo dos ganhos junto das habilidades e do plano seguinte: dois anos na formação, seis partidas nos blocos profissionais. Histórico e resposta de formação também indicam o intervalo. Valores, motor, regras e saves não mudam nesta revisão visual.
+
+Antes de alterar progressão, executar na raiz:
+
+```sh
+node scripts/prototype-balance.mjs --output-dir ../../outputs/1903-equilibrio --baseline docs/balance/prototype05.json
+```
+
+Protocolo, referências de idade, métricas e limitações em `docs/BALANCE_TRACKING.md`; checkpoint e decisão no PROJECT_LOG D0047/A0029. O monitor emite PASS/REVIEW/BLOCKED e mede ganhos por intervalo; não lê saves privados nem impõe cap de potencial.

@@ -61,4 +61,15 @@ const signed=JSON.parse(entryUI.map.get(key));assert.equal(signed.clubId,selecte
 assert.ok(game.progression.some(p=>Object.values(p.skillChanges).some(x=>Math.abs(x)>=.05)));
 const playedUI=fixture(game);assert.ok(playedUI.root.innerHTML.includes('Variação no último avanço'));assert.ok(playedUI.root.innerHTML.includes('chutes'));assert.ok(playedUI.root.innerHTML.includes('no alvo'));assert.ok(playedUI.root.innerHTML.includes('ataques do time com você em campo'));checks++;
 assert.ok(game.marketHistory?.length);assert.ok(final.root.innerHTML.includes('Quem observou sua carreira'));assert.ok(final.root.innerHTML.includes('Interesse não garante proposta nem contrato'));checks++;
+// A completed two-year gain must be distinct from the upcoming two-year plan.
+const spanGame=engine.createGame('Intervalo público','ST',7);
+const spanFresh=fixture(spanGame);assert.ok(spanFresh.root.innerHTML.includes('Plano de formação · 12–14 anos'));
+assert.ok(engine.choose(spanGame,spanGame.event.choices[0].id));
+const snapshot=JSON.stringify(spanGame),spanUI=fixture(spanGame);
+assert.ok(spanUI.root.innerHTML.includes('Variação acumulada · 12–14 anos · 2 anos de formação'));
+assert.ok(spanUI.root.innerHTML.includes('Plano de formação · 14–16 anos'));
+assert.ok(spanUI.root.innerHTML.includes('Formação dos 12 aos 14 anos (2 anos):'));
+spanUI.history();assert.ok(spanUI.root.innerHTML.includes('12–14 anos · 2 anos de formação'));
+assert.equal(JSON.stringify(spanGame),snapshot);assert.equal(spanUI.map.get(key),snapshot);assert.equal(spanUI.writes.length,0);checks++;
+assert.ok(playedUI.root.innerHTML.includes('bloco de 6 partidas'));checks++;
 console.log(JSON.stringify({checks,phases:[...seen],result:'PASS',originalStorageTouched:false}));

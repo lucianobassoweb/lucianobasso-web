@@ -969,3 +969,43 @@ CUA em origin isolada8914, criação normal Date.now e carreira descartável ST.
 Segunda carreira CM descartável no origin localhost confirma copy final e perfis iniciais: BotafogoSP47%/34–58min, AméricaMG26%/21–45, Fortaleza5%/9–33, com aumento de salários/estrutura/concorrência. Capturas outputs/1903_PROTO05_CLUBES.png/FINAL.png e standalone1903_PROTO05.html,112292bytes, SHA2562e1435ee203f6f14959129fcfcad0cbda7c1216a6c6620b5c265a81e6a534efc. README e ADRdocs/PROTOTYPE05_AGENCY.md descrevem regras, gates e limites. RelatórioQA completo emoutputs/1903_PROTO05_VALIDACAO.md; intermediários públicos emwork/agency-05.
 
 Publicação limitada ao protótipo/testes/ADR/log/orquestração na branchexperimental e PRdraft1; semmain/merge/Pages. SHA/link final ficam no relatório externo após confirmar publicação. Recorte mantém três temporadas18j/ano, sem38rodadas/acesso/rebaixamento, última janela20, carreira longa, aposentadoria ou vida externa nova. Sem alegar diversão, superioridade sobre referências, Safari físico ou4horas. Para avaliar formação/entrada novas, jogador deve exportar antes de Recomeçar; carreira antiga continua com fatos anteriores. Próximo passo: playtest do custo percebido e da vontade de seguir nesse mesmo recorte; expansão de duração apenas com nova demanda, evitando encobrir os problemas com mais texto.
+
+
+## D0047 / A0029 — equilíbrio por idade e duração explícita da formação (05.1)
+
+### Relato, causa e decisão
+
+O usuário rejeitou finalização80 aos15 e pediu modo de acompanhar equilíbrio no Log; depois relatou +11 em uma skill a cada treino. Investigação do motor confirmou que FORMATION acumula dois anos a cada escolha (12→14→16→18); os blocos adultos acumulam seis partidas. A UI mostrava deltas sem esse intervalo e chamava a resposta de “Etapa dos12 anos”, induzindo leitura de uma sessão. +11 é onze pontos na escala adulta, não 11% de crescimento relativo ou onze pontos por treino. Nenhuma quantidade de sessões internas é simulada ou reconstruída. Decisão: explicar o intervalo nos locais da escolha/ganho e tornar o balanceamento verificável; não reduzir números outra vez somente para resolver a ambiguidade temporal.
+
+### Método registrado para próximas mudanças
+
+Criado scripts/prototype-balance.mjs, protocolo docs/BALANCE_TRACKING.md e baseline imutável docs/balance/prototype05.json. Antes de mudança na aquisição, registrar hipótese causal, parâmetros, versão/regras, hashes motor/catálogo, coortes e métricas comparáveis; após gate, decisão manter/revisar/reverter e próximo playtest. Comando na raiz: `node scripts/prototype-balance.mjs --output-dir ../../outputs/1903-equilibrio --baseline docs/balance/prototype05.json`. Report Markdown/JSON fica em outputs/1903-equilibrio. Sem leitura de exports privados, escrita de saves ou nova dependência. Tarefa delimitada ficou com principal, sem overhead de subagentes.
+
+32 seeds públicos ×8 posições ×27 combinações de formação =6.912 caminhos completos. Coortes intermediárias por posição32/96/288/864 compartilhamDNA, não são incidências populacionais. Adulto16seeds×8posições×2políticas (foco/recuperação e sobrecarga) =256carreiras/13.824partidas/2.304blocos. Permanência/primeiro projeto/mistura das três prioridades de formação; não mede toda política de mercado. Por idade/posição/momento/política: mínimo/média/P50/P95/máximo dos seis atributos, OVR, físico/fadiga/pressão e ganhos de OVR/principal por avanço. Deltas correspondem a dois anos ou seis partidas, nunca a uma sessão. Perdas de qualquer habilidade e da principal separadas.
+
+Gate BLOCKED se qualquer habilidade≥80 antes18 (exit1); REVIEW se referência de formação excedida ou P95 comparável de skill/OVR/ganho desviar mais5pontos (exit2); PASS exit0. ReferênciasP95/máximo:12=25/30;14=42/50;15=50/60 quando houver estado;16=55/65;18naentrada=62/70. São decisões de design revisáveis, não normas biológicas ou caps no motor. Nenhum potencial individual é condenado; crescimento adulto não bloqueado por esse teto juvenil. Aprovação do balanceamento exige decisão explícita em REVIEW/BLOCKED; comando ainda não conectado automaticamente a workflow de hospedagem.
+
+Baseline compara mesma versão do monitor, seeds e coortes. Criação de baseline recusa alertas e usa flagwx para não sobrescrever checkpoint aprovado. Saves antigos são categoria observacional separada; nenhuma inflação legada é apagada para conseguir PASS. A idade15 não existe naturalmente no recorte: há14→16. O alarme15/80 foi exercitado em probe sintético;15/79 não ativa a regra dura e25/95 não é bloqueado. Não afirmar que se mediu finalização aos15 nem interpolar como dado real.
+
+### Checkpoint factual e controle negativo
+
+Motor atual inalterado SHA2568a97705eb4ba3051ba951b588655365fa530d60cf08ad7883aae3f8724b7d6a6; catálogo a83cbf6678dc4c7d6a55989dbe99e15c848f931681915fab4a9902e11cf25921. Amostra juvenil ampla PASS: zero estados≥80 antes18, zero avisos. Tabela de finalização ST:
+
+| Idade observada | Configurações | P50 | P95 | Máximo | Maior ganho no avanço anterior |
+|---|---:|---:|---:|---:|---:|
+|12|32|17,480|22,747|22,968|0 (inicial)|
+|14|96|29,013|36,657|38,123|16,355 em2anos|
+|16|288|38,406|45,874|50,937|14,713 em2anos|
+|18/entrada|864|46,767|55,202|61,467|13,236 em2anos|
+
+ST ganho principal mediano nos três avanços9,129/8,107/7,108. Adulto2.304blocos com alguma perda,381com perda principal; inclui política intensa e não representa incidência natural. Perda secundária isolada não prova desgaste adequado da posição. Comparação repetida com baseline aprovada: PASS, zero drift; metadata identifica tempo dos avanços.
+
+Controle negativo04 congelado SHA256a791538d09becd7d8aa64d8e6ec507d0484d5ef891a499b4d8df6451c193ba80, mesma amostra e regras de alerta: BLOCKED/exit1,56estados≥80 antes18,101avisos; STmax12=22,968/14=49,123/16=75,717/18=99. Adulto0perdas de qualquer skill/principal. O monitor detectou a inflação anterior, além do probe sintético15/80. Saídas intermediárias públicas emwork/balance-tracking/prototype04; dados de carreiras privadas não publicados.
+
+### UI, compatibilidade e verificação
+
+Etiqueta05.1. Plano de formação mostra intervalo futuro (ex14–16) e dois anos antes do clique. Habilidades mostram período já acumulado (ex12–14), deltas continuam assinados em pontos. Tooltip, histórico e resposta da formação indicam o tempo; blocos adultos indicam seis partidas. Renderização somente interpreta a descrição temporal conhecida, sem alterar lastOutcome persistido. Mesmos números, schema2/key1903.prototype10.v2, DNA, calendários, contratos e fatos passados. Carreira legada permanece legada; UI explicitar duração não recalibra suas habilidades.
+
+UI16/16grupos PASS, incluindo fluxo completo existente atéDONE, novo contraste intervalo anterior/próximo e seis partidas no adulto; render/reload sem gravar estado, histórico preservado. Monitor atual PASS e controle04 BLOCKED como esperado. TypecheckTSprévio PASS, não substitui gateJSproto. CUAoriginisolada8916, carreira fictícia normal: início12, prioridade técnica→14, finalização23,0→37,6 (+14,6 emdoisanos); passe+11,5; próxima decisão14–16. Reload mantém14 e deltas persistidos, resposta declara12→14;390/320semoverflow, logs warning/errorcapturados vazios. Não é reprodução do save real do usuário.
+
+Captura outputs/1903_PROTO05_1_FORMACAO.png e HTML standalone outputs/1903_PROTO05_1.html. Sintaxe app/monitor/bundle e diffcheck restrito validados. Publicação limitada aUI/build/monitor/baseline/protocolo/testefocal/log; rascunho0.4 principal continua fora. SHA/linkfinal no relatório externo após confirmar commit. Sem alegar uma sessão de treino com +11, observação exata15, diversão comprovada ou certificação do restante da carreira. Próximo: observar o custo das prioridades e curva adulta no playtest, conservando amostra e unidade de tempo entre versões.
