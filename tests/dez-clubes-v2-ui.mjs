@@ -22,6 +22,8 @@ let game=engine.createGame('UI fluxo','AM',4130044585),seen=new Set();
 for(let i=0;game.phase!=='DONE'&&i<60;i++){
  assert.ok(engine.validGame(game));const f=fixture(game);assert.equal(f.writes.length,0);assert.ok(!f.root.innerHTML.includes('[object Object]'));assert.ok(!f.root.innerHTML.includes('undefined'));assert.ok(!/aptitudes|dna\.learning/.test(f.root.innerHTML));
  seen.add(game.event.kind);
+ if(game.mechanicsRevision===1){for(const c of game.event.choices){assert.ok(c.benefit&&c.cost);assert.ok(f.root.innerHTML.includes('Ganha'));assert.ok(f.root.innerHTML.includes('Custo'));}}
+ if(game.event.kind==='PLAN')assert.equal((f.root.innerHTML.match(/Meta do papel:/g)??[]).length,3);
  const choice=game.event.choices[0];assert.ok(choice);assert.ok(engine.choose(game,choice.id));
 }
 assert.equal(game.phase,'DONE');const final=fixture(game);assert.ok(final.root.innerHTML.includes('O recorte terminou'));final.history();assert.ok([18,19,20].every(y=>final.root.innerHTML.includes(y+' anos')));assert.equal(final.writes.length,0);checks++;
@@ -46,4 +48,17 @@ const directory40=fixture(game);directory40.history();
 assert.ok(directory40.root.innerHTML.includes('20 na Série A e 20 na Série B'));
 for(const c of engine.CLUBS.filter(c=>['A','B'].includes(c.division)))assert.ok(directory40.root.innerHTML.includes(c.name));
 assert.ok(directory40.root.innerHTML.includes('calendário resumido'));checks++;
+// The first contract stays unassigned until the player selects an interested project.
+const entry=engine.createGame('Escolha inicial','ST',7);
+for(let i=0;i<3;i++)assert.ok(engine.choose(entry,entry.event.choices[0].id));
+assert.equal(entry.phase,'ENTRY');assert.equal(entry.clubId,null);assert.equal(entry.entryOffers.length,3);
+const entryUI=fixture(entry);assert.ok(entryUI.root.innerHTML.includes('Escolha seu primeiro clube'));assert.equal(entryUI.buttons.length,3);
+for(const p of entry.entryOffers){assert.ok(entryUI.root.innerHTML.includes(p.name));}
+for(const text of ['Concorrente','chance inicial de titularidade','min/jogo previstos','R$','Ganha','Custo'])assert.ok(entryUI.root.innerHTML.includes(text));
+const selected=entry.entryOffers[1];entryUI.buttons[1].handlers.click();
+const signed=JSON.parse(entryUI.map.get(key));assert.equal(signed.clubId,selected.clubId);assert.equal(signed.salary,selected.monthly);assert.equal(signed.rival.quality,selected.rivalQuality);assert.ok(entryUI.root.innerHTML.includes('Estrutura de formação'));checks++;
+// Signed skill variation and observed shooting are exposed next to their own evidence.
+assert.ok(game.progression.some(p=>Object.values(p.skillChanges).some(x=>Math.abs(x)>=.05)));
+const playedUI=fixture(game);assert.ok(playedUI.root.innerHTML.includes('Variação no último avanço'));assert.ok(playedUI.root.innerHTML.includes('chutes'));assert.ok(playedUI.root.innerHTML.includes('no alvo'));assert.ok(playedUI.root.innerHTML.includes('ataques do time com você em campo'));checks++;
+assert.ok(game.marketHistory?.length);assert.ok(final.root.innerHTML.includes('Quem observou sua carreira'));assert.ok(final.root.innerHTML.includes('Interesse não garante proposta nem contrato'));checks++;
 console.log(JSON.stringify({checks,phases:[...seen],result:'PASS',originalStorageTouched:false}));

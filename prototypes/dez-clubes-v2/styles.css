@@ -5,3 +5,7 @@
 .match-detail{padding-bottom:10px;border-bottom:1px solid var(--line)}.match-detail .matchrow{border:0;padding-bottom:3px}.match-detail p{font-size:11px;line-height:1.5;margin:4px 0}.match-evidence{color:var(--ink)}.match-moment{border-left:2px solid var(--accent);padding-left:8px}.memory-list p{overflow-wrap:anywhere}.skills{scroll-margin-top:72px}
 
 .player .competition-context{font-size:10px;letter-spacing:.01em}.league small{color:var(--muted);font-size:10px}.league+ h3{margin-top:18px}
+
+.choice .choice-benefit,.choice .choice-cost{font-size:11px;line-height:1.45;margin-top:5px}.choice-benefit>span{color:var(--good)}.choice-cost>span{color:var(--warn)}.project-facts{display:flex;flex-wrap:wrap;gap:3px 8px;font-size:10px;line-height:1.4;color:var(--muted);margin:6px 0}.project-facts span{border-bottom:1px solid var(--line);padding-bottom:2px}.contract-line,.shot-context{font-size:11px;line-height:1.5;margin:6px 0}.shot-context{padding:8px 10px;border-left:2px solid var(--line)}.market-history{margin-top:18px}
+
+.skill-value{display:flex;align-items:baseline;gap:3px}.skill-value small{font-size:8px;line-height:1}
