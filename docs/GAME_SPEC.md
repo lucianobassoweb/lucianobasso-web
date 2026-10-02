@@ -294,3 +294,10 @@ Evolução por temporada usa registros adquiridos: gráfico de overall e tabela 
 ## Interface experimental07.2 — decisão sem duplicação
 
 Cada opção deve aparecer uma única vez, como cartão clicável que reúne ação, ganho, custo e previsão. Rodapé fixo só para navegação, exportação e recomeço; não repetir as decisões nele. Cabeçalho conserva gols, treino, habilidades e estados enquanto o centro rola. Resultado factual e contexto da próxima decisão permanecem nessa área. Correção visual sem alteração de motor ou save.
+
+
+## Protótipo experimental08 — resposta contextual e disputa por papel,02/10/2026
+
+A crítica de facilidade/repetição leva à mudança do ciclo: rotina e intenção formam uma decisão por seis jogos. Novas carreiras possuem21 momentos profissionais e31 escolhas com permanência, mantendo126 jogos internos/156clubes/formação12–18/fim25. As situações usam fatos atuais; integração, disputa, consolidação e referência têm exigências limitadas pela oportunidade e produção observada. Não punir reserva por amostra insuficiente; reconhecer boa contribuição parcial sem inventar meta cumprida. Recuperação física deve ter alternativa combinando menos treino e menor carga em campo.
+
+Tela principal mostra resultado factual, contexto curto e três cartões; dados essenciais permanecem no cabeçalho. Detalhes completos e evolução anual têm navegação própria. Mesmo save/schema, evento legado e passado preservados; adoção prospectiva challengeRevision1. Controle técnico0 conserva o ciclo07. Regras docs/PROTOTYPE08_CHALLENGE.md; hipótese/gates/REVIEW no PROJECT_LOG D0055/A0037. Progresso e diversão continuam experimentais, sem potencial condenado nem aposentadoria nesta versão.

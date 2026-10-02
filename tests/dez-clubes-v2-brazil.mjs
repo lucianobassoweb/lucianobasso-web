@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
-import {CLUBS,POSITIONS,createGame,choose,validGame,overall} from '../prototypes/dez-clubes-v2/engine.mjs';
+import {CLUBS,POSITIONS,createGame as engineCreateGame,choose,validGame,overall} from '../prototypes/dez-clubes-v2/engine.mjs';
+// Explicit flag-off control: retain the established mechanics gates; default08 is tested separately.
+const createGame=(name,position,seed)=>engineCreateGame(name,position,seed,{challenge:false});
 import {ENTRY_CLUB_IDS,LEGACY_CLUB_IDS,CLUB_SOURCES,CLUB_CATALOG_VERSION} from '../prototypes/dez-clubes-v2/clubs.mjs';
 const clone=x=>JSON.parse(JSON.stringify(x)),byId=id=>CLUBS.find(c=>c.id===id);
 const pick=(g,key)=>g.event.choices.find(c=>c.id.split('@')[0]===key);

@@ -4,7 +4,9 @@ import crypto from 'node:crypto';
 import {pathToFileURL} from 'node:url';
 import {gunzipSync} from 'node:zlib';
 const engineURL=process.env.ENGINE_FILE?pathToFileURL(process.env.ENGINE_FILE):new URL('../prototypes/dez-clubes-v2/engine.mjs',import.meta.url);
-const E=await import(engineURL),{createGame,choose,validGame,overall,CLUBS,POSITIONS}=E;
+const E=await import(engineURL),{createGame:engineCreateGame,choose,validGame,overall,CLUBS,POSITIONS}=E;
+// Explicit flag-off control: retain the established mechanics gates; default08 is tested separately.
+const createGame=(name,position,seed)=>engineCreateGame(name,position,seed,{challenge:false});
 const clone=x=>JSON.parse(JSON.stringify(x)),pick=(g,key)=>g.event.choices.find(c=>c.id.split('@')[0]===key);
 const groups=[],metrics={};
 const check=(name,fn)=>{try{fn();groups.push({name,pass:true});console.log('PASS',name);}catch(e){groups.push({name,pass:false,error:e.message});console.error('FAIL',name,e.message);}};

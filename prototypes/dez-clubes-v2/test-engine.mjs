@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
-import {CLUBS,POSITIONS,createGame,choose,overall,club,validGame} from './engine.mjs';
+import {CLUBS,POSITIONS,createGame as engineCreateGame,choose,overall,club,validGame} from './engine.mjs';
+// Explicit flag-off control: retain the established mechanics gates; default08 is tested separately.
+const createGame=(name,position,seed)=>engineCreateGame(name,position,seed,{challenge:false});
 const pick=(g,prefix)=>g.event.choices.find(c=>c.id.startsWith(`${prefix}@`));
 function policy(g,{formation=[0,1,2],market='stay',style=0,recovery='EXTRA',routine='TRAIN'}={}){
  const e=g.event;if(e.kind==='ENTRY')return e.choices.find(c=>c.profile.division==='B')??e.choices.at(-1);if(e.kind==='FORMATION')return e.choices[formation[g.formation]];if(e.kind==='RIVALRY')return e.choices[0];if(e.kind==='ROUTINE')return pick(g,`routine:${routine}`);if(e.kind==='PLAN')return e.choices[(g.period+style)%3];if(e.kind==='RECOVERY')return pick(g,`recovery:${recovery}`);if(e.kind==='DECISIVE')return e.choices[style%2];if(['INTEREST','CONTACT','OFFER','ASSESSMENT_RESULT'].includes(e.kind))return market==='move'?e.choices[0]:pick(g,'market:stay');return e.choices[0];

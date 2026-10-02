@@ -73,3 +73,19 @@ D0050/A0032 aprova extensão preservando o REVIEW contra06:54drifts adultos/0juv
 Referência07 permanece imutável e continua default. Comparação do motor053902e3a8a96204cd60e1b47056f5bafacb7045ffe07529e8b1f83e35d1e3ac: REVIEW,333 desvios adultos deP95,0juvenis/0bloqueios, mesma amostra16384caminhos/768carreiras/16128blocos. Mudança de interesse/peso por desempenho altera projetos, concorrência, cobrança e RNG futuro; não houve novo multiplicador de aprendizado. Maior drift23,887 em stressDM/focoD, aos22 no segundo período. Separar esse resultado de certificação de equilíbrio.
 
 D0051/A0033 mantém a regra experimental e os limiares, com alertas explícitos; não cria checkpoint novo para ocultar a mudança. Formação originalST aos18 permanece P95 55,081/máximo61,414. A observação humana seguinte deve comparar subir cedo paraA/reserva e permanecer com minutos, capacidade de recuperar espaço e custo de cobrança. Comparações futuras continuam exigindo revisar o REVIEW, com relatório datado/hash e sem modificar07.
+
+
+## 08 — comparação contextual e controle preservado
+
+D0055/A0037 mantém08 experimental com REVIEW, sem novo checkpoint. Motor `aec16b62346860fb616e99e9ea07a1f5d7fc6280239cc068dac1a0d3de9bd18d`. Mesmas seeds/coortes/referências/limiares:16384caminhos de formação,768carreiras/16128períodos. Comparação contra relatório07.1 imutável: default08 REVIEW5277desviosP95 adultos/0juvenis/0bloqueios; controle explícito0 PASS0desvios. Baseline07 default continua imutável.
+
+`--control-legacy` cria challengeRevision0 e conserva o ciclo antigo. Default08 combina rotina/intenção; política solicita rotina antiga quando oferecida, senão escolhe prática disponível mais próxima/desempata por intenção. Registrar6016correspondências/10112substituições: OVERLOAD nem sempre encontraTRAIN. Comparação adulta inclui restrição das ações/cadência/metas e não isola uma fórmula. Version1/seeds/quantis permanecem iguais; não ocultar mudança semântica da política. Objetivos: controle7882/16128,08 4127/16128; após20 controle5405/11520,08 2535/11520. Perda principal6356→6 exige observar se o menu protege demais a aprendizagem; não confundir perda de atributo secundário com desafio físico.
+
+Formação originalST aos18 finalizaçãoP95 55,081/máximo61,414 inalterada. 15anos continua apenas probe explícito, sem medição interpolada. Relatórios externos reportam hash/catálogo/exposição, frequência de situações/metas, ganhos e estados. Situações de bem-estar podem persistir com causa; FATIGUE agora oferece REST com intenção de menor carga, mantendo fórmulas globais.
+
+```sh
+node scripts/prototype-balance.mjs --output-dir ../../outputs/1903-equilibrio-08-comparacao --baseline ../../outputs/1903-equilibrio-07-1-comparacao/report.json
+node scripts/prototype-balance.mjs --control-legacy --output-dir ../../outputs/1903-equilibrio-08-controle --baseline ../../outputs/1903-equilibrio-07-1-comparacao/report.json
+```
+
+Se o relatório externo07.1 não estiver disponível, usar baseline07 imutável e registrar que o resultado inclui diferenças07.1 anteriores. Não trocar a base silenciosamente. Os limites ainda exigem playtest: referência1,30, repetição deLIFE/FATIGUE, produção e crescimento tardios em clube inferior. PASScontrole confirma preservação; REVIEW08 é decisão de manter hipótese experimental, não calibração certificada.

@@ -1191,3 +1191,79 @@ CUA na origem isolada8920/carreira pública descartável: recuperação→Rever 
 ### Entrega e aprendizado
 
 Artefatosoutputs/1903_PROTO07_2.html,1903_PROTO07_2_TELA.png e1903_PROTO07_2_VALIDACAO.md. Publicação restrita a nove arquivos do protótipo/docs/teste/registro de execução, na branch experimental/PRdraft existente, sem merge/main/Pages ou rascunhoTS0.4. Log inclui diagnósticoD0052 factual anterior, sem export privado. SHA/link após publicação no relatório externo. Aprendizado: contexto e ação pertencem ao mesmo componente; barra fixa deve preservar dados e navegação sem repetir opções. Próximo passo é playtest de legibilidade e continuidade do ciclo.
+
+
+## D0054 / A0036 — diagnóstico privado da carreira completa até25 no motor07.1/07.2
+
+### Pedido, método e integridade
+
+Usuário envia novo export sem texto adicional, após correçãoUI07.2. Principal interpreta como pedido de diagnóstico, sem inventar reclamação específica ou recalibração solicitada. Protocolo/log e regras conferidos. Principal executa replay/contabilidade; trabalhadorSol6.1 revisa causas/metas/mercado/feedback somente leitura. Original validGame válido, replay62decisões reproduz exatamente estado/RNG/históricos/menu atual; hash original conferido antes/depois. Arquivo não identifica versão visual; marcadores atuais compatíveis com motor07.1/07.2. Fonte/seed/nome/replay não publicados nem usados como fixtures. Motor não alterado; nenhum save do navegador avançado.
+
+### Fatos e interpretação
+
+MeiaAM: formaçãoOVR19→29→38→45 em12→14→16→18, skillmáxima18=52,8, sem amostra15/80. ProfissionalPaysanduC18–23→FlamengoA24, recorteDONE25. OVRfinal porano52/57/63/68/72/76/79.126jogosinternos,121participações/97starts/24entradas/5semminutos/8080min/53G36A; somas de partidas e anos exatas. A aos24:READY/OVR76/rival75,12starts+4entradas+2semminutos/1013min=56,3minporrodada dentro35–59previstos. Não diagnosticarPROSPECT nem titular automático.
+
+Mercado18/19/21 permanência escolhida,20silêncio,22contatoCorinthians sem proposta concreta,23Flamengo aceito para24. Interesse não equivale a proposta. Último ano24 encerra sem janela futura por escopo até25. Bem-estar:14TRAIN/6REST/1LIFE; felicidademín50,8/stressmáx39,7 aos19.22 stress0 ou residual;A elevou31,6/descanso56,2 antesRESTfinal. Final81,6felicidade/76,6descanso/17,5stress. Custo existe e gestão funciona.
+
+### Riscos observados e decisão
+
+17/21metas cumpridas;12/12 dos20–23,14/15 dos20–24; output até27/3=9vezes. targetForMetric usa patamar base/strong binário, sem substituir prova inicial de confiança por desafio de papel consolidado. Isso reduz dificuldade percebida nesta carreira; uma amostra não prova incidência geral. Skills relevantes finishing/passing/reading/pace crescem21/21blocos; perdas apenasGK/defesa. Passe52,8→88,9 adulto, ganho máximo4,571 num bloco de seis jogos, não sessão. Coorte sintéticaFOCUSED_C16exemplos monitor07.1 temOVRfinalmédio72,125/máximo78/passeP95máx93,536;OVR79 não é violação de potencial nem outlier populacional demonstrado, políticas/DNA/projeto diferem.
+
+Repertório21rotinas/21planos reutiliza mesma prova de confiança mesmo após titular consolidado. Próxima iteração deve diferenciar integração/consolidação/liderança, usar evidência recente para metas razoáveis e comprimir etapas dominadas; não apenas somar eventos aleatórios. Cuidado com metas que aumentam indefinidamente ou punem reserva sem minutos. Revisão confirma ambiguidade de copy: recompensa“confiança”altera trust do treinador, não confidence pessoal. Rótulo precisa de qualificação, contagem atual correta.
+
+Decisão: manter motor e fatos nesta análise; nenhuma quebra de replay/contabilidade/mercado confirmada. Riscos ficam registrados, sem patch de balanço arbitrário a partir de upload sem reclamação explícita. Não criar checkpoint/rodar suíte ampla: monitor anteriorREVIEW333adulto/0juvenis/0bloqueios mantido. Artefatos privadosoutputs/1903_DIAGNOSTICO_CARREIRA3_PRIVADO.md e1903_REVIEW_CARREIRA3_PRIVADO.md; evidênciawork/career-review-072/replay.json, fora do commit. Sem nova publicação, rascunhoTS0.4 preservado.
+
+
+## D0055 / A0037 — protótipo08: desafio por papel, resposta contextual e tela concisa
+
+### Hipótese, decisão e escopo
+
+Usuário critica jogo fácil/previsível, ausência de variação/desafio e UI prolixa. DiagnósticoD0054 sustentava17/21metas,14/15 após20, e21pares rotina→plano com a mesma prova inicial de confiança. Decisão do principal: substituir o ciclo repetido por uma escolha que combina rotina e intenção; distinguir integração, disputa, consolidação e referência por oportunidade/desempenho. Não basta aumentar aleatoriedade de frases nem punir atributos diretamente. Aplicados frontend-design/responsive-design; motor auditado por Sol6.1, com dois trabalhadores no máximo, ownership separado. Principal integra app/CSS/build/docs/monitor e entrega. Sem escaladaAstra ou novos chats; modelo principal mantido.
+
+Mantidos156clubes, catálogo/desenho salarial/mercado07.1, formação12–18,126partidas/sete anos18–24, fim25. Nenhuma mudança global de crescimento/recuperação, DNA, potencial ou algoritmo de placar. WORK86% de prática adiciona carga intermediária; TRAIN128/REST50/LIFE58 preservados. O recorte não implementa aposentadoria, calendário oficial, acesso/rebaixamento ou quatro horas.
+
+### Mecânica e consequências
+
+challengeRevision1 por padrão; situação causal gera menu congelado de três pares: chegada, transferência, desgaste, stress, vida pessoal, banco, produção insuficiente, derrotas, sequência forte, boa fase, consolidação ou disputa. São combinações esportivas e de carga distintas, não rotação de copy. Sem fila automática de RIVALRY/RECOVERY/DECISIVE no ciclo novo. Rival inicializado na assinatura; chegada tem próprio momento. Permanência:31escolhas(3formação+ENTRY+21PLAN+6janelas), contra56,625médias na coorte gerenciada de controle. Transferências podem acrescentar negociação.
+
+Objetivo revision2 considera estágio, nível relativo, previsão de participação, força dos próximos seis rivais e até12 atuações qualificadas no clube atual. Observação limitada a65% da taxa, entre0,65–1,55 da referência teórica, sem meta crescente ilimitada. Minutos78% da previsão/10–450; participações74%/1–6; boas limitadas por titularidade; output taxa×min/90×fator. REFERENCE1,30 acima da média é deliberado. A estimativaGK foi alinhada à exposição defensiva real, incluindoSAFE−0,035, sem alterar simulação/RNG. MET exige todos os critérios. Sem minutos suficientes, não criar crise adicional; boas contribuições recebem reconhecimento parcial. MISSED adiciona stress1/felicidade−0,5; pressão adicional0 se amostra insuficiente,1 com boas contribuições ou3 sem boas; strain só com amostra suficiente/zero boas. Recompensa de confiança rotulada como confiança do treinador.
+
+### Correção encontrada no teste mobile
+
+No primeiro fullflow08,b99e49cb, ST acumulou condição25/descanso97 e FATIGUE repetido, mesmo comPRESS+REST. Causa comprovada: recuperaçãoREST6,5 por jogo, consumoPRESS1+5,5×1,4×min/90; aos75min saldo−0,917,90min−2,2. Fadiga recuperava, mas condição não. O menu08 havia retirado LINK+REST que07permitia; todas as alternativasFATIGUEST perdiam condição aos75min. Corrigir causa, sem aumentar recuperação global: REST usa menor intensidade(STLINK,GKSAFE,defesaHOLD,demaisCONTROL); demais pares distintos/custos preservados. Aos75min STLINKREST recupera0,917 condição; aos90min saldo0, portanto recuperação extrema é gradual e pode depender de menos minutos/virada anual+8.
+
+Own8casos naturais, com pelo menos uma partida≥75min em todas as posições, melhoram condição/fadiga e saemFATIGUE. ST80,372→84,161 e fadiga39,562→16,931. Revisão64probes severos em8posições:55saem em1períodoREST,9em2, semoffseason; condição cresce≥5,56/fadiga reduz≥21,95. O revisor rejeitou expectativa inicial de recuperação instantânea em1período, exigindo melhora no primeiro e escape em até2. Fórmulas globais e14guards atômicos intactos. Hash final: aec16b62346860fb616e99e9ea07a1f5d7fc6280239cc068dac1a0d3de9bd18d.
+
+### UI e persistência
+
+Cabeçalho fixo conserva idade/posição/clube/treino, gols/estatísticas, três estados de bem-estar, condição/cobrança/confiança/treinador e seis skills com cores/deltas/intervalo explícito. Antes do primeiro clube não mostrar estatística zero redundante ou treino desconhecido. Centro reduzido a resultado factual do último clique, contexto atual de até duas frases e cartões compactos com ganhos/custos/meta. Uma ação por opção, sem duplicação no rodapé. Meta do resultado vem do período arquivado, não do preview seguinte. Bom período/meta parcial reconhece contribuições sem alterar MISSED paraMET.
+
+Carreira guarda contrato, evolução anual/gráfico, metas, escolhas e mercado. Partidas guarda reações completas/ações/memórias, sem cortar registros. Rodapé quatro alvos≥44px. Fontes nativas, títulos pequenos, pouca ênfase; não esconder unidade de tempo dos ganhos. Contexto usa minutos/titularidades/rival/produção/próximos adversários observados, sem DNA ou sorteio no render.
+
+Mesma chave/schema2. Saves sem challengeRevision conservam evento pendente e efeitos consumidos; adoção1 apenas na próxima preparação. DONE25 imutável; DONE21 conserva extensão explícita. Controle0 via createGame(...,{challenge:false}) é técnico e não migra. Snapshots antigos não são convertidos para controle para esconder adoção. Comparações permitem somente próximo event/objective/revision e defaults prospectivos ausentes no input, jamais atributos/partidas/RNG/históricos consumidos. Não rescalar saves nem importar export privado no browser.
+
+### Gates e revisão
+
+No hash final: engine9, agência14, correções15, Brasil7 executados pelo principal; wellbeing10, lower8, promises8 e revisão08 independente7 pelo revisor; challenge8 pelo implementador; UI28 pelo principal. Total114grupos PASS. Sintaxe/typecheck/diffcheck restrito conferidos; standalone178074bytes sem novas dependências. Typecheck cobre fonte principal local, não transforma rascunhoTS0.4 em parte desta entrega.
+
+Gates antigos criam controle explícito para preservar seus contratos/cobertura. Adapters de snapshots isolam apenas próximo menu/defaults novos; mantêm todos os efeitos antigos. Brazil mantém cobertura156destinos/trials2529/limite4096 já aprovado07.1. Não reduzir assert/limiar numérico para obterPASS. Independente:192ramos em64estados têm consequências reais diferentes;96carreiras completas/oito posições/126partidas/JSON/replay exatos;14forgeries rejeitadas. GK21casos sem minutos e22amostras insuficientes não geram crise adicional.96carreiras:640/2016metas(31,75%),range0–15; único0/21 é escolha constante não adaptativaCB/C,OVR49, não travamento.
+
+32pares gerenciados públicos (mesmas posições/seeds/formaçãoC/permanência): controle0→08, MET82,89%→29,02%; após20 88,33%→28,96%; decisões56,625→31; gols25,28→26; minutos8130→7821,25;OVR69,81→67,69; picosfadiga40,80→34,81/stress34,29→34. Bundles mudam prática/intenção/pressão/cadência, portanto comparação da experiência, não efeito isolado das metas nem frequência real do futebol. Referência ainda exige playtest; nenhumP1 confirmado ou certificação de diversão.
+
+### Monitor: manter experimental com REVIEW explícito
+
+Mesmas32seeds/coortes/referências/limiares,16384caminhosjuvenis/768adultos/16128períodos. Relatório07.1 imutável como comparação, baseline07 default preservada. Controle0 final PASS0desvios, reproduz07.1; metas7882/16128, após20 5405/11520. Default08 REVIEW5277desviosP95 adultos,0juvenis/0bloqueios; metas4127/16128(25,59%),após20 2535/11520(22,01%). Rotina desejada disponível6016/substituída10112: não chamar políticaOVERLOAD idêntica quando bundle não ofereceTRAIN. Maior drift mentalStressCM/OVERLOAD21/segundo período−95,894. A restrição das opções reduz sobrecarga desse controle extremo e modifica treino/oportunidade; não houve novo multiplicador global de skills.
+
+Todas16128observações novas têm perda de alguma skill, só6perdasprincipais versus6356controle. Isso não comprova dificuldade física suficiente ou progresso equilibrado; mostra que o menu/recuperação escolhido protege aprendizagem principal nesta política. Situações predominantes LIFE6565/FATIGUE3432 podem repetir se causa persistir. FormaçãoST aos18 permaneceP95finalização55,081/máximo61,414; aos16máximo50,937; não há observação natural15 neste recorte. Não inventar interpolação ou cap para passar.
+
+Decisão explícita do principal: manter08 como próxima build experimental, preservando REVIEW e limiares; não criar novo checkpoint/PASS para ocultar os drifts. Custos/prática, metas por papel, fila reduzida e escape físico cumprem a hipótese; facilidade de progressão tardia, predominância de bem-estar e exigênciaREFERENCE precisam de playtest humano. Critério seguinte: se a recuperação continua monopolizando menus ou meta fracassada não produz tensão compreensível, revisar situação/expectativa com nova evidência. Crescimento de um jogador superior em clube fraco não demonstra sozinho falha, mas excesso de gols e titularidade tardia ficam no radar.
+
+### Replay privado e fluxo visual
+
+Comparação exploratória do exportD0054, sem alterar bytesoriginais: controle62decisões/17MET/OVR79;08com31/6MET/OVR81,12substituições de rotina nos21bundles, oito situações. Mercado e intenção divergem; carreira nova permaneceC, antiga foiA aos24. Portanto OVR81 não é efeito puro das metas; não afirmar redução de skill ou melhoria de diversão com esse replay. Fonte/nome/seed/export ficam fora do repo/fixtures/publicação.
+
+CUA em origem local isolada, nome público descartável: criação/formação/entradaC e31escolhas até25/126partidas internas,123participações/115starts/9336min/98G6A, sete linhasanuais; reloadDONE mantém texto/números. Em390×844 resultado+contexto+três cartões inteiros; alturas108,4/108,4/123,2px.320×740 semoverflow/alvos138px, centro rolável. Carreira/Partidas acessíveis, logswarn/error vazios, viewportresetado. Esse fullflow precedeu correção estreitaFATIGUE; recuperação final validada por8+64probes eUI28, sem alegar novo fullflowCUA. Tentativa adicional de Recomeçar abriu diálogo nativo IAB não controlável pelo canal; nova ação interrompida/sem avançar save real. Não certificar Safari/iPhonefísico, addressbar/offline ou diversão.
+
+### Entrega
+
+Arquivosoutputs/1903_PROTO08.html,1903_PROTO08_TELA.png,1903_PROTO08_VALIDACAO.md e relatórios deequilíbrio/revisão privados; intermediárioswork/. Publicação restrita a21arquivos de protótipo/docs/gates/monitor na branch experimental ePRdraft existente; nenhum export/nome/seed privado, rascunhoTS0.4, main/merge/Pages. Link eSHA depois da publicação no relatório externo. Para experimentar novo ciclo desde formação, exportar se desejar preservar carreira e usar Recomeçar; DONE25 anterior permanece encerrado.
