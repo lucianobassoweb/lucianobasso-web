@@ -273,3 +273,10 @@ Equilíbrio continua experimental. Auditoria com primeira opção automática ca
 ## Atualização experimental06 — bem-estar, 01/10/2026
 
 A pedido do usuário, felicidade, descanso físico e stress mental passam a ser fundamentos de aprendizagem/atuação no protótipo BrasilA/B independente. Felicidade/descanso altos e stress baixo favorecem execução. Preservar bem-estar custa prática; maior cobrança real do clube exige recuperação e pode mudar a decisão de carreira. Rotina prepara seis jogos; prioridades juvenis continuam dois anos. Cobrança e condição são distintas de stress e descanso. Regras/custos/compatibilidade em PROTOTYPE06_WELLBEING.md, decisão e checkpoint D0048/A0030. Não substitui o calendário ou save da carreira principal.
+
+
+## Atualização experimental07 — BrasilA–D até25,02/10/2026
+
+Pedido do usuário amplia protótipo independente a156clubes2026(20A/20B/20C/96D) e sete temporadas18–24, encerrando25 com126partidas internas/21metas. Formação12–18 preservada. Entrada ofereceD/C/B e possibilidadeA em formaçãoforte, sempre com escolha entre interessados. Calendário experimental18jogos/ano; D guarda grupo oficial e usa rivais da chave pareada, sem reproduzir regulamento/acesso/rebaixamento. Motor de aprendizado/bem-estar06 continua.
+
+Saves antigos conservam pending/contratos/passado; adoção prospectiva. DONE21 fica fechado até botão explícito “Continuar até os25anos”, que valida nova cópia e inicia21 sem inventar janela20. Regras docs/PROTOTYPE07_BRAZIL_CD.md; checkpoint/logD0050/A0032. Extensão não é aposentadoria nem certificação de quatro horas.

@@ -32,14 +32,14 @@ Adulto: 16 seeds × oito posições × duas políticas (foco/recuperação e int
 
 Por idade, posição, momento e política: mínimo, média, P50, P95 e máximo dos seis atributos, OVR, condição, fadiga, pressão, felicidade, descanso físico, stress mental, ganho de OVR e ganho principal. Também contar blocos com qualquer perda e com perda principal. Uma perda de habilidade secundária não demonstra por si só sobrecarga relevante; separar perda principal. Reportar valores adquiridos e carga, evitando comparar somente OVR final.
 
-Registrar hashes do motor e catálogo, versão do monitor, seeds e coortes. A baseline aprovada está em `docs/balance/prototype06.json`. A comparação exige versão, seeds e grupos iguais. Mudança na amostra exige baseline nova e decisão explícita; arquivo aprovado não deve ser sobrescrito. `--record-baseline` usa criação exclusiva e recusa relatório com alertas.
+Registrar hashes do motor e catálogo, versão do monitor, seeds e coortes. A baseline aprovada atual é `docs/balance/prototype07.json`; checkpoints anteriores permanecem imutáveis. A comparação exige versão, seeds e grupos iguais. Mudança na amostra exige baseline nova e decisão explícita; arquivo aprovado não deve ser sobrescrito. `--record-baseline` usa criação exclusiva e recusa relatório com alertas.
 
 ## Comando obrigatório para alterações de progressão
 
 Na raiz do repositório:
 
 ```sh
-node scripts/prototype-balance.mjs --output-dir ../../outputs/1903-equilibrio --baseline docs/balance/prototype06.json
+node scripts/prototype-balance.mjs --output-dir ../../outputs/1903-equilibrio --baseline docs/balance/prototype07.json
 ```
 
 O diretório de saída é ajustável; resultados são `report.md` e `report.json`. O JSON contém todas as coortes; Markdown resume finalização do atacante e alertas. O relatório informa intervalo de dois anos/seis partidas, sem dividir o ganho por uma quantidade de treinos que o motor não simula.
@@ -61,3 +61,8 @@ Baseline05 permanece em `docs/balance/prototype05.json`; a06 foi criada com excl
 Motor06 SHA256 `556268622eea846e1d8b1311ad328e108a47e9f6af2e10354db28064e7deefdf`. Aos18, finalizaçãoST coorte original P95 55,081/máximo61,414, próxima do05. Aos21, foco com recuperação OVRmédio55,055; sobrecarga39,117. Todos os2.304 blocos têm alguma perda;660 têm perda principal. Números refletem políticas selecionadas, não incidência no futebol real.
 
 A comparação exige que todas as coortes da baseline existam; apenas a nova coorte equilibrada é admitida ao comparar com05. Hashes de motor/catálogo são capturados antes do import e conferidos novamente antes da escrita: fontes que mudaram durante execução invalidam o relatório. Aprovar checkpoint novo exige causa/resultado explícitos no Log, criar arquivo ainda inexistente com `--record-baseline` e confirmar repetibilidade. Essa aprovação não substitui playtest humano.
+
+
+## Checkpoint07: catálogoA–D e até25
+
+D0050/A0032 aprova extensão preservando o REVIEW contra06:54drifts adultos/0juvenis/0bloqueios, maior12,593. Motor224926279cc2a6f80f2b2dd2ffb2ffc55f46d7565f6ca581f4133ecb1f9defa2. Adulto768carreiras/16128blocos até126partidas cada, entradaB/C/D separada. Formação16384caminhos mantém6912originais. Comparar adulto por temporada/período: DONE21 antigo coincide com final da temporada20; novos21–24 não têm referência06 e não entram no drift. C/D nunca são misturados aB. Default07;06permanece acessível para comparação histórica. Crescimento/sobrecarga/bem-estar não ganharam multiplicadores. Alterar catálogo muda futuras oportunidades/RNG: quantificar, não exigir identidade de partidas depois de adoção. Nova baseline usa criação exclusiva e repetição; PASS local significa repetibilidade, não calibração científica/diversão.

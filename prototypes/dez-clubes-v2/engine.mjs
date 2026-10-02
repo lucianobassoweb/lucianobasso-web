@@ -9,9 +9,18 @@ const random=g=>{g.rng=(Math.imul(g.rng,1664525)+1013904223)>>>0;return g.rng/42
 const roll=(g,p)=>random(g)<clamp(p,0,1);
 const integer=(g,min,max)=>min+Math.floor(random(g)*(max-min+1));
 const stat=()=>({apps:0,starts:0,minutes:0,goals:0,assists:0,ratingSum:0});
-export const club=g=>CLUBS.find(c=>c.id===g.clubId)??null;
-const national=c=>c?.division==='A'||c?.division==='B';
-const divisionText=c=>c.divisionLabel??(national(c)?`Série ${c.division}`:'Circuito de transição');
+// Frozen pre-07 membership/order is required for deterministic legacy market replay.
+const LEGACY_REGIONAL_IDS=['sao-luiz','brasil-pelotas','caxias','ypiranga'];
+const LEGACY_NATIONAL_IDS=['athletico-pr','atletico-mg','bahia','botafogo','chapecoense','corinthians','coritiba','cruzeiro','flamengo','fluminense','gremio','internacional','mirassol','palmeiras','bragantino','remo','santos','sao-paulo','vasco','vitoria','america-mg','athletic','atletico-go','avai','botafogo-sp','ceara','crb','criciuma','cuiaba','fortaleza','goias','juventude','londrina','nautico','novorizontino','operario-pr','ponte-preta','sao-bernardo','sport','vila-nova'];
+export const national=c=>['A','B','C','D'].includes(c?.division);
+const legacyClub=c=>{if(!c||!LEGACY_REGIONAL_IDS.includes(c.id))return c;const old={...c,division:'REGIONAL',divisionLabel:'Circuito de transição'};delete old.group;return old;};
+const resolveClub=(g,id)=>{const c=CLUBS.find(c=>c.id===id);return g.nationalRevision===1?c:legacyClub(c);};
+export const club=g=>resolveClub(g,g.clubId)??null;
+const catalog=g=>g.nationalRevision===1?CLUBS:[...LEGACY_NATIONAL_IDS,...LEGACY_REGIONAL_IDS].map(id=>resolveClub(g,id));
+const eligibleNational=(g,c)=>g.nationalRevision===1?national(c):['A','B'].includes(c?.division);
+const divisionText=c=>c.division==='D'?`Série D · grupo ${c.group} · calendário experimental de 18 jogos`:c.divisionLabel??(national(c)?`Série ${c.division}`:'Circuito de transição');
+const endAge=g=>g.careerEndAge??21;
+const pairedGroup=group=>{const n=Number(group.slice(1));return `A${n%2?n+1:n-1}`;};
 export function overall(g){return Math.round(KEYS.reduce((s,k,i)=>s+g.skills[k]*WEIGHTS[g.position][i],0)*(.9+g.proficiency*.001));}
 const TRADEOFFS={
  'formation:balanced':['Preserva lazer, descanso e escola durante os dois anos.','Menos tempo de prática específica e menor ganho técnico.'],
@@ -86,7 +95,7 @@ function observedForm(g,id){const matches=g.playedMatches.filter(m=>m.clubId===i
 function starterProbability(g,id,rivalQuality,rivalForm=6.7){return clamp(.51+(effectiveLevel(g)-rivalQuality)*.035+(g.trust-50)*.004+(observedForm(g,id)-rivalForm)*.10+((g.fanMemory[id]?.respect??50)-50)*.0005,.05,.90);}
 function demand(g,id){let hash=g.seed>>>0;for(const ch of id+g.position)hash=(Math.imul(hash,31)+ch.charCodeAt(0))>>>0;return (hash%5)-2;}
 export function projectProfile(g,id){
- const c=CLUBS.find(c=>c.id===id);if(!c)throw new Error('Projeto desconhecido');
+ const c=resolveClub(g,id);if(!c)throw new Error('Projeto desconhecido');
  const current=g.clubId===id,quality=current&&g.rival?g.rival.quality:Math.round(c.level*(c.division==='A'?.94:.82)+demand(g,id));
  const pressure=clamp(26+c.prestige*.32),trainingQuality=Math.round(clamp(45+c.prestige*.55,0,98));
  const mentalDemand=pressure;
@@ -96,14 +105,19 @@ export function projectProfile(g,id){
  const minutesEstimate={min:Math.max(0,Math.round(mean-12)),max:Math.min(90,Math.round(mean+12))};
  const monthly=current&&g.salary!==undefined?g.salary:Math.round((1500+c.prestige*180+Math.max(0,overall(g)-35)*350)/50)*50;
  const role=starterChance>=.58?'Disputa por titularidade':starterChance>=.3?'Rotação com disputa':'Entrada gradual e banco';
- return {clubId:id,name:c.name,division:c.division,...(g.wellbeingRevision===1?{mentalDemand}:{}),monthly,rivalQuality:quality,trainingQuality,pressure,starterChance,minutesEstimate,role,playerLevel:overall(g),benefit:`Salário ficcional R$ ${monthly.toLocaleString('pt-BR')}/mês; estrutura ${trainingQuality}/100 e ${divisionText(c)}.`,cost:`Concorrente ${num(quality)}; ${minutesEstimate.min}–${minutesEstimate.max} min estimados por partida, sujeitos à atuação. Pressão de projeto ${Math.round(pressure)}/100.${g.wellbeingRevision===1?' A cobrança mantém stress; compare este valor com outros projetos.':''}`};
+ return {clubId:id,name:c.name,division:c.division,...(g.nationalRevision===1?{nationalRevision:1,...(c.division==='D'?{group:c.group}:{})}:{}),...(g.wellbeingRevision===1?{mentalDemand}:{}),monthly,rivalQuality:quality,trainingQuality,pressure,starterChance,minutesEstimate,role,playerLevel:overall(g),benefit:`Salário ficcional R$ ${monthly.toLocaleString('pt-BR')}/mês; estrutura ${trainingQuality}/100 e ${divisionText(c)}.`,cost:`Concorrente ${num(quality)}; ${minutesEstimate.min}–${minutesEstimate.max} min estimados por partida, sujeitos à atuação. Pressão de projeto ${Math.round(pressure)}/100.${g.wellbeingRevision===1?' A cobrança mantém stress; compare este valor com outros projetos.':''}`};
 }
 function entryEvent(g){
- g.age=18;g.phase='ENTRY';
- const first=ENTRY_CLUB_IDS[g.seed%ENTRY_CLUB_IDS.length],middle=CLUBS.filter(c=>c.division==='B'&&c.level>=58&&c.level<=62),hard=CLUBS.filter(c=>c.division===(overall(g)>=50?'A':'B')&&c.level>=(overall(g)>=50?62:63));
- const ids=[first,middle[g.seed%middle.length].id,hard[(g.seed+7)%hard.length].id];
+ g.nationalRevision=1;g.careerEndAge=25;g.age=18;g.phase='ENTRY';
+ const level=overall(g),pick=(division,max,offset)=>{
+  const pool=CLUBS.filter(c=>c.division===division&&c.level<=max);
+  if(!pool.length)throw new Error(`Sem projeto elegível na Série ${division}`);
+  return pool[(g.seed+offset)%pool.length].id;
+ };
+ // Limited observed invitations; eligible A replaces B as an aspirational third project.
+ const ids=[pick('D',Math.max(44,level+8),0),pick('C',Math.max(56,level+16),3),level>=50?pick('A',Math.max(63,level+18),11):ENTRY_CLUB_IDS[g.seed%ENTRY_CLUB_IDS.length]];
  g.entryOffers=ids.map(id=>projectProfile(g,id));
- event(g,'ENTRY','Três projetos para começar como profissional','Estes clubes observaram sua formação. Compare salário, estrutura e disputa por minutos antes de assinar. A previsão não garante vaga.',g.entryOffers.map(p=>option(`entry:${p.clubId}`,`Assinar com ${p.name}`,p.role,p)));
+ event(g,'ENTRY','Três projetos para começar como profissional','Sua formação abriu convites limitados nas Séries D e C, além de '+(g.entryOffers[2].division==='A'?'uma porta aspiracional na Série A':'um projeto na Série B')+'. Compare salário, estrutura, cobrança e disputa por minutos. Estes convites não garantem vaga.',g.entryOffers.map(p=>option(`entry:${p.clubId}`,`Assinar com ${p.name}`,p.role,p)));
 }
 function signProject(g,p,origin,season){g.clubProject={...JSON.parse(JSON.stringify(p)),origin,signedSeason:season};g.salary=p.monthly;g.trust=48;g.pressure=p.pressure;g.projectStrain=0;}
 function continueProject(g,p){const trust=g.trust,pressure=g.pressure,strain=g.projectStrain;signProject(g,p,'CONTINUITY',g.season);g.trust=trust;g.pressure=pressure;if(strain===undefined)delete g.projectStrain;else g.projectStrain=strain;}
@@ -113,20 +127,31 @@ const TECHNICAL={GK:['goalkeeping','passing'],CB:['defending','passing'],FB:['pa
 function formationEvent(g){adoptWellbeing(g);g.age=[12,14,16][g.formation];g.objective={title:'Aprender sua posição',body:'Três etapas de formação antes do primeiro projeto adulto.',progress:{stages:g.formation},target:{stages:3},progressText:`${g.formation}/3 etapas`,targetText:'3 etapas; escolha onde acumular experiência',status:'ACTIVE'};event(g,'FORMATION',`Seu jogo aos ${g.age}`,`Como ${POSITIONS.find(p=>p.id===g.position).label.toLowerCase()}, você ainda constrói habilidade e experiência. Esta etapa registra aprendizado; o adulto não começa pronto.`,[option('formation:technique','Lapidar a técnica da posição','Melhora as habilidades relevantes para sua função.'),option('formation:reading','Especializar a leitura de jogo','Prioriza leitura e experiência; a técnica terá menos prática nesta etapa.'),option('formation:athletic','Ganhar ritmo e solidez','Trabalha velocidade/defesa e experiência.'),option('formation:balanced','Equilibrar futebol, escola e lazer','Menor prática técnica durante dois anos; descanso até +10, stress até −12, felicidade até +10 e condição até +5.')]);}
 export function createGame(name,position,seed=Date.now()>>>0){
  if(!POSITIONS.some(p=>p.id===position))throw new Error('Posição inválida');
- const g={schema:2,rulesRevision:1,calendarRevision:1,mechanicsRevision:1,wellbeingRevision:1,happiness:72,mentalStress:16,routine:null,name:String(name||'Jogador').slice(0,60),age:12,position,clubId:null,condition:85,fatigue:10,pressure:15,confidence:60,trust:48,skills:{},proficiency:28,dna:{learning:0,aptitudes:{}},rng:Number(seed)>>>0,seed:Number(seed)>>>0,round:0,season:18,period:0,formation:0,phase:'FORMATION',serial:0,decisions:0,totalstats:stat(),seasonStats:stat(),yearStats:[],playedMatches:[],lastMatches:[],history:[],log:[],fanMemory:{},reputation:0,rival:null,market:[],resolved:[],choicesLog:[],progression:[],objective:null,objectiveHistory:[],lastOutcome:null,roleEvidence:null,recoveryUsed:false,recoveryWork:null,recoveryArc:null,decisiveUsed:false,decisive:null,schedule:[],event:null};
+ const g={schema:2,careerEndAge:25,nationalRevision:1,rulesRevision:1,calendarRevision:1,mechanicsRevision:1,wellbeingRevision:1,happiness:72,mentalStress:16,routine:null,name:String(name||'Jogador').slice(0,60),age:12,position,clubId:null,condition:85,fatigue:10,pressure:15,confidence:60,trust:48,skills:{},proficiency:28,dna:{learning:0,aptitudes:{}},rng:Number(seed)>>>0,seed:Number(seed)>>>0,round:0,season:18,period:0,formation:0,phase:'FORMATION',serial:0,decisions:0,totalstats:stat(),seasonStats:stat(),yearStats:[],playedMatches:[],lastMatches:[],history:[],log:[],fanMemory:{},reputation:0,rival:null,market:[],resolved:[],choicesLog:[],progression:[],objective:null,objectiveHistory:[],lastOutcome:null,roleEvidence:null,recoveryUsed:false,recoveryWork:null,recoveryArc:null,decisiveUsed:false,decisive:null,schedule:[],event:null};
  g.dna.learning=.85+random(g)*.55;for(const k of KEYS){g.dna.aptitudes[k]=.8+random(g)*.55;g.skills[k]=14+random(g)*9;}formationEvent(g);return g;
 }
 function schedule(g){
- const c=club(g),division=national(c)?c.division:'TRANSITION';
- const rivals=CLUBS.filter(x=>x.id!==g.clubId&&(division==='TRANSITION'?LEGACY_CLUB_IDS.includes(x.id):x.division===division));
+ const c=club(g),division=eligibleNational(g,c)?c.division:'TRANSITION';
+ const rivals=catalog(g).filter(x=>x.id!==g.clubId&&(division==='TRANSITION'?LEGACY_CLUB_IDS.includes(x.id):x.division===division));
  if(rivals.length<9)throw new Error('Calendário sem nove rivais disponíveis');
- let offset=(g.seed+g.season)%rivals.length;const last=g.playedMatches.at(-1)?.opponentId;
- // Rotate a nine-club sample. Across offsets every peer in the division is reachable.
- if(rivals[offset].id===last)offset=(offset+1)%rivals.length;
- const first=Array.from({length:9},(_,i)=>rivals[(offset+i)%rivals.length].id);
+ let first;
+ if(g.nationalRevision===1&&division==='D'){
+  const own=rivals.filter(x=>x.group===c.group),near=rivals.filter(x=>x.group===pairedGroup(c.group));
+  if(own.length!==5||near.length!==6)throw new Error('Grupo da Série D incompleto');
+  const offset=(g.seed+g.season)%near.length;
+  first=[...own.map(x=>x.id),...Array.from({length:4},(_,i)=>near[(offset+i)%near.length].id)];
+  g.scheduleGroup=c.group;
+ }else{
+  let offset=(g.seed+g.season)%rivals.length;const last=g.playedMatches.at(-1)?.opponentId;
+  if(rivals[offset].id===last)offset=(offset+1)%rivals.length;
+  first=Array.from({length:9},(_,i)=>rivals[(offset+i)%rivals.length].id);
+  delete g.scheduleGroup;
+ }
+ // All divisions retain the bounded 18-date prototype, without access/relegation or knockouts.
  g.schedule=[...first,...first];g.calendarRevision=1;g.scheduleDivision=division;
+ if(g.nationalRevision===1)g.scheduleNationalRevision=1;
 }
-function startSeason(g){g.lastMatches=[];g.roleEvidence=null;g.coachReaction='';g.fanReaction='';g.age=g.season;if(g.mechanicsRevision===1&&(!g.clubProject||g.clubProject.origin==='LEGACY_CONTEXT')){continueProject(g,projectProfile(g,g.clubId));}g.period=0;g.round=0;g.seasonStats=stat();g.phase='PRO';g.condition=clamp(g.condition+8);g.fatigue=clamp(g.fatigue-8);g.pressure=clamp(g.pressure-4);schedule(g);if(g.pendingNewClub){g.pendingNewClub=false;rivalEvent(g);}else if(recoveryAvailable(g)&&g.objective?.status==='MISSED')recoveryEvent(g);else continuationEvent(g);}
+function startSeason(g){g.nationalRevision=1;g.careerEndAge??=25;g.lastMatches=[];g.roleEvidence=null;g.coachReaction='';g.fanReaction='';g.age=g.season;if(g.mechanicsRevision===1&&(!g.clubProject||g.clubProject.origin==='LEGACY_CONTEXT')){continueProject(g,projectProfile(g,g.clubId));}g.period=0;g.round=0;g.seasonStats=stat();g.phase='PRO';g.condition=clamp(g.condition+8);g.fatigue=clamp(g.fatigue-8);g.pressure=clamp(g.pressure-4);schedule(g);if(g.pendingNewClub){g.pendingNewClub=false;rivalEvent(g);}else if(recoveryAvailable(g)&&g.objective?.status==='MISSED')recoveryEvent(g);else continuationEvent(g);}
 function rivalEvent(g){const c=club(g);g.rival={name:['Rafael Nunes','Bruno Medeiros','Caio Fontes'][g.history.length%3],quality:g.mechanicsRevision===1?(g.clubProject?.rivalQuality??projectProfile(g,c.id).rivalQuality):c.level-1,form:6.7,apps:0,goals:0,minutes:0,recentRating:6.7};event(g,'RIVALRY','Um projeto, uma disputa por espaço',`${g.rival.name} é um concorrente fictício de nível ${g.rival.quality}. Seu nível é ${overall(g)}. No ${c.name} (${divisionText(c)}), a entrada em campo será observada: escolher uma postura não compra a vaga.`,[option('rival:earn','Mostrar meu jogo na função','A próxima meta avaliará sua produção e seus minutos.'),option('rival:team','Construir parceria com o elenco','Estabelece a intenção de cooperar; a contribuição nas partidas decide o efeito.'),option('rival:challenge','Disputar um papel mais ofensivo','Eleva a exigência da próxima meta, sem ganhar titularidade no clique.')]);}
 const OUTPUT_NAMES={attack:'pontos de finalização (chutes no alvo + gols)',creation:'chances criadas',control:'passes completos',protection:'defesas e intervenções',sweep:'antecipações fora do gol',press:'recuperações na pressão',advance:'progressões e apoio',cooperation:'ações de cooperação',role:'produção da função'};
 function outputLabel(g,o=g.objective){
@@ -298,7 +323,7 @@ function marketEvent(g){
  g.market=[];g.marketModes={};g.marketContexts={};
  const production=matches.reduce((s,m)=>s+(g.position==='ST'||g.position==='WG'?m.goals+m.assists:g.position==='GK'?m.saves+m.interventions:m.chancesCreated+m.interventions),0);
  // Sample projects before rolling interest: a larger catalog must not buy certainty.
- const eligible=CLUBS.filter(x=>national(x)&&x.id!==c.id&&x.level<=score+7&&x.level>=c.level-14);
+ const eligible=catalog(g).filter(x=>eligibleNational(g,x)&&x.id!==c.id&&x.level<=score+7&&x.level>=c.level-14);
  const shortlist=eligible.map(destination=>{
   const remembered=g.fanMemory[destination.id]?.respect??50;
   const weight=clamp(1-Math.abs(destination.level-score)/35,.18,1.1)*(destination.division===c.division?1.08:1)*clamp(1+(remembered-50)*.005,.75,1.25);
@@ -312,15 +337,15 @@ function marketEvent(g){
  }
  // A weak season can reopen a modest project through an uncertain assessment.
  if(!g.market.length&&!proof&&g.seasonStats.minutes>=60&&roll(g,.58)){
-  const modest=CLUBS.filter(x=>x.id!==c.id&&(national(c)?x.division==='B':LEGACY_CLUB_IDS.includes(x.id))&&x.level<=Math.max(c.level,g.mechanicsRevision===1?54:50));
+  const modest=catalog(g).filter(x=>x.id!==c.id&&(g.nationalRevision===1?national(x)&&x.division!=='A':eligibleNational(g,c)?x.division==='B':LEGACY_CLUB_IDS.includes(x.id))&&x.level<=Math.max(c.level,g.mechanicsRevision===1?54:50));
   const destination=modest.length?modest[integer(g,0,modest.length-1)]:null;
   if(destination){g.market=[destination.id];g.marketModes[destination.id]='ASSESSMENT';g.marketContexts[destination.id]={need:.55,fit:clamp(.5+(overall(g)-destination.level)*.02,.15,.9),observed:true,competition:.5,role:'REBUILD',closeProbability:clamp(.35+(overall(g)-destination.level)*.015,.18,.7)};}
  }
- if(g.mechanicsRevision===1){g.marketHistory??=[];g.marketHistory.push({season:g.season,clubId:g.clubId,contacts:g.market.map(id=>({clubId:id,mode:g.marketModes[id],profile:projectProfile(g,id)})),status:'OBSERVED'});g.marketHistory=g.marketHistory.slice(-2);}
+ if(g.mechanicsRevision===1){g.marketHistory??=[];g.marketHistory.push({season:g.season,clubId:g.clubId,contacts:g.market.map(id=>({clubId:id,mode:g.marketModes[id],profile:projectProfile(g,id)})),status:'OBSERVED'});g.marketHistory=g.marketHistory.slice(-(endAge(g)-19));}
  const evidence=`${g.seasonStats.apps} participações, ${g.seasonStats.minutes} minutos, ${good} contribuições positivas e nota ${num(rating)}.`;
- event(g,'INTEREST','O que sua temporada fez aparecer',g.market.length?`${evidence} ${g.market.map(id=>{const x=CLUBS.find(c=>c.id===id);return `${x.name} (${divisionText(x)})`;}).join(' e ')} observam um encaixe. A necessidade e a concorrência ainda podem impedir uma proposta.`:`${evidence} Não surgiu contato com necessidade e encaixe suficientes neste ano; continuar e mudar a resposta esportiva permanece possível.`,[...g.market.map(id=>option(`contact:${id}`,`${g.marketModes[id]==='ASSESSMENT'?'Ouvir uma avaliação no':'Conversar com'} ${CLUBS.find(c=>c.id===id).name} (${divisionText(CLUBS.find(c=>c.id===id))})`,g.marketModes[id]==='ASSESSMENT'?'Avaliação para reconstrução, com aprovação incerta.':'Interesse observado; a negociação e o espaço permanecem incertos.',g.mechanicsRevision===1?projectProfile(g,id):undefined)),option('market:stay',`Continuar no ${c.name}`,'Mantém o projeto; a temporada encerrada fica preservada.')]);
+ event(g,'INTEREST','O que sua temporada fez aparecer',g.market.length?`${evidence} ${g.market.map(id=>{const x=resolveClub(g,id);return `${x.name} (${divisionText(x)})`;}).join(' e ')} observam um encaixe. A necessidade e a concorrência ainda podem impedir uma proposta.`:`${evidence} Não surgiu contato com necessidade e encaixe suficientes neste ano; continuar e mudar a resposta esportiva permanece possível.`,[...g.market.map(id=>option(`contact:${id}`,`${g.marketModes[id]==='ASSESSMENT'?'Ouvir uma avaliação no':'Conversar com'} ${CLUBS.find(c=>c.id===id).name} (${divisionText(resolveClub(g,id))})`,g.marketModes[id]==='ASSESSMENT'?'Avaliação para reconstrução, com aprovação incerta.':'Interesse observado; a negociação e o espaço permanecem incertos.',g.mechanicsRevision===1?projectProfile(g,id):undefined)),option('market:stay',`Continuar no ${c.name}`,'Mantém o projeto; a temporada encerrada fica preservada.')]);
 }
-function endSeason(g){g.yearStats.push({age:g.season,season:g.season,clubId:g.clubId,...g.seasonStats});log(g,`${g.season} anos: ${g.seasonStats.apps} participações, ${g.seasonStats.starts} titularidades, OVR ${overall(g)}.`);if(g.season===20){g.age=21;g.phase='DONE';event(g,'DONE','Uma trajetória até os 21',`O recorte termina, não sua carreira. ${g.totalstats.apps} participações, ${g.totalstats.starts} titularidades e ${g.totalstats.minutes} minutos. Seu trabalho e suas metas ficam nos registros abaixo.`);return;}marketEvent(g);}
+function endSeason(g){g.yearStats.push({age:g.season,season:g.season,clubId:g.clubId,...g.seasonStats});log(g,`${g.season} anos: ${g.seasonStats.apps} participações, ${g.seasonStats.starts} titularidades, OVR ${overall(g)}.`);if(g.season===endAge(g)-1){g.age=endAge(g);g.phase='DONE';event(g,'DONE',`Uma trajetória até os ${endAge(g)}`,`O recorte termina, não sua carreira. ${g.totalstats.apps} participações, ${g.totalstats.starts} titularidades e ${g.totalstats.minutes} minutos. Seu trabalho e suas metas ficam nos registros abaixo.`);return;}marketEvent(g);}
 function finishMarket(g){if(g.marketHistory?.at(-1)?.status==='OBSERVED'||g.marketHistory?.at(-1)?.status==='CONTACT')g.marketHistory.at(-1).status='STAY';g.season++;startSeason(g);}
 function recoveryAvailable(g){
  if(g.recoveryWork)return false;
@@ -353,7 +378,7 @@ function validAction(g,id){const base=id.split('@')[0],kind=g.event?.kind;
 function chooseMutable(g,id){
  if(!validGame(g)||g.schema!==2||g.phase==='DONE'||typeof id!=='string'||!g.event?.choices.some(c=>c.id===id)||g.resolved.includes(g.event.id)||!validAction(g,id))return false;
  const kind=g.event.kind,key=g.event.id,selected=g.event.choices.find(c=>c.id===id);g.choicesLog.push({eventId:key,kind,id,label:selected.label,age:g.age,clubId:g.clubId,round:g.round});g.resolved.push(key);g.decisions++;id=id.split('@')[0];
- if(kind==='ENTRY'){const p=g.entryOffers.find(p=>id===`entry:${p.clubId}`);g.clubId=p.clubId;signProject(g,p,'ENTRY',18);g.phase='PRO';g.history.push({age:18,clubId:g.clubId,reason:'Primeiro contrato escolhido entre três projetos observadores'});schedule(g);rivalEvent(g);return true;}
+ if(kind==='ENTRY'){const p=g.entryOffers.find(p=>id===`entry:${p.clubId}`);g.clubId=p.clubId;signProject(g,p,'ENTRY',18);g.phase='PRO';g.history.push({age:18,clubId:g.clubId,reason:g.nationalRevision===1?'Primeiro contrato escolhido entre projetos observadores nacionais':'Primeiro contrato escolhido entre três projetos observadores'});schedule(g);rivalEvent(g);return true;}
  if(kind==='ROUTINE'){const mode=id.slice(8),r=ROUTINES[mode],before=wellbeing(g);g.routine={mode,season:g.season,period:g.period+1};g.fatigue=clamp(g.fatigue+r.initialFatigue);g.mentalStress=clamp(g.mentalStress+r.initialStress);g.happiness=clamp(g.happiness+r.initialHappiness);g.lastOutcome={title:'Rotina escolhida para seis jogos',body:`${selected.label}: prática ${(r.practice*100).toFixed(0)}% no bloco; descanso ${num(100-g.fatigue-before.physicalRest)}, stress ${num(g.mentalStress-before.mentalStress)} e felicidade ${num(g.happiness-before.happiness)} pontos aplicados. O ganho de habilidade só será calculado com a prática e os minutos do próximo período.`};planEvent(g);return true;}
  if(kind==='FORMATION'){const before=overall(g),mode=id.split(':')[1],skills={...g.skills};for(const k of KEYS){const priority=g.rulesRevision===1?(mode==='technique'?TECHNICAL[g.position].includes(k):mode==='reading'?['reading'].includes(k):['pace','defending'].includes(k)):mode==='technique'?WEIGHTS[g.position][KEYS.indexOf(k)]>=.25:mode==='reading'?['reading','passing'].includes(k):['pace','defending'].includes(k);if(g.mechanicsRevision===1){const weight=WEIGHTS[g.position][KEYS.indexOf(k)],base=weight>0?6+weight*8:0,emphasis=mode==='reading'?(k==='reading'?11:0):priority?7:0;g.skills[k]=clamp(g.skills[k]+(base+(mode==='balanced'?0:emphasis))*(mode==='balanced'?.68:1)*wellbeing(g).learningMultiplier*wellbeing(g).physicalLearningMultiplier*(.8+g.dna.learning*.2)*(.75+g.dna.aptitudes[k]*.25)*(1-g.skills[k]/110),0,99);}else g.skills[k]=clamp(g.skills[k]+(priority?(mode==='reading'&&g.rulesRevision===1?20:15):6)*g.dna.learning*g.dna.aptitudes[k],0,99);}const experience=g.rulesRevision===1?(mode==='reading'?12:mode==='balanced'?8:10):mode==='reading'?15:8;g.proficiency=clamp(g.proficiency+experience);g.progression.push({season:g.age,period:0,beforeOverall:before,afterOverall:overall(g),skillChanges:Object.fromEntries(KEYS.map(k=>[k,Number((g.skills[k]-skills[k]).toFixed(3))])),experienceGain:experience,intent:mode});const worked=mode==='reading'?'reading':mode==='athletic'?'pace':g.rulesRevision===1?TECHNICAL[g.position][0]:primary(g);g.lastOutcome={title:'Aprendizado registrado',body:`Etapa dos ${g.age} anos: ${labelSkill[worked]}: ${num(skills[worked])}→${num(g.skills[worked])}; experiência +${experience}.`};if(g.wellbeingRevision===1){if(mode==='balanced'){g.fatigue=clamp(g.fatigue-10);g.mentalStress=clamp(g.mentalStress-12);g.happiness=clamp(g.happiness+10);g.condition=clamp(g.condition+5);}else{g.fatigue=clamp(g.fatigue+(mode==='athletic'?10:6));g.mentalStress=clamp(g.mentalStress+(mode==='reading'?9:mode==='athletic'?4:6));g.happiness=clamp(g.happiness-4);if(mode==='athletic')g.condition=clamp(g.condition-2);}}else if(g.mechanicsRevision===1){g.fatigue=clamp(g.fatigue+(mode==='reading'?3:mode==='athletic'?2:1));if(mode==='athletic')g.condition=clamp(g.condition-2);}
  g.formation++;if(g.formation<3)formationEvent(g);else{g.objective.progress.stages=3;g.objective.progressText='3/3 etapas concluídas';g.objective.targetText='Formação concluída; a próxima meta pertence ao projeto adulto';g.objective.status='MET';g.lastOutcome.season=g.age;g.lastOutcome.clubId=null;g.age=18;if(g.mechanicsRevision===1){entryEvent(g);return true;}g.phase='PRO';g.clubId=(g.calendarRevision===1?ENTRY_CLUB_IDS:LEGACY_CLUB_IDS)[overall(g)>=62?2:overall(g)>=55?1:0];g.history.push({age:18,clubId:g.clubId,reason:'Primeiro projeto após formação'});schedule(g);rivalEvent(g);}return true;}
@@ -361,8 +386,8 @@ function chooseMutable(g,id){
  if(kind==='PLAN'){playPeriod(g,id.slice(7));return true;}
  if(kind==='RECOVERY'){g.recoveryWork=id.slice(9);g.recoveryArc.work=g.recoveryWork;g.recoveryArc.status='WORKING';memory(g,`Mudou o trabalho: ${selected.label}; prova nos próximos seis jogos.`,0,true);continuationEvent(g);return true;}
  if(kind==='DECISIVE'){g.decisive={kind:id.endsWith('risk')?'risk':'safe',remaining:6};planEvent(g);return true;}
- if(kind==='INTEREST'){if(id==='market:stay'){finishMarket(g);return true;}g.contactClub=id.slice(8);if(g.marketHistory?.at(-1)){g.marketHistory.at(-1).status='CONTACT';g.marketHistory.at(-1).selectedClubId=g.contactClub;}const c=CLUBS.find(c=>c.id===g.contactClub),assessment=g.marketModes[c.id]==='ASSESSMENT';event(g,'CONTACT',`${assessment?'Avaliação':'Contato'} no ${c.name}`,`${divisionText(c)}, projeto de nível ${c.level}, seu OVR ${overall(g)}. ${assessment?'O clube avaliará sua experiência e evidência recente; pode não oferecer contrato.':'A evidência da temporada abriu uma negociação; o espaço será disputado.'}`,[option(`offer:${c.id}`,assessment?'Participar da avaliação':'Pedir a proposta concreta',assessment?'A resposta depende da qualidade e da amostra; nenhuma habilidade cresce pelo aceite.':'Conhece salário e exigência antes de decidir.'),option('market:stay','Encerrar contato e permanecer','Não apaga as atuações nem a meta anterior.')]);return true;}
- if(kind==='CONTACT'){if(id==='market:stay'){finishMarket(g);return true;}const c=CLUBS.find(c=>c.id===g.contactClub);if(g.marketModes[c.id]==='ASSESSMENT'||g.marketContexts?.[c.id]){const rating=g.seasonStats.apps?g.seasonStats.ratingSum/g.seasonStats.apps:6.5,probability=g.marketContexts?.[c.id]?.closeProbability??clamp(.45+(overall(g)-c.level)*.02+(rating-6.5)*.12,.2,.8);if(!roll(g,probability)){if(g.marketHistory?.at(-1))g.marketHistory.at(-1).status='NO_OFFER';g.lastOutcome={title:'O contato não virou contrato',body:`${c.name} não abriu proposta: o encaixe observado não venceu a concorrência nesta janela. A experiência e os números do ano continuam registrados.`};event(g,'ASSESSMENT_RESULT','Uma tentativa sem proposta',g.lastOutcome.body,[option('market:stay',`Retomar o ${club(g).name}`,'Muda a resposta em campo na próxima temporada; a rota não está encerrada.')]);return true;}}
+ if(kind==='INTEREST'){if(id==='market:stay'){finishMarket(g);return true;}g.contactClub=id.slice(8);if(g.marketHistory?.at(-1)){g.marketHistory.at(-1).status='CONTACT';g.marketHistory.at(-1).selectedClubId=g.contactClub;}const c=resolveClub(g,g.contactClub),assessment=g.marketModes[c.id]==='ASSESSMENT';event(g,'CONTACT',`${assessment?'Avaliação':'Contato'} no ${c.name}`,`${divisionText(c)}, projeto de nível ${c.level}, seu OVR ${overall(g)}. ${assessment?'O clube avaliará sua experiência e evidência recente; pode não oferecer contrato.':'A evidência da temporada abriu uma negociação; o espaço será disputado.'}`,[option(`offer:${c.id}`,assessment?'Participar da avaliação':'Pedir a proposta concreta',assessment?'A resposta depende da qualidade e da amostra; nenhuma habilidade cresce pelo aceite.':'Conhece salário e exigência antes de decidir.'),option('market:stay','Encerrar contato e permanecer','Não apaga as atuações nem a meta anterior.')]);return true;}
+ if(kind==='CONTACT'){if(id==='market:stay'){finishMarket(g);return true;}const c=resolveClub(g,g.contactClub);if(g.marketModes[c.id]==='ASSESSMENT'||g.marketContexts?.[c.id]){const rating=g.seasonStats.apps?g.seasonStats.ratingSum/g.seasonStats.apps:6.5,probability=g.marketContexts?.[c.id]?.closeProbability??clamp(.45+(overall(g)-c.level)*.02+(rating-6.5)*.12,.2,.8);if(!roll(g,probability)){if(g.marketHistory?.at(-1))g.marketHistory.at(-1).status='NO_OFFER';g.lastOutcome={title:'O contato não virou contrato',body:`${c.name} não abriu proposta: o encaixe observado não venceu a concorrência nesta janela. A experiência e os números do ano continuam registrados.`};event(g,'ASSESSMENT_RESULT','Uma tentativa sem proposta',g.lastOutcome.body,[option('market:stay',`Retomar o ${club(g).name}`,'Muda a resposta em campo na próxima temporada; a rota não está encerrada.')]);return true;}}
   const profile=g.mechanicsRevision===1?projectProfile(g,c.id):null;g.offer={clubId:c.id,monthly:profile?.monthly??Math.round((1500+c.prestige*180+Math.max(0,overall(g)-45)*500)/50)*50,...(profile?{profile}: {})};event(g,'OFFER',`Proposta do ${c.name}`,`Salário ficcional R$ ${g.offer.monthly.toLocaleString('pt-BR')} por mês. ${divisionText(c)}, projeto de nível ${c.level}; experiência e confiança no novo clube ainda terão que virar minutos.`,[option(`accept:${c.id}`,`Aceitar o ${c.name}`,'Muda de projeto; confiança inicia em48 e a exigência do concorrente acompanha o nível do clube.',g.offer.profile),option('market:stay',`Continuar no ${club(g).name}`,'Preserva o espaço construído; não aceita o salário do outro projeto.')]);return true;}
  if(kind==='OFFER'){if(id.startsWith('accept:')){g.clubId=g.offer.clubId;g.salary=g.offer.monthly;if(g.offer.profile)signProject(g,g.offer.profile,'MARKET',g.season+1);g.trust=48;g.projectStrain=0;g.pressure=clamp(g.pressure+Math.max(0,club(g).prestige-40)*.2);const m=g.fanMemory[g.clubId];if(m){g.pressure=clamp(g.pressure+(50-m.respect)*.1);g.trust=clamp(g.trust+(m.respect-50)*.08);}g.history.push({age:g.season+1,clubId:g.clubId,reason:'Proposta aceita após contato'});g.pendingNewClub=true;if(g.marketHistory?.at(-1))g.marketHistory.at(-1).status='ACCEPTED';log(g,`Aceitou ${club(g).name}; disputa de espaço reabre com exigência maior.`);}delete g.offer;finishMarket(g);return true;}
  if(kind==='ASSESSMENT_RESULT'){finishMarket(g);return true;}return false;
@@ -374,15 +399,28 @@ export function choose(g,id){
   for(const key of Object.keys(g))if(!(key in candidate))delete g[key];Object.assign(g,candidate);return true;
  }catch{return false;}
 }
+/** Explicitly resume a closed 21-year prototype on a copy; never reopen during hydration. */
+export function extendCareer(g){
+ if(!validGame(g)||g.phase!=='DONE'||g.age!==21||g.season!==20||g.yearStats.length!==3||g.careerEndAge!==undefined)return null;
+ try{
+  const candidate=JSON.parse(JSON.stringify(g));
+  candidate.careerEndAge=25;candidate.season=21;
+  // DONE is an unconsumed pending event. Replace it without inventing a resolved choice.
+  candidate.serial--;startSeason(candidate);
+  return validGame(candidate)?candidate:null;
+ }catch{return null;}
+}
 /** Validate hydration without changing supplied state. Schema1 is deliberately not migrated. */
 export function validGame(g){
  const bound=(v,a,b)=>typeof v==='number'&&Number.isFinite(v)&&v>=a&&v<=b;
  const finite=(v,ancestors=new Set())=>{if(typeof v==='number')return Number.isFinite(v);if(!v||typeof v!=='object')return true;if(ancestors.has(v))return false;ancestors.add(v);const ok=Object.values(v).every(x=>finite(x,ancestors));ancestors.delete(v);return ok;};
  const stats=s=>s&&['apps','starts','minutes','goals','assists','ratingSum'].every(k=>bound(s[k],0,1e6))&&s.starts<=s.apps;
- try{if(!g||g.schema!==2||typeof g.name!=='string'||g.name.length>60||!POSITIONS.some(p=>p.id===g.position)||g.clubId!==null&&!CLUBS.some(c=>c.id===g.clubId)||!bound(g.age,12,21)||!['FORMATION','ENTRY','PRO','DONE'].includes(g.phase))return false;
+ try{const finish=endAge(g),years=finish-18,maxSeason=finish-1,maxMatches=years*18,maxSerial=finish===25?192:96;
+ if(g?.careerEndAge!==undefined&&g.careerEndAge!==25)return false;
+ if(!g||g.schema!==2||typeof g.name!=='string'||g.name.length>60||!POSITIONS.some(p=>p.id===g.position)||g.clubId!==null&&!CLUBS.some(c=>c.id===g.clubId)||!bound(g.age,12,finish)||!['FORMATION','ENTRY','PRO','DONE'].includes(g.phase))return false;
  if(!['condition','fatigue','pressure','confidence','trust','proficiency','reputation'].every(k=>bound(g[k],0,100))||!KEYS.every(k=>bound(g.skills?.[k],0,99))||!bound(g.seed,0,4294967295)||!Number.isInteger(g.seed)||!bound(g.rng,0,4294967295)||!Number.isInteger(g.rng)||!bound(g.dna?.learning,.5,2)||!KEYS.every(k=>bound(g.dna?.aptitudes?.[k],.5,2)))return false;
- if(![['serial',1,96],['decisions',0,95],['formation',0,3],['period',0,3],['round',0,18],['season',18,20]].every(([k,a,b])=>Number.isInteger(g[k])&&bound(g[k],a,b)))return false;
- if(!stats(g.totalstats)||!stats(g.seasonStats)||!Array.isArray(g.yearStats)||g.yearStats.length>3||!g.yearStats.every(stats)||!Array.isArray(g.playedMatches)||g.playedMatches.length>54||!Array.isArray(g.lastMatches)||g.lastMatches.length>6)return false;
+ if(![['serial',1,maxSerial],['decisions',0,maxSerial-1],['formation',0,3],['period',0,3],['round',0,18],['season',18,maxSeason]].every(([k,a,b])=>Number.isInteger(g[k])&&bound(g[k],a,b)))return false;
+ if(!stats(g.totalstats)||!stats(g.seasonStats)||!Array.isArray(g.yearStats)||g.yearStats.length>years||!g.yearStats.every(stats)||!Array.isArray(g.playedMatches)||g.playedMatches.length>maxMatches||!Array.isArray(g.lastMatches)||g.lastMatches.length>6)return false;
  for(const m of g.playedMatches)if(!CLUBS.some(c=>c.id===m.clubId)||!CLUBS.some(c=>c.id===m.opponentId)||!bound(m.gf,0,m.teamChances)||!bound(m.ga,0,m.oppChances)||!bound(m.teamChances,0,9)||!bound(m.oppChances,0,9)||!bound(m.minutes,0,90)||!bound(m.rating,0,10)||!bound(m.goals,0,m.gf)||!bound(m.assists,0,m.gf-m.goals)||m.completedPasses>m.passAttempts||typeof m.started!=='boolean'||typeof m.coach!=='string'||typeof m.fans!=='string'||m.minutes===0&&(m.rating||m.goals||m.assists||m.saves||m.completedPasses||m.interventions||m.chancesCreated))return false;
  if(!Array.isArray(g.choicesLog)||g.choicesLog.length!==g.decisions||!Array.isArray(g.progression)||!Array.isArray(g.objectiveHistory)||!Array.isArray(g.history)||!Array.isArray(g.resolved)||!Array.isArray(g.log)||!g.fanMemory||!g.event||typeof g.event.id!=='string'||typeof g.event.title!=='string'||typeof g.event.body!=='string'||!Array.isArray(g.event.choices)||g.event.choices.length>4)return false;
  if(g.serial!==g.decisions+1||g.event.id!==`p10v2-${g.serial}`||g.resolved.length!==g.decisions||new Set(g.resolved).size!==g.resolved.length||!g.choicesLog.every((c,i)=>c.eventId===g.resolved[i]&&typeof c.label==='string'&&typeof c.id==='string'))return false;
@@ -391,24 +429,24 @@ export function validGame(g){
  if(!equal(g.totalstats,sum(g.playedMatches))||!equal(g.seasonStats,sum(g.playedMatches.filter(m=>m.season===g.season)))||!g.yearStats.every(s=>equal(s,sum(g.playedMatches.filter(m=>m.season===s.season))))||new Set(g.yearStats.map(s=>s.season)).size!==g.yearStats.length)return false;
  if(!['FORMATION','ENTRY'].includes(g.phase)&&(g.schedule.length!==18||new Set(g.schedule).size!==9||g.schedule.some(id=>id===g.clubId||!CLUBS.some(c=>c.id===id))||g.schedule.some((id,i)=>i>0&&id===g.schedule[i-1])||[...new Set(g.schedule)].some(id=>g.schedule.filter(x=>x===id).length!==2)))return false;
  if(!g.event.choices.every(c=>typeof c.id==='string'&&c.id.endsWith(`@${g.serial}`)&&validAction(g,c.id)&&typeof c.label==='string'&&typeof c.hint==='string')||new Set(g.event.choices.map(c=>c.id)).size!==g.event.choices.length)return false;
- if(g.phase==='DONE'&&(g.age!==21||g.event.kind!=='DONE'||g.event.choices.length))return false;if(g.phase!=='DONE'&&!g.event.choices.length)return false;
+ if(g.phase==='DONE'&&(g.age!==finish||g.event.kind!=='DONE'||g.event.choices.length))return false;if(g.phase!=='DONE'&&!g.event.choices.length)return false;
  if(g.objective&&(!['ACTIVE','MET','MISSED'].includes(g.objective.status)||typeof g.objective.progressText!=='string'||typeof g.objective.targetText!=='string'))return false;
- const objectiveContext=o=>Number.isInteger(o.season)&&bound(o.season,18,20)&&Number.isInteger(o.period)&&bound(o.period,1,3)&&CLUBS.some(c=>c.id===o.clubId)&&(o.revision===1?['attack','creation','control','protection','sweep','press','advance','cooperation'].includes(o.metric):o.revision===undefined&&['role','cooperation'].includes(o.metric));
- if(g.objective?.metric&&!objectiveContext(g.objective)||g.objectiveHistory.length>9||!g.objectiveHistory.every(o=>objectiveContext(o)&&['MET','MISSED'].includes(o.status)&&typeof o.progressText==='string'&&typeof o.targetText==='string'&&g.playedMatches.some(m=>m.season===o.season&&m.clubId===o.clubId))||new Set(g.objectiveHistory.map(o=>`${o.season}:${o.period}`)).size!==g.objectiveHistory.length)return false;
+ const objectiveContext=o=>Number.isInteger(o.season)&&bound(o.season,18,maxSeason)&&Number.isInteger(o.period)&&bound(o.period,1,3)&&CLUBS.some(c=>c.id===o.clubId)&&(o.revision===1?['attack','creation','control','protection','sweep','press','advance','cooperation'].includes(o.metric):o.revision===undefined&&['role','cooperation'].includes(o.metric));
+ if(g.objective?.metric&&!objectiveContext(g.objective)||g.objectiveHistory.length>years*3||!g.objectiveHistory.every(o=>objectiveContext(o)&&['MET','MISSED'].includes(o.status)&&typeof o.progressText==='string'&&typeof o.targetText==='string'&&g.playedMatches.some(m=>m.season===o.season&&m.clubId===o.clubId))||new Set(g.objectiveHistory.map(o=>`${o.season}:${o.period}`)).size!==g.objectiveHistory.length)return false;
  // Hydrated dependencies must be safe before choose records any mutation.
- const knownClub=id=>CLUBS.some(c=>c.id===id),integer=(v,a,b)=>Number.isInteger(v)&&bound(v,a,b);
+ const knownClub=id=>g.nationalRevision===1?CLUBS.some(c=>c.id===id):[...LEGACY_NATIONAL_IDS,...LEGACY_REGIONAL_IDS].includes(id),integer=(v,a,b)=>Number.isInteger(v)&&bound(v,a,b);
  const text=v=>typeof v==='string';
- if(g.progression.length>12||!g.progression.every(p=>p&&integer(p.season,12,20)&&integer(p.period,0,3)&&bound(p.beforeOverall,0,99)&&bound(p.afterOverall,0,99)&&bound(p.experienceGain,0,100)&&text(p.intent)&&p.skillChanges&&KEYS.every(k=>bound(p.skillChanges[k],-99,99))))return false;
- if(g.history.length>3||!g.history.every(h=>h&&integer(h.age,18,20)&&knownClub(h.clubId)&&text(h.reason))||g.log.length>100||!g.log.every(text))return false;
- if(!g.yearStats.every(h=>h&&integer(h.age,18,20)&&h.season===h.age&&knownClub(h.clubId))||!g.choicesLog.every(c=>c&&text(c.kind)&&integer(c.age,12,20)&&(c.clubId===null||knownClub(c.clubId))&&integer(c.round,0,18)))return false;
+ if(g.progression.length>3+years*3||!g.progression.every(p=>p&&integer(p.season,12,maxSeason)&&integer(p.period,0,3)&&bound(p.beforeOverall,0,99)&&bound(p.afterOverall,0,99)&&bound(p.experienceGain,0,100)&&text(p.intent)&&p.skillChanges&&KEYS.every(k=>bound(p.skillChanges[k],-99,99))))return false;
+ if(g.history.length>years||!g.history.every(h=>h&&integer(h.age,18,maxSeason)&&knownClub(h.clubId)&&text(h.reason))||g.log.length>100||!g.log.every(text))return false;
+ if(!g.yearStats.every(h=>h&&integer(h.age,18,maxSeason)&&h.season===h.age&&knownClub(h.clubId))||!g.choicesLog.every(c=>c&&text(c.kind)&&integer(c.age,12,maxSeason)&&(c.clubId===null||knownClub(c.clubId))&&integer(c.round,0,18)))return false;
  if(!Array.isArray(g.market)||g.market.length>3||new Set(g.market).size!==g.market.length||!g.market.every(knownClub)||!Array.isArray(g.schedule)||g.schedule.length>18||!g.schedule.every(knownClub))return false;
  if(g.lastOutcome!==null&&(!g.lastOutcome||!text(g.lastOutcome.title)||!text(g.lastOutcome.body)))return false;
  if(!g.objective||!text(g.objective.title)||!text(g.objective.body)||!g.objectiveHistory.every(o=>o&&text(o.title)&&text(o.body)))return false;
- const validMatch=m=>m&&integer(m.season,18,20)&&integer(m.round,1,18)&&knownClub(m.clubId)&&knownClub(m.opponentId)&&text(m.opponent)&&text(m.result)&&text(m.strategy)&&text(m.moment)&&typeof m.good==='boolean'&&['gf','ga','minutes','goals','assists','saves','shots','shotsOnTarget','chancesCreated','keyPasses','passAttempts','completedPasses','interventions','failedInterventions','teamChances','oppChances'].every(k=>integer(m[k],0,k==='minutes'?90:100))&&m.shotsOnTarget<=m.shots&&m.goals<=m.shotsOnTarget&&m.completedPasses<=m.passAttempts;
+ const validMatch=m=>m&&integer(m.season,18,maxSeason)&&integer(m.round,1,18)&&knownClub(m.clubId)&&knownClub(m.opponentId)&&text(m.opponent)&&text(m.result)&&text(m.strategy)&&text(m.moment)&&typeof m.good==='boolean'&&['gf','ga','minutes','goals','assists','saves','shots','shotsOnTarget','chancesCreated','keyPasses','passAttempts','completedPasses','interventions','failedInterventions','teamChances','oppChances'].every(k=>integer(m[k],0,k==='minutes'?90:100))&&m.shotsOnTarget<=m.shots&&m.goals<=m.shotsOnTarget&&m.completedPasses<=m.passAttempts;
  if(!g.playedMatches.every(validMatch)||!g.lastMatches.every(m=>validMatch(m)&&g.playedMatches.some(a=>a.season===m.season&&a.round===m.round&&JSON.stringify(a)===JSON.stringify(m))))return false;
  if(!['FORMATION','ENTRY'].includes(g.phase)&&(!knownClub(g.clubId)||!g.rival||typeof g.rival.name!=='string'||!bound(g.rival.quality,0,100)))return false;
  if(typeof g.recoveryUsed!=='boolean'||typeof g.decisiveUsed!=='boolean'||g.recoveryWork!==null&&!['EXTRA','READ','COOPERATE'].includes(g.recoveryWork))return false;
- if(g.recoveryArc!==null){const a=g.recoveryArc;if(!a||!knownClub(a.clubId)||!integer(a.season,18,20)||!['CHOOSING','WORKING','PROVED','UNPROVED'].includes(a.status)||!integer(a.beforeStarts,0,6)||!bound(a.beforeLevel,0,99)||a.work!==null&&!['EXTRA','READ','COOPERATE'].includes(a.work))return false;}
+ if(g.recoveryArc!==null){const a=g.recoveryArc;if(!a||!knownClub(a.clubId)||!integer(a.season,18,maxSeason)||!['CHOOSING','WORKING','PROVED','UNPROVED'].includes(a.status)||!integer(a.beforeStarts,0,6)||!bound(a.beforeLevel,0,99)||a.work!==null&&!['EXTRA','READ','COOPERATE'].includes(a.work))return false;}
  if(g.event.kind==='RECOVERY'&&(!g.recoveryUsed||!g.recoveryArc||g.recoveryArc.status!=='CHOOSING'||g.recoveryArc.clubId!==g.clubId||g.recoveryArc.season!==g.season)||g.recoveryWork&&(!g.recoveryArc||g.recoveryArc.status!=='WORKING'||g.recoveryArc.work!==g.recoveryWork))return false;
  if(Array.isArray(g.fanMemory)||!Object.entries(g.fanMemory).every(([id,m])=>knownClub(id)&&m&&bound(m.respect,0,100)&&Array.isArray(m.entries)&&m.entries.length<=4&&m.entries.every(x=>typeof x==='string')&&Array.isArray(m.criticalEntries)&&m.criticalEntries.length<=10&&m.criticalEntries.every(x=>typeof x==='string')))return false;
  if(g.roleEvidence!==null){const r=g.roleEvidence,keys=['minutes','goals','assists','chancesCreated','keyPasses','completedPasses','interventions','saves','good'];if(!r||typeof r.description!=='string'||!keys.every(k=>integer(r[k],0,k==='minutes'?540:1000)))return false;for(const k of keys){const observed=g.lastMatches.reduce((v,m)=>v+(k==='good'?(m.good?1:0):m[k]),0);if(r[k]!==observed)return false;}}
@@ -442,28 +480,43 @@ export function validGame(g){
   if(g.event.kind==='PLAN'&&(!g.routine||g.routine.season!==g.season||g.routine.period!==g.period+1))return false;
  }else if(g.happiness!==undefined||g.mentalStress!==undefined||g.routine!==undefined||g.event.kind==='ROUTINE')return false;
  // Optional revision fields never reconstruct past matches or goals.
+ if(g.nationalRevision!==undefined&&g.nationalRevision!==1)return false;
+ if(g.scheduleNationalRevision!==undefined&&g.scheduleNationalRevision!==1)return false;
  if(g.calendarRevision!==undefined&&g.calendarRevision!==1)return false;
- if(g.scheduleDivision!==undefined&&!['A','B','TRANSITION'].includes(g.scheduleDivision))return false;
+ if(g.scheduleDivision!==undefined&&!['A','B','C','D','TRANSITION'].includes(g.scheduleDivision))return false;
+ if(g.scheduleGroup!==undefined&&!/^A([1-9]|1[0-6])$/.test(g.scheduleGroup))return false;
  if(g.calendarRevision===1){
-  if(['FORMATION','ENTRY'].includes(g.phase)){if(g.scheduleDivision!==undefined||g.schedule.length)return false;}
-  else{const c=club(g),expected=national(c)?c.division:'TRANSITION';
-   if(g.scheduleDivision!==expected||g.schedule.some(id=>expected==='TRANSITION'?!LEGACY_CLUB_IDS.includes(id):CLUBS.find(c=>c.id===id)?.division!==expected))return false;
+  if(['FORMATION','ENTRY'].includes(g.phase)){if(g.scheduleDivision!==undefined||g.schedule.length||g.scheduleNationalRevision!==undefined||g.scheduleGroup!==undefined)return false;}
+  else if(g.scheduleNationalRevision===1){
+   const c=club(g),expected=c.division;
+   if(g.nationalRevision!==1||!national(c)||g.scheduleDivision!==expected||g.schedule.some(id=>CLUBS.find(c=>c.id===id)?.division!==expected))return false;
+   if(expected==='D'){
+    if(g.scheduleGroup!==c.group)return false;
+    const peers=[...new Set(g.schedule)].map(id=>CLUBS.find(c=>c.id===id));
+    if(peers.filter(x=>x.group===c.group).length!==5||peers.filter(x=>x.group===pairedGroup(c.group)).length!==4)return false;
+   }else if(g.scheduleGroup!==undefined)return false;
+  }else{
+   const c=legacyClub(CLUBS.find(c=>c.id===g.clubId)),expected=['A','B'].includes(c.division)?c.division:'TRANSITION';
+   if(g.nationalRevision!==undefined||g.scheduleGroup!==undefined||g.scheduleDivision!==expected||g.schedule.some(id=>expected==='TRANSITION'?!LEGACY_CLUB_IDS.includes(id):!LEGACY_NATIONAL_IDS.includes(id)||legacyClub(CLUBS.find(c=>c.id===id)).division!==expected))return false;
   }
- }else if(g.scheduleDivision!==undefined||!['FORMATION','ENTRY'].includes(g.phase)&&(!LEGACY_CLUB_IDS.includes(g.clubId)||g.schedule.some(id=>!LEGACY_CLUB_IDS.includes(id))))return false;
+ }else if(g.scheduleDivision!==undefined||g.scheduleNationalRevision!==undefined||g.scheduleGroup!==undefined||g.nationalRevision!==undefined||!['FORMATION','ENTRY'].includes(g.phase)&&(!LEGACY_CLUB_IDS.includes(g.clubId)||g.schedule.some(id=>!LEGACY_CLUB_IDS.includes(id))))return false;
  if(g.rulesRevision!==undefined&&g.rulesRevision!==1)return false;
  if(g.mechanicsRevision!==undefined&&g.mechanicsRevision!==1)return false;
  if(g.salary!==undefined&&!integer(g.salary,1,1e7))return false;
  const profileKeys=['clubId','name','division','monthly','rivalQuality','trainingQuality','pressure','starterChance','minutesEstimate','role','playerLevel','benefit','cost'];
  const validProfile=(p,accepted=false)=>{
-  if(!p||Array.isArray(p)||!knownClub(p.clubId)||!Object.keys(p).every(k=>profileKeys.includes(k)||k==='mentalDemand'||accepted&&['origin','signedSeason'].includes(k))||!profileKeys.every(k=>Object.hasOwn(p,k)))return false;
-  const c=CLUBS.find(c=>c.id===p.clubId);
+  if(!p||Array.isArray(p)||!knownClub(p.clubId)||!Object.keys(p).every(k=>profileKeys.includes(k)||['mentalDemand','nationalRevision','group'].includes(k)||accepted&&['origin','signedSeason'].includes(k))||!profileKeys.every(k=>Object.hasOwn(p,k)))return false;
+  const actual=CLUBS.find(c=>c.id===p.clubId),c=p.nationalRevision===1?actual:legacyClub(actual);
+  if(p.nationalRevision!==undefined&&(p.nationalRevision!==1||g.nationalRevision!==1))return false;
+  if(p.nationalRevision===1&&p.division==='D'){if(p.group!==c.group)return false;}else if(p.group!==undefined)return false;
+  if(p.nationalRevision===undefined&&![...LEGACY_NATIONAL_IDS,...LEGACY_REGIONAL_IDS].includes(p.clubId))return false;
   if(p.mentalDemand!==undefined&&(!bound(p.mentalDemand,0,100)||p.mentalDemand!==p.pressure))return false;
   if(p.name!==c.name||p.division!==c.division||!integer(p.monthly,1,1e7)||!bound(p.rivalQuality,0,99)||!bound(p.trainingQuality,0,100)||p.trainingQuality!==Math.round(clamp(45+c.prestige*.55,0,98))||!bound(p.pressure,0,100)||!bound(p.starterChance,.05,.90)||!integer(p.playerLevel,0,99)||!text(p.role)||!text(p.benefit)||!p.benefit.length||!text(p.cost)||!p.cost.length)return false;
   if(!p.minutesEstimate||Object.keys(p.minutesEstimate).sort().join(',')!=='max,min'||!integer(p.minutesEstimate.min,0,90)||!integer(p.minutesEstimate.max,p.minutesEstimate.min,90))return false;
   if(accepted&&(!['ENTRY','MARKET','CONTINUITY','LEGACY_CONTEXT'].includes(p.origin)||(p.origin==='LEGACY_CONTEXT'?p.signedSeason!==null:!integer(p.signedSeason,18,g.season))))return false;
   return true;
  };
- if(g.entryOffers!==undefined&&(!Array.isArray(g.entryOffers)||g.entryOffers.length!==3||new Set(g.entryOffers.map(p=>p?.clubId)).size!==3||!g.entryOffers.every(p=>validProfile(p)&&national(CLUBS.find(c=>c.id===p.clubId))&&(p.division!=='A'||p.playerLevel>=50))))return false;
+ if(g.entryOffers!==undefined&&(!Array.isArray(g.entryOffers)||g.entryOffers.length!==3||new Set(g.entryOffers.map(p=>p?.clubId)).size!==3||!g.entryOffers.every(p=>validProfile(p)&&national(p)&&(p.division!=='A'||p.playerLevel>=50))))return false;
  if(g.clubProject!==undefined&&(!validProfile(g.clubProject,true)||g.clubProject.clubId!==g.clubId||g.clubProject.origin!=='LEGACY_CONTEXT'&&g.salary!==g.clubProject.monthly))return false;
  if(g.offer?.profile!==undefined&&(!validProfile(g.offer.profile)||g.offer.profile.clubId!==g.offer.clubId||g.offer.monthly!==g.offer.profile.monthly))return false;
  for(const c of g.event.choices){
@@ -473,14 +526,19 @@ export function validGame(g){
   if(c.profile&&g.event.kind==='INTEREST'&&c.id!==`contact:${c.profile.clubId}@${g.serial}`)return false;
  }
  if(g.phase==='ENTRY'){
+  if(g.nationalRevision===1){
+   const level=overall(g);
+   if(g.entryOffers?.some(p=>p.nationalRevision!==1)||g.entryOffers?.map(p=>p.division).join(',')!==`D,C,${level>=50?'A':'B'}`)return false;
+   if(g.entryOffers?.some(p=>{const c=CLUBS.find(c=>c.id===p.clubId);return p.division==='D'?c.level>Math.max(44,level+8):p.division==='C'?c.level>Math.max(56,level+16):p.division==='A'?c.level>Math.max(63,level+18):!ENTRY_CLUB_IDS.includes(p.clubId);}))return false;
+  }
   if(g.mechanicsRevision!==1||g.age!==18||g.season!==18||g.formation!==3||g.clubId!==null||g.rival!==null||g.event.kind!=='ENTRY'||g.round||g.period||g.playedMatches.length||!g.entryOffers||g.event.choices.length!==3||g.entryOffers.some(p=>p.playerLevel!==overall(g)))return false;
   if(!g.event.choices.every(c=>{const p=g.entryOffers.find(p=>c.id===`entry:${p.clubId}@${g.serial}`);return p&&JSON.stringify(p)===JSON.stringify(c.profile);}))return false;
  }
  if(g.event.kind==='ENTRY'&&g.phase!=='ENTRY')return false;
  if(g.mechanicsRevision===1&&g.event.choices.some(c=>!text(c.benefit)||!text(c.cost)))return false;
  if(g.marketHistory!==undefined){
-  if(!Array.isArray(g.marketHistory)||g.marketHistory.length>2||new Set(g.marketHistory.map(x=>x?.season)).size!==g.marketHistory.length)return false;
-  for(const h of g.marketHistory)if(!h||!integer(h.season,18,19)||!knownClub(h.clubId)||!['OBSERVED','CONTACT','NO_OFFER','ACCEPTED','STAY'].includes(h.status)||!Array.isArray(h.contacts)||h.contacts.length>2||new Set(h.contacts.map(x=>x?.clubId)).size!==h.contacts.length||!h.contacts.every(x=>x&&knownClub(x.clubId)&&['OFFER','ASSESSMENT'].includes(x.mode)&&validProfile(x.profile)&&x.profile.clubId===x.clubId)||h.selectedClubId!==undefined&&!h.contacts.some(x=>x.clubId===h.selectedClubId))return false;
+  if(!Array.isArray(g.marketHistory)||g.marketHistory.length>years-1||new Set(g.marketHistory.map(x=>x?.season)).size!==g.marketHistory.length)return false;
+  for(const h of g.marketHistory)if(!h||!integer(h.season,18,maxSeason-1)||!knownClub(h.clubId)||!['OBSERVED','CONTACT','NO_OFFER','ACCEPTED','STAY'].includes(h.status)||!Array.isArray(h.contacts)||h.contacts.length>2||new Set(h.contacts.map(x=>x?.clubId)).size!==h.contacts.length||!h.contacts.every(x=>x&&knownClub(x.clubId)&&['OFFER','ASSESSMENT'].includes(x.mode)&&validProfile(x.profile)&&x.profile.clubId===x.clubId)||h.selectedClubId!==undefined&&!h.contacts.some(x=>x.clubId===h.selectedClubId))return false;
  }
  for(const m of g.playedMatches){
   if(m.mechanicsRevision!==undefined&&m.mechanicsRevision!==1)return false;
@@ -496,17 +554,17 @@ export function validGame(g){
  if(g.market.length&&(!g.marketModes||!g.market.every(id=>['OFFER','ASSESSMENT'].includes(g.marketModes[id]))))return false;
  if(g.memoryTimeline!==undefined){
   if(!Array.isArray(g.memoryTimeline)||g.memoryTimeline.length>100||!integer(g.memorySequence,1,1000))return false;
-  for(const [i,m] of g.memoryTimeline.entries())if(!m||!knownClub(m.clubId)||!text(m.text)||typeof m.critical!=='boolean'||!integer(m.season,18,20)||!integer(m.round,0,18)||!integer(m.sequence,1,g.memorySequence)||i>0&&m.sequence>=g.memoryTimeline[i-1].sequence)return false;
+  for(const [i,m] of g.memoryTimeline.entries())if(!m||!knownClub(m.clubId)||!text(m.text)||typeof m.critical!=='boolean'||!integer(m.season,18,maxSeason)||!integer(m.round,0,18)||!integer(m.sequence,1,g.memorySequence)||i>0&&m.sequence>=g.memoryTimeline[i-1].sequence)return false;
  }
  if(g.memorySequence!==undefined&&(!integer(g.memorySequence,1,1000)||!Array.isArray(g.memoryTimeline)))return false;
- if(g.recoveryLast!==undefined){const r=g.recoveryLast;if(!r||!knownClub(r.clubId)||!integer(r.season,18,20)||!integer(r.step,(r.season-18)*3,(r.season-18)*3+2))return false;}
+ if(g.recoveryLast!==undefined){const r=g.recoveryLast;if(!r||!knownClub(r.clubId)||!integer(r.season,18,maxSeason)||!integer(r.step,(r.season-18)*3,(r.season-18)*3+2))return false;}
  if(g.decisive!==null&&(!g.decisive||!['risk','safe'].includes(g.decisive.kind)||!integer(g.decisive.remaining,1,6)||!g.decisiveUsed))return false;
  if(g.phase==='FORMATION'&&(g.age!==[12,14,16][g.formation]||g.clubId!==null||g.event.kind!=='FORMATION'||g.round!==0||g.period!==0||g.playedMatches.length))return false;
  if(g.phase==='PRO'&&(g.age!==g.season||g.formation!==3||g.round!==g.period*6||['FORMATION','DONE'].includes(g.event.kind)))return false;
- if(g.phase==='DONE'&&(g.season!==20||g.period!==3||g.round!==18||g.playedMatches.length!==54))return false;
+ if(g.phase==='DONE'&&(g.season!==maxSeason||g.period!==3||g.round!==18||g.playedMatches.length!==maxMatches))return false;
  if(g.playedMatches.length!==(g.season-18)*18+g.round||new Set(g.playedMatches.map(m=>`${m.season}:${m.round}`)).size!==g.playedMatches.length)return false;
  if(g.event.kind==='DECISIVE'&&(!g.decisiveUsed||g.decisive!==null))return false;
- if(g.rival){for(const key of ['form','recentRating'])if(g.rival[key]!==undefined&&!bound(g.rival[key],0,10))return false;for(const key of ['apps','goals','minutes'])if(g.rival[key]!==undefined&&!integer(g.rival[key],0,key==='minutes'?5000:100))return false;}
+ if(g.rival){for(const key of ['form','recentRating'])if(g.rival[key]!==undefined&&!bound(g.rival[key],0,10))return false;for(const key of ['apps','goals','minutes'])if(g.rival[key]!==undefined&&!integer(g.rival[key],0,key==='minutes'?Math.max(5000,maxMatches*90):finish===25?key==='apps'?maxMatches:maxMatches*9:100))return false;}
  if(g.marketModes!==undefined&&(!g.marketModes||Array.isArray(g.marketModes)||!Object.entries(g.marketModes).every(([id,mode])=>g.market.includes(id)&&['OFFER','ASSESSMENT'].includes(mode))))return false;
  if(g.marketContexts!==undefined){if(!g.marketContexts||Array.isArray(g.marketContexts)||!Object.entries(g.marketContexts).every(([id,m])=>g.market.includes(id)&&m&&['need','fit','competition','closeProbability'].every(k=>bound(m[k],0,1))&&typeof m.observed==='boolean'&&['DISPUTE','ROTATION','REBUILD'].includes(m.role)))return false;}
  for(const m of g.playedMatches){
