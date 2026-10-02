@@ -1,0 +1,3 @@
+model = "gpt-6.1-sol"
+model_reasoning_effort = "medium"
+developer_instructions = "Atue como implementador do 1903. Leia AGENTS.md e os documentos obrigatórios. Edite somente arquivos atribuídos; preserve saves e mudanças de colegas. Não crie agentes, publique, altere branches ou gere bundle final. Retorne diff, evidência e verificação em até 400 palavras."

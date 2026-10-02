@@ -1,0 +1,204 @@
+import {DECISION_CASES,type DecisionCase,type CaseAction} from '../data/decision-cases.js';
+import {CLUB_BY_ID} from '../data/clubs-br-2026.js';
+import {POSITION_LABEL} from './positions.js';
+import {clamp,RNG,hashSeed} from './random.js';
+import {CATEGORY_LABEL, calendarScale, competitionCategory} from './calendar.js';
+import {rememberCoach, syncCoachContext} from './coaches.js';
+import {ensureLife} from './pathways.js';
+import {ensureLifestyle} from './lifestyle.js';
+import {groupRelation, ensureGroupRelation} from './group.js';
+import type {CareerChoice, CareerEvent, DecisionFamily, PlayerState, VisibleAttributes} from './types.js';
+
+const families:DecisionFamily[]=['LOAD','SPACE','SERVICE','RIVALRY','PRESSURE','ADAPTATION','PATH','LIFE'];
+const choice=(id:string,label:string,hint:string):CareerChoice=>({id,label,hint});
+const c={
+  rest:choice('routine:rest','Reservar o intervalo para recuperar','Recupera condição e reduz fadiga e carga extra; perde a oportunidade de trabalho específico'),
+  review:choice('routine:review','Rever minha atuação em vídeo','Pequeno ganho de experiência na posição; aumenta fadiga mental sem aumentar os atributos'),
+  reset:choice('routine:reset','Reduzir a cobrança sobre mim','Alivia a pressão; perde confiança pessoal e abre mão de maior exposição'),
+  help:choice('routine:help','Ajudar a organizar o material e os vídeos','Pode aproximar você do treinador e melhorar o diálogo; aumenta fadiga mental, sem aumentar confiança profissional'),
+  team:choice('routine:team','Compartilhar minha leitura com o grupo','Ganha respeito no grupo e aumenta fadiga mental; sem garantia de espaço'),
+  intrigue:choice('routine:intrigue','Insinuar que um concorrente não está comprometido','Pode render apoio social; descoberta custa confiança e gera conflito. O grupo guarda memória'),
+  focus:choice('routine:focus','Trabalhar a adaptação à função','Reduz a dificuldade de adaptação à função; reduz condição física e aumenta fadiga mental'),
+  expose:choice('routine:expose','Assumir a cobrança pela próxima atuação','Aumenta confiança pessoal e pressão; a escalação depende do rendimento'),
+};
+function attribute(p:PlayerState):keyof VisibleAttributes {
+  return p.position==='GK'?'handling':p.position==='CB'?'positioning':p.position==='FB'?'crossing':p.position==='DM'?'tackling':p.position==='AM'?'vision':p.position==='WG'?'dribbling':p.position==='ST'?'finishing':'passing';
+}
+const names:Partial<Record<keyof VisibleAttributes,string>>={handling:'segurança nas mãos',positioning:'posicionamento',crossing:'cruzamento',tackling:'desarme',vision:'visão',dribbling:'drible',finishing:'finalização',passing:'passe'};
+function packages(p:PlayerState,event:CareerEvent):Record<DecisionFamily,{situation:string;choices:CareerChoice[];priority:number}> {
+  const m=event.matchFeedback!,senior=(m.category??competitionCategory(p))==='SENIOR',talk=p.currentClubId&&p.age>=16;
+  const discuss=talk?choice('career:discuss','Pedir clareza ao treinador','Abre uma conversa sobre expectativas; afinidade e confiança profissional são distintas'):c.review;
+  const stable=senior?choice('career:stable','Sustentar o projeto atual','Estabelece permanência e prioridade de estabilidade'):choice('career:local','Continuar neste caminho','Estabelece permanência no caminho de formação');
+  const extra=(!p.injury&&p.phase!=='APOSENTADO'&&p.physicalCondition>=55&&p.mentalFatigue<80&&p.careerTurn-(p.decisionMemory?.lastExtraTurn??-99)>=5)?choice('routine:extra',`Ficar após o horário para trabalhar ${names[attribute(p)]}`,'Pequeno ganho na habilidade; reduz condição física e aumenta fadiga mental. Fora do profissional, a carga pesa nas duas próximas notas'):c.review;
+  const path=p.age<=18?choice('career:education','Reorganizar meu tempo com a escola','Abre a escolha entre ganho cognitivo e tempo para técnica e físico'):senior?choice('career:market','Ouvir outros projetos','Abre intenção de mercado; sem transferência garantida'):discuss;
+  const campaign=p.currentClubId?p.coaching?.campaigns[p.currentClubId]:undefined;
+  const crisis=!!campaign&&campaign.games>=8&&campaign.points/campaign.games<campaign.expectedPPG-.3;
+  const relation=groupRelation(p);
+  return {
+    LIFE:{situation:`O intervalo entre rodadas também tem lazer. Felicidade pessoal: ${Math.round(p.lifestyle?.happiness??50)}/100. Você pode aproveitar com equilíbrio ou adotar hábitos que trazem prazer e cobram condição, peso ou sono nos próximos jogos. Os custos representam a rotina desse intervalo.`,choices:[choice('routine:leisure',p.age<18?'Jogar videogame com amigos e dormir no horário':'Encontrar amigos e voltar cedo','Felicidade +3, condição física +2 e fadiga mental −2; reduz a carga de sono em 0,5'),p.age>=18?choice('routine:pizza-beer','Pizza e cerveja sem moderação','Felicidade +7, peso extra +0,4 kg e condição física −4; o excesso de peso leva várias rodadas para diminuir'):choice('routine:food','Exagerar na pizza e nos lanches','Felicidade +7, peso extra +0,3 kg e condição física −4; o excesso de peso leva várias rodadas para diminuir'),p.age>=18?choice('routine:party','Curtir a balada até tarde','Felicidade +9, peso extra +0,3 kg, condição física −9, fadiga mental +6 e carga de sono +2; cobra rendimento nos próximos jogos'):choice('routine:gaming',Math.floor(p.careerTurn/5)%2===0?'Virar a noite jogando com os amigos':'Ficar até tarde na festa dos amigos','Felicidade +9, condição física −9, fadiga mental +6 e carga de sono +2; cobra rendimento nos próximos jogos')],priority:3},
+    LOAD:{situation:`Depois de ${m.minutes} minutos, sua condição está em ${Math.round(p.physicalCondition)}/100 e a fadiga mental em ${Math.round(p.mentalFatigue)}/100. Você precisa escolher como usar o intervalo disponível.`,choices:[extra,c.rest,extra.id===c.review.id?c.reset:c.review],priority:p.physicalCondition<75||p.mentalFatigue>45?10:2},
+    SPACE:{situation:m.minutes===0?'Você não entrou nesta partida. A falta de uma nova avaliação abre a disputa entre pedir explicações, contribuir com o grupo e preservar o vínculo.':`Você participou por ${m.minutes} minutos${m.started?' como titular':' entrando durante o jogo'}. Esse espaço pode ser discutido, sem transformar um pedido em vaga.`,choices:senior?[choice('career:responsibility','Disputar mais responsabilidade no projeto','Pede ampliação do papel com maior cobrança; depende de confiança e evidências esportivas'),discuss,stable]:[discuss,c.team,stable],priority:m.minutes<30?10:1},
+    SERVICE:{situation:`O trabalho entre partidas inclui material e revisão de vídeo. Você pode investir tempo em ajudar a comissão, estudar sua própria atuação ou recuperar-se; aproximação pessoal não equivale a confiança esportiva.`,choices:[p.currentClubId?c.help:choice('routine:help','Ajudar a organizar o material e os vídeos','Aproxima você do grupo e aumenta fadiga mental; contribuição não garante uma vaga'),c.review,c.rest],priority:3},
+    RIVALRY:{situation:`A disputa por espaço no ${senior?'elenco profissional':p.age<=20?'grupo de formação':'grupo do futebol local'} continua após esta rodada. ${relation?.resentment?`O grupo ainda guarda ressentimento de decisões anteriores.`:'Uma insinuação sobre um concorrente pode circular sem nenhuma prova esportiva.'} Você escolhe como participar dessa disputa.`,choices:[p.currentClubId?c.intrigue:choice('routine:intrigue',c.intrigue.label,'Pode render apoio no grupo; descoberta custa respeito e alimenta ressentimento. O grupo guarda memória'),c.team,discuss],priority:relation?.resentment?7:2},
+    PRESSURE:{situation:crisis?`O clube tem ${campaign!.points} pontos em ${campaign!.games} jogos, abaixo da expectativa. Você pode se expor à cobrança, negociar seu papel ou reduzir a pressão pessoal.`:`A ${m.minutes?`nota ${m.rating.toFixed(1)} desta atuação`:'ausência de minutos nesta partida'} chega com pressão pessoal em ${Math.round(p.pressure)}/100. O próximo intervalo pode ampliar a exposição ou ajudar a conter essa carga.`,choices:[c.expose,c.reset,discuss],priority:crisis||p.pressure>55?9:1},
+    ADAPTATION:{situation:p.adaptationDebt>0?`Sua mudança de função ainda tem adaptação pendente. Estudar a função aumenta fadiga mental; recuperar-se ou pedir orientação deixa essa tarefa para depois.`:`Sua função atual não tem dívida de adaptação pendente. Você pode estudar a leitura da atuação, recuperar-se ou comparar orientações com o grupo.`,choices:[p.adaptationDebt>0?c.focus:c.review,c.rest,c.team],priority:p.adaptationDebt>0?10:1},
+    PATH:{situation:p.age<=18?`A rotina de ${CATEGORY_LABEL[m.category??competitionCategory(p)]} divide tempo com a escola (${ensureLife(p).education.priority==='SCHOOL'?'estudos priorizados':ensureLife(p).education.priority==='FOOTBALL'?'futebol priorizado':'tempo dividido'}). Você pode rever essa divisão do tempo, continuar neste caminho ou aliviar a cobrança pessoal.`:senior?`Você está vinculado ao projeto atual, com intenção de mercado ${p.transferIntent==='STAY'?'de permanecer':'aberta a mudanças'}. Ouvir alternativas compete com conservar o vínculo e reduzir a cobrança.`:`Você segue competindo no futebol local. ${talk?'Conversar sobre sua avaliação':'Rever sua atuação'} pode ajudar a interpretar o rendimento atual; continuar neste caminho e reduzir a cobrança pessoal são as outras alternativas.`,choices:[path,stable,c.reset],priority:p.age<=18?4:1},
+  };
+}
+function caseEligible(p:PlayerState,event:CareerEvent,definition:DecisionCase):boolean {
+  const m=event.matchFeedback;if(!m)return false;
+  const category=m.category??competitionCategory(p);
+  if(p.age<(definition.minAge??12)||p.age>(definition.maxAge??99))return false;
+  if(definition.scope==='SENIOR'&&category!=='SENIOR'||definition.scope==='YOUTH'&&(category==='SENIOR'||p.age>20))return false;
+  if(definition.positions&&!definition.positions.some(pos=>pos===p.position))return false;
+  if(definition.requires==='BENCH'&&m.minutes!==0||definition.requires==='STARTER'&&!m.started
+    ||definition.requires==='LOW_CONDITION'&&p.physicalCondition>=75&&p.mentalFatigue<=45
+    ||definition.requires==='PRESSURE'&&p.pressure<=55||definition.requires==='ADAPTATION'&&p.adaptationDebt<=0
+    ||definition.requires==='RESENTMENT'&&groupRelation(p).resentment<=0)return false;
+  return true;
+}
+function caseChoice(p:PlayerState,event:CareerEvent,action:CaseAction,packs=packages(p,event)):CareerChoice|null {
+  if(action==='extra')return packs.LOAD.choices[0]!.id==='routine:extra'?packs.LOAD.choices[0]!:null;
+  if(action==='focus')return p.adaptationDebt>0&&!p.injury?c.focus:null;
+  if(action==='leisure')return packs.LIFE.choices[0]!;
+  if(action==='food')return packs.LIFE.choices[1]!;
+  if(action==='night')return packs.LIFE.choices[2]!;
+  if(action==='path')return packs.PATH.choices[0]!;
+  if(action==='stable')return packs.PATH.choices[1]!;
+  if(action==='discuss')return p.currentClubId&&p.age>=16?choice('career:discuss','Conversar com o treinador','Abre uma conversa; nenhuma vaga garantida'):c.review;
+  return c[action];
+}
+function renderCaseText(p:PlayerState,event:CareerEvent,text:string):string {
+  const terms:Record<string,string>={position:p.position==='IND'?'posição em descoberta':POSITION_LABEL[p.position],club:p.currentClubId?CLUB_BY_ID[p.currentClubId]?.shortName??'seu clube':p.life?.localSchool??'sua escolinha',minutes:String(event.matchFeedback?.minutes??0),rating:event.matchFeedback?.rating?.toFixed(1)??'sem nota'};
+  return text.replace(/\{(position|club|minutes|rating)\}/g,(_,key:string)=>terms[key]!);
+}
+function socialHint(social:DecisionCase['choices'][number]['social']):string {
+  if(!social)return '';const labels={respect:'respeito do grupo',affinity:'afinidade do grupo',resentment:'ressentimento'};
+  return Object.entries(social).filter(([,v])=>v!==0).map(([k,v])=>`${labels[k as keyof typeof labels]} ${v!<0?'−':'+'}${Math.abs(v!)}`).join('; ');
+}
+function preparedCase(p:PlayerState,event:CareerEvent,definition:DecisionCase,packs=packages(p,event)):CareerChoice[]|null {
+  if(!caseEligible(p,event,definition))return null;
+  const choices:CareerChoice[]=[];
+  for(const option of definition.choices){const base=caseChoice(p,event,option.action,packs);if(!base)return null;
+    const social=socialHint(option.social);choices.push({id:base.id,label:renderCaseText(p,event,option.label),hint:[base.hint,option.consequence,social?`Além disso: ${social}.`:null].filter(Boolean).join(' ')});
+  }
+  return new Set(choices.map(x=>x.id)).size===3?choices:null;
+}
+/** Seeded contextual draw on a separate stream. Persisted cases never reroll on render/reload. */
+export function buildRoutineDecision(p:PlayerState,event:CareerEvent):CareerEvent {
+  if(event.choices?.length||!event.matchFeedback||!['MATCH','INFO'].includes(event.kind)||p.phase==='APOSENTADO')return event;
+  const memory=p.decisionMemory??={recent:[],lastOffered:{}};
+  const packs=packages(p,event),eligibleFamilies=families.filter(f=>p.careerTurn-(memory.lastOffered[f]??-99)>=5);
+  const available=DECISION_CASES.flatMap(definition=>{const choices=preparedCase(p,event,definition,packs);return choices?[{definition,choices}]:[];});
+  const notRecent=available.filter(x=>!memory.recentCases?.some(r=>r.id===x.definition.id));
+  const fresh=notRecent.length?notRecent:available;
+  const cooled=fresh.filter(x=>eligibleFamilies.includes(x.definition.family));const pool=cooled.length?cooled:fresh;
+  if(!pool.length){const family=families.find(f=>eligibleFamilies.includes(f))??'LOAD';event.decisionFamily=family;event.decisionContext=packs[family].situation;event.choices=packs[family].choices;return event;}
+  const counts=Object.fromEntries(families.map(f=>[f,pool.filter(x=>x.definition.family===f).length]));
+  const weight=(x:typeof pool[number])=>(1+packs[x.definition.family].priority+Math.min(20,p.careerTurn-(memory.lastOffered[x.definition.family]??-99))*.35)/counts[x.definition.family]!;
+  const random=new RNG(hashSeed(`${p.id}|${event.id}|${p.rngState}|${memory.recentCases?.map(x=>x.id).join(',')??''}`));
+  let draw=random.float(0,pool.reduce((sum,x)=>sum+weight(x),0));let selected=pool[pool.length-1]!;
+  for(const candidate of pool){draw-=weight(candidate);if(draw<=0){selected=candidate;break;}}
+  const {definition,choices}=selected;memory.lastOffered[definition.family]=p.careerTurn;
+  memory.recent=[...memory.recent,{family:definition.family,turn:p.careerTurn}].slice(-3);
+  memory.recentCases=[...(memory.recentCases??[]),{id:definition.id,turn:p.careerTurn}].slice(-20);
+  event.decisionFamily=definition.family;event.decisionCaseId=definition.id;
+  event.decisionCaseContext={clubId:p.currentClubId,category:event.matchFeedback.category??competitionCategory(p),position:p.position,season:p.season,turn:p.careerTurn};
+  event.decisionContext=renderCaseText(p,event,`${definition.title}. ${definition.situation}`);event.choices=choices;
+  return event;
+}
+export function canResolveCaseChoice(p:PlayerState,event:CareerEvent,id:string):boolean {
+  if(!event.decisionCaseId)return true;
+  const definition=DECISION_CASES.find(x=>x.id===event.decisionCaseId),ctx=event.decisionCaseContext;
+  if(!definition||!ctx||ctx.clubId!==p.currentClubId||ctx.season!==p.season||ctx.turn!==p.careerTurn||ctx.position!==p.position||ctx.category!==competitionCategory(p)||definition.family!==event.decisionFamily)return false;
+  const prepared=preparedCase(p,event,definition);return !!prepared&&event.choices?.length===prepared.length&&prepared.every((choice,i)=>event.choices![i]?.id===choice.id)&&prepared.some(choice=>choice.id===id);
+}
+export function applyCaseSocial(p:PlayerState,event:CareerEvent,id:string):string[] {
+  if(!event.decisionCaseId)return [];
+  const definition=DECISION_CASES.find(x=>x.id===event.decisionCaseId);if(!definition)return [];
+  const index=event.choices?.findIndex(x=>x.id===id)??-1;const option=definition.choices[index];if(!option?.social)return [];
+  const r=ensureGroupRelation(p),keys:string[]=[];
+  for(const [key,value] of Object.entries(option.social)){if(!value)continue;const k=key as 'respect'|'affinity'|'resentment';r[k]=clamp(r[k]+value);keys.push(k==='respect'?'groupRespect':k==='affinity'?'groupAffinity':'groupResentment');}
+  if(keys.length){r.memories.unshift(`${p.season}: ${definition.title} — ${option.label}`);r.memories=r.memories.slice(0,16);}
+  return keys;
+}
+const deltaLabels:Record<string,string>={happiness:'felicidade',weight:'peso (kg)',sleep:'carga de sono',condition:'condição',fatigue:'fadiga mental',pressure:'pressão',confidence:'confiança pessoal',adaptation:'adaptação pendente',knowledge:'conhecimento da habilidade',attribute:'ganho na habilidade trabalhada',groupAffinity:'afinidade do grupo',groupRespect:'respeito do grupo',groupResentment:'ressentimento do grupo',groupRivalry:'rivalidade no grupo',coachAffinity:'afinidade com o treinador',coachTrust:'confiança profissional',coachConflict:'conflito com o treinador',proficiency:'experiência na posição'};
+function effectSnapshot(p:PlayerState,key:keyof VisibleAttributes):Record<string,number>{
+  const r=groupRelation(p);
+  const bond=p.currentClubId&&p.tactical?p.coaching?.bonds[p.tactical.coachId]:undefined;
+  return {proficiency:p.position==='IND'?0:p.positionProficiency[p.position],happiness:p.lifestyle?.happiness??50,weight:p.weightKg,sleep:p.lifestyle?.sleepDebt??0,condition:p.physicalCondition,fatigue:p.mentalFatigue,pressure:p.pressure,confidence:p.confidence,adaptation:p.adaptationDebt,knowledge:p.attributeKnowledge[key],attribute:p.attributes[key],groupAffinity:r?.affinity??50,groupRespect:r?.respect??50,groupResentment:r?.resentment??0,groupRivalry:r?.rivalry??0,...(bond?{coachAffinity:bond.affinity,coachTrust:bond.trust,coachConflict:bond.conflict}:{})};
+}
+function effectReport(before:Record<string,number>,after:Record<string,number>,keys:string[]):string{
+  return keys.filter(key=>before[key]!==undefined&&after[key]!==undefined).map(key=>{
+    const delta=after[key]!-before[key]!,magnitude=Math.abs(delta);
+    const displayed=magnitude>0&&magnitude<.01?'<0,01':Number(magnitude.toFixed(2)).toString().replace('.',',');
+    return `${deltaLabels[key]} ${delta<0?'−':'+'}${displayed}`;
+  }).join('; ')+'.';
+}
+/** Only offered routine ids can mutate the player; resolution is idempotent per event. */
+export function canResolveRoutineChoice(p:PlayerState,event:CareerEvent,id:string):boolean {
+  if(!canResolveCaseChoice(p,event,id)||!event.decisionFamily||!event.choices?.some(c=>c.id===id)||!id.startsWith('routine:')||p.phase==='APOSENTADO'||p.decisionMemory?.lastResolvedEvent===event.id)return false;
+  if(['routine:pizza-beer','routine:party'].includes(id)&&p.age<18)return false;
+  if(['routine:food','routine:gaming'].includes(id)&&p.age>=18)return false;
+  if(['routine:leisure','routine:food','routine:gaming','routine:pizza-beer','routine:party'].includes(id)&&event.decisionFamily!=='LIFE'&&!event.decisionCaseId)return false;
+  if(id==='routine:extra'&&(p.injury||p.physicalCondition<55||p.mentalFatigue>=80||p.careerTurn-(p.decisionMemory?.lastExtraTurn??-99)<5))return false;
+  if(id==='routine:focus'&&(p.adaptationDebt<=0||p.injury))return false;
+  if(!['extra','rest','review','reset','help','team','focus','expose','intrigue','leisure','food','gaming','pizza-beer','party'].some(action=>id===`routine:${action}`))return false;
+  return true;
+}
+export function resolveRoutineChoice(p:PlayerState,event:CareerEvent,id:string,rng:RNG):boolean {
+  if(!canResolveRoutineChoice(p,event,id))return false;
+  if(p.currentClubId&&(id==='routine:help'||id==='routine:intrigue'))syncCoachContext(p);
+  const memory=p.decisionMemory??={recent:[],lastOffered:{}};
+  const key=attribute(p),before=effectSnapshot(p,key);let detail='',keys:string[]=[];
+  const coach=(text:string,affinity:number,trust:number,conflict:number)=>{if(p.currentClubId)rememberCoach(p,text,affinity,trust,conflict);};
+  if(['routine:leisure','routine:food','routine:gaming','routine:pizza-beer','routine:party'].includes(id)){
+    const life=ensureLifestyle(p),leisure=id==='routine:leisure',food=id==='routine:food'||id==='routine:pizza-beer';
+    life.happiness=clamp(life.happiness+(leisure?3:food?7:9));
+    p.physicalCondition=clamp(p.physicalCondition+(leisure?2:food?-4:-9));
+    p.mentalFatigue=clamp(p.mentalFatigue+(leisure?-2:food?0:6));
+    const added=leisure||id==='routine:gaming'?0:id==='routine:pizza-beer'?.4:.3;
+    const actualAdded=Math.min(12-life.excessKg,added);life.excessKg=Number((life.excessKg+actualAdded).toFixed(4));
+    if(actualAdded>0)p.weightKg=Number((p.weightKg+actualAdded).toFixed(4));
+    life.sleepDebt=clamp(life.sleepDebt+(leisure?-.5:food?0:2),0,8);
+    detail=leisure?'Lazer equilibrado no intervalo entre rodadas.':'Hábitos do intervalo entre rodadas: prazer agora, custo físico nas próximas partidas. Peso extra e carga de sono diminuem gradualmente.';
+    keys=['happiness','weight','condition','fatigue','sleep'];
+  }else if(id==='routine:extra'){
+    p.attributes[key]=clamp(p.attributes[key]+.25*calendarScale(p),0,99);p.physicalCondition=clamp(p.physicalCondition-5);p.mentalFatigue=clamp(p.mentalFatigue+4);memory.lastExtraTurn=p.careerTurn;
+    if((event.matchFeedback?.category??competitionCategory(p))!=='SENIOR')memory.extraLoad=2;
+    detail=`Trabalho extra em ${names[key]}.${memory.extraLoad?' Carga extra: −0,4 na próxima nota fora do profissional e −0,2 na seguinte, se não descansar.':''}`;keys=['attribute','condition','fatigue'];
+  }else if(id==='routine:rest'){
+    p.physicalCondition=clamp(p.physicalCondition+4);p.mentalFatigue=clamp(p.mentalFatigue-5);const load=memory.extraLoad??0;memory.extraLoad=Math.max(0,load-1);
+    if(p.lifestyle)p.lifestyle.sleepDebt=Math.max(0,p.lifestyle.sleepDebt-.75);
+    detail=`Recuperação: carga extra reduzida em ${load-memory.extraLoad}. Você abriu mão do trabalho específico neste intervalo; não ganhou uma vaga. Descanso ajuda o sono sem apagar peso extra.`;keys=['condition','fatigue','sleep'];
+  }else if(id==='routine:review'){
+    p.attributeKnowledge[key]=clamp(p.attributeKnowledge[key]+3);p.mentalFatigue=clamp(p.mentalFatigue+2);
+    if(p.position!=='IND')p.positionProficiency[p.position]=clamp(p.positionProficiency[p.position]+.12*calendarScale(p));
+    detail=`Revisão de vídeo sobre ${names[key]}: aprendizado da posição, sem ganho de atributo.`;keys=['proficiency','knowledge','fatigue'];
+  }else if(id==='routine:reset'){
+    p.pressure=clamp(p.pressure-4);p.confidence=clamp(p.confidence-1);
+    detail='Cobrança reduzida. Você abriu mão de se expor mais nesta rodada.';keys=['pressure','confidence'];
+  }else if(id==='routine:help'){
+    p.mentalFatigue=clamp(p.mentalFatigue+4);coach('Ajudou a organizar material e vídeos',4,0,0);const r=ensureGroupRelation(p);r.affinity=clamp(r.affinity+2);r.memories.unshift(`${p.season}: Ajudou a organizar material e vídeos`);r.memories=r.memories.slice(0,16);
+    detail='Ajuda à organização. Confiança profissional e escalação preservadas.';keys=['fatigue','groupAffinity','coachAffinity','coachTrust'];
+  }else if(id==='routine:team'){
+    p.mentalFatigue=clamp(p.mentalFatigue+2);const r=ensureGroupRelation(p);r.respect=clamp(r.respect+3);r.memories.unshift(`${p.season}: Compartilhou leitura da atuação`);r.memories=r.memories.slice(0,16);
+    detail='Cooperação: a contribuição não assegurou mais minutos.';keys=['groupRespect','fatigue'];
+  }else if(id==='routine:focus'){
+    p.adaptationDebt=Math.max(0,p.adaptationDebt-2);p.physicalCondition=clamp(p.physicalCondition-2);p.mentalFatigue=clamp(p.mentalFatigue+3);
+    detail='Estudo da função.';keys=['adaptation','condition','fatigue'];
+  }else if(id==='routine:expose'){
+    p.confidence=clamp(p.confidence+2);p.pressure=clamp(p.pressure+5);
+    detail='Maior exposição. A escalação continua dependendo de evidências esportivas.';keys=['confidence','pressure'];
+  }else if(id==='routine:intrigue'){
+    const r=ensureGroupRelation(p),caught=rng.chance(clamp(.55+r.resentment/200,.55,.9));p.mentalFatigue=clamp(p.mentalFatigue+3);r.rivalry=clamp(r.rivalry+4);
+    if(caught){coach('Insinuação contra concorrente foi descoberta',-3,-6,8);r.resentment=clamp(r.resentment+8);r.respect=clamp(r.respect-5);detail='A insinuação foi descoberta. Nenhum concorrente foi afastado.';keys=['coachTrust','coachAffinity','coachConflict','groupRespect','groupResentment'];}
+    else{coach('Insinuação trouxe apoio social sem evidência esportiva',2,0,0);r.affinity=clamp(r.affinity+2);r.resentment=clamp(r.resentment+2);detail='A insinuação circulou sem descoberta. Confiança profissional não aumentou; nenhum espaço foi garantido.';keys=['coachAffinity','coachTrust','groupAffinity','groupResentment'];}
+    const rivalryDelta=Number((r.rivalry-before.groupRivalry!).toFixed(6));r.memories.unshift(`${p.season}: ${caught?'Descoberta':'Circulação'} de insinuação contra concorrente; rivalidade +${rivalryDelta}`);r.memories=r.memories.slice(0,16);keys.push('groupRivalry','fatigue');
+  }
+  keys=[...new Set([...keys,...applyCaseSocial(p,event,id)])];
+  detail+=' '+effectReport(before,effectSnapshot(p,key),keys);
+  memory.lastResolvedEvent=event.id;
+  p.history.unshift({turn:p.careerTurn,season:p.season,age:p.age,type:'DECISÃO',headline:event.choices!.find(c=>c.id===id)!.label,detail});p.history=p.history.slice(0,220);
+  return true;
+}

@@ -1,0 +1,3 @@
+model = "gpt-6-luna"
+model_reasoning_effort = "medium"
+developer_instructions = "Atue como verificador do 1903. Leia AGENTS.md. Execute somente gates necessários à tarefa. Não mude gameplay, log ou build final. Não crie agentes. Informe testes executados, falhas e limitações em até 400 palavras."
