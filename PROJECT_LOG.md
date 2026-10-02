@@ -1163,3 +1163,31 @@ PrincipalUI27/27 no hashfinal: fluxo inteiro126partidas até25/sete anos, tabela
 CUA originisolada8920 usa fixturepúblicanatural/replay21IDsST1, nunca exportprivado/savereal. Comparou ofertaSãoPaulo19, assinou20: treino63→90/100/concorrente70/cobrança sobe/trustreseta48; rivalearn→REST→ATTACK simulou6jogos,1participação14min/0G0A/nota6,2, próxima recuperação na mesma tela. Resultado e headergols/skills acessíveis junto aosbotões. Reload preserva números/decisão; deltas transitórios deestadoresetam como previsto, skills mantêmúltimoavanço. Tabela18/19/20parcial usa17/18/0G eOVR48/51/51.
 
 390×844/320×740/1200×900 semoverflow. Header/rodapé dentroviewport antes/depois da rolagem; só centro rola, botões≥44px. Tabela320 tem300px e seiscolunas, semrolagemhorizontal. Warning/error capturados vazios. Overrideviewportresetado. Não certificar Safari/iPhonefísico/addressbar/offline/diversão. Tela emoutputs/1903_PROTO07_1_TELA.png; evolução1903_PROTO07_1_EVOLUCAO.png; standalone1903_PROTO07_1.html; relatório1903_PROTO07_1_VALIDACAO.md. PRdraft existente recebe apenasprotótipo/docs/gates, semmain/merge/Pages, exportprivado ouTS0.4. SHA/link apóspublicação constamno relatório externo.
+
+
+## D0052 / A0034 — diagnóstico do primeiro ano naA, sem recalibrar a partir de leitura incorreta
+
+Usuário relata titular quase todo jogo no primeiro anoA e envia exportprivado. Aplicado engineering:debug com principal, sem overhead de delegação emreplay delimitado. Arquivo validado nos motores07/07.1; replay integral63escolhas em07hash22492627 reproduz exatamente estado/RNG/histórias, bytesoriginais imutáveis. Relatório privadooutputs/1903_DIAGNOSTICO_PRIMEIRO_ANO_A_PRIVADO.md e diagnóstico estruturado emwork/first-a-year, fora da publicação. Nenhuma fixturepública recebe nome/seed/export.
+
+Fatos: contrataçãoBahia aos24,OVR67/rival68, projetoRotação com disputa/chance inicial42,6%/31–55minporrodada.18rodadas:10starts/7entradasbanco/1semminutos=17participações/951min/5G2A. Blocosstarts4/3/3; minutos389/259/303. Titular55,6%; média52,8minporrodada nafaixa prevista. Chance efetiva48,6%primeirojogo→64,7%último, máximo67,8%, com condições/forma/qualidade/trustdinâmicos. Forma recente é filtrada pelo clubeatual; nenhum históricoB é contado como provaA.
+
+Decisão: diagnóstico não confirma titular automático nem erro na viaPROSPECT. Jogador24/próximo ao rival contratado para rotação não é promessa19/OVR51/rival70. Manter distinção entre prontidão e desenvolvimento; não reduzir toda primeira temporadaA por regra arbitrária nem reescrever partidas passadas.17jogos significa participações incluindo7entradas, não17starts. UI07.1 já distingueJ/titular; indicação explícita de entradas pode ajudar, mas neste diagnóstico nenhuma alteração de código/publicação. Arquivo segue marcadores07 sempromiseRevision/marketRevision e replay07exato, indicando janelas resolvidas pelas regras anteriores; apontar link07.1atual. Nenhum novo teste global/checkpoint criado por análise de saveprivado.
+
+
+## D0053 / A0035 — interface07.2: uma opção, um cartão clicável
+
+### Causa e decisão
+
+Usuário aponta redundância entre botão de decisão no rodapé e texto da mesma opção no centro. Causa:07.1 separava artigos informativos e ações com o mesmo título, exigindo associar dois lugares e consumindo altura. Escolha do principal: reunir cada opção em um único cartão clicável central, com título, perfil/previsão relevante, ganho e custo. Rodapé fixo mantém somente Evolução e história, Exportar e Recomeçar. Cabeçalho fixo conserva gols, treino, habilidades e estados; resultado e próxima decisão ficam no centro. Removidos artigos choice-info, dock de decisões e seus estilos. Fonte nativa/títulos pequenos/cores permanecem.
+
+### Escopo, verificação e limites
+
+Principal executou tarefa delimitada sem delegação adicional. App/CSS/teste UI e standalone alterados; motor e catálogo intactos. SHA256 do motor053902e3a8a96204cd60e1b47056f5bafacb7045ffe07529e8b1f83e35d1e3ac. Mesma chave/schema; nenhuma migração ou recalibração. Monitor não reexecutado por mudança apenas visual: REVIEW333 adulto de07.1 permanece documentado; não afirmar novoPASS de equilíbrio.
+
+UI27/27PASS inclui fluxo126partidas até25, persistência/quota/corrupção/duploclick, tabela anual e prova de uma ação por opção: número de botões corresponde ao evento, títulos aparecem uma vez e rodapé tem três botões de navegação/zero escolhas. Build standalone156863bytes. Sintaxe app e diffcheck restrito conferidos.
+
+CUA na origem isolada8920/carreira pública descartável: recuperação→Rever as ações e mudar a leitura→rotina seguinte; uma única execução e três opções únicas. Reload preserva evento e números (1 participação/0 titularidades/14min/0G0A).390×844: três cartões de recuperação visíveis com alturas94,8/78,9/78,9px, semoverflow.320×740 na rotina: semoverflow, header até225,1px/rodapé até740px; cartões170,7/170,7/154,8px, centro rolável. Nenhum warn/error capturado, viewportresetado. Save real e exports privados não usados ou avançados. Não certificar Safari/iPhone físico.
+
+### Entrega e aprendizado
+
+Artefatosoutputs/1903_PROTO07_2.html,1903_PROTO07_2_TELA.png e1903_PROTO07_2_VALIDACAO.md. Publicação restrita a nove arquivos do protótipo/docs/teste/registro de execução, na branch experimental/PRdraft existente, sem merge/main/Pages ou rascunhoTS0.4. Log inclui diagnósticoD0052 factual anterior, sem export privado. SHA/link após publicação no relatório externo. Aprendizado: contexto e ação pertencem ao mesmo componente; barra fixa deve preservar dados e navegação sem repetir opções. Próximo passo é playtest de legibilidade e continuidade do ciclo.

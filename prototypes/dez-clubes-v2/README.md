@@ -1,4 +1,4 @@
-# 1903 · Brasil — Séries A–D · Protótipo07.1
+# 1903 · Brasil — Séries A–D · Protótipo07.2
 
 Recorte independente: três etapas de formação12–18, sete temporadas profissionais18–24 e encerramento aos25. Cada temporada tem18 partidas internas, total126; cada plano resolve seis partidas. Formação representa dois anos por escolha, não uma sessão. Não é aposentadoria nem a carreira completa de quatro horas.
 
@@ -21,7 +21,7 @@ Finalização melhora alvo/conversão quando há chutes; função, intenção e 
 
 Cabeçalho fixo com idade, posição, clube, treino do projeto atual, estatísticas da temporada (incluindo gols), contribuição do último bloco, bem-estar e seis habilidades coloridas com variação. Somente o conteúdo central rola. Resultado resumido do último clique e contexto ficam nessa área; reações completas e partidas permanecem acessíveis sem abrir detalhes.
 
-Decisões numeradas ficam no rodapé, com as mesmas opções descritas no centro. “Evolução e história” abre gráfico de overall registrado e tabela por temporada: jogos, gols, assistências, nota e overall. Ano em andamento é identificado como parcial; valores históricos não registrados não são inventados.
+Cada decisão aparece uma única vez: um cartão clicável no centro reúne título, ganho, custo e previsão relevante. O rodapé fixo contém somente navegação, exportação e recomeço. “Evolução e história” abre gráfico de overall registrado e tabela por temporada: jogos, gols, assistências, nota e overall. Ano em andamento é identificado como parcial; valores históricos não registrados não são inventados.
 
 ## Saves
 

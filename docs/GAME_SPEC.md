@@ -289,3 +289,8 @@ Jovem promessa pode saltar de D diretamente para A; contratação para desenvolv
 A tela do protótipo mantém cabeçalho e rodapé no viewport. Idade, posição, clube, estrutura do treino, gols/assistências/jogos/minutos/nota da temporada, resultado do último bloco, felicidade, descanso, stress e habilidades ficam junto das ações. Área central mostra efeito factual do último clique, contexto e ganhos/custos das opções; reações completas permanecem acessíveis por rolagem. Somente essa área central rola. Navegação fixa oferece evolução, exportação e recomeço.
 
 Evolução por temporada usa registros adquiridos: gráfico de overall e tabela de jogos, gols, assistências, nota e overall, com ano atual parcial. Não inventar dados para save antigo incompleto. Fonte nativa, títulos pequenos, cores com números e variações; ações com alvo de toque de pelo menos44px. Compatibilidade usa mesma chave/schema; layout não grava nem muda o motor durante renderização.
+
+
+## Interface experimental07.2 — decisão sem duplicação
+
+Cada opção deve aparecer uma única vez, como cartão clicável que reúne ação, ganho, custo e previsão. Rodapé fixo só para navegação, exportação e recomeço; não repetir as decisões nele. Cabeçalho conserva gols, treino, habilidades e estados enquanto o centro rola. Resultado factual e contexto da próxima decisão permanecem nessa área. Correção visual sem alteração de motor ou save.

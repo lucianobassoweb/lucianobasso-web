@@ -129,7 +129,7 @@ const reloadPromise=fixture(signedPromise);assert.equal(reloadPromise.writes.len
 assert.ok(reloadPromise.root.innerHTML.includes('Contratado como promessa'));reloadPromise.history();
 assert.ok(reloadPromise.root.innerHTML.includes('Observação como promessa'));checks++;
 
-// Header evidence, footer binding and yearly evolution must refer to actual records.
+// Header evidence, one action per choice and yearly evolution refer to actual records.
 const board=fixture(game),boardRaw=JSON.stringify(game),html=board.root.innerHTML;
 const header=html.match(/<header class="game-header">([\s\S]*?)<\/header>/)[1];
 assert.ok(header.includes('gols')&&header.includes('assistências'));
@@ -140,7 +140,11 @@ assert.ok(html.includes('class="game-body"')&&html.includes('class="game-footer"
 assert.equal(board.buttons.length,0);assert.equal(board.writes.length,0);checks++;
 const decisions=fixture(signedPromise),decisionHTML=decisions.root.innerHTML;
 assert.equal(decisions.buttons.length,signedPromise.event.choices.length);
-assert.equal((decisionHTML.match(/class="choice choice-info"/g)??[]).length,signedPromise.event.choices.length);
+assert.equal((decisionHTML.match(/<button class="choice"/g)??[]).length,signedPromise.event.choices.length);
+assert.ok(!decisionHTML.includes('choice-info')&&!decisionHTML.includes('decision-dock'));
+const footer=decisionHTML.match(/<footer class="game-footer">([\s\S]*?)<\/footer>/)[1];
+assert.ok(!footer.includes('data-proto-choice'));assert.equal((footer.match(/<button /g)??[]).length,3);
+for(const c of signedPromise.event.choices)assert.equal(decisionHTML.split('<strong>'+c.label+'</strong>').length-1,1);
 assert.ok(decisionHTML.indexOf('class="turn-result"')<decisionHTML.indexOf('class="decision"'));
 assert.ok(decisionHTML.includes('Efeito da última decisão'));checks++;
 board.history();const history=board.root.innerHTML;

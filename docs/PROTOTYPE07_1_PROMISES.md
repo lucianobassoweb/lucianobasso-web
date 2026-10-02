@@ -29,3 +29,8 @@ De integração0→1: chance-base de titular×0,3→1 (piso5%); entrada jogador 
 Mesma chave/schema2. promiseRevision1/marketRevision1 opcionais; adoção em novas ENTRY/janelas de mercado. INTEREST/CONTACT/OFFER já pendentes não são sorteados novamente. Último PLAN antigo mantém partidas, mas a janela futura adota a regra nova. Contexto e perfilPROSPECT exigem classificação compatível; corrupção é rejeitada antes de mutação. DONE/contratos/fatos passados preservados.
 
 Recorte até25, calendário experimental, sem empréstimos ou titularidade prometida. Metas ainda podem falhar por pouca oportunidade. Validação técnica e quantis não certificam diversão, Safari físico ou números do futebol real. PROJECT_LOG D0051/A0033 e relatório da entrega registram amostras, hashes, resultado de monitor e decisão sobre alertas.
+
+
+## Correção de interface07.2 — opção e ação no mesmo cartão
+
+O feedback do usuário rejeitou a descrição central acompanhada de outro botão no rodapé. Essa organização de07.1 está substituída: cada opção é um único botão no centro, com título, perfil/previsão relevante, ganho e custo. Não há lista duplicada nem botão de decisão no rodapé. Cabeçalho fixo conserva dados para decidir; rodapé conserva apenas navegação. Resultado e próxima decisão continuam na área central rolável. Motor, calendário, regras, schema e chave de save não mudam.
