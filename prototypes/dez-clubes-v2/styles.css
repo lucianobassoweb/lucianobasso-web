@@ -11,3 +11,6 @@
 .skill-value{display:flex;align-items:baseline;gap:3px}.skill-value small{font-size:8px;line-height:1}
 
 .skill-period{font-size:10px;line-height:1.4;margin:0 0 9px}
+
+/* Three causal states stay visible; sporting demands form a quieter second row. */
+.hud{display:block;padding:8px 0}.wellbeing-states{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding-bottom:6px}.wellbeing-states .state{font-size:10px}.wellbeing-states .state strong{font-size:20px}.sport-states{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;border-top:1px solid var(--line);padding-top:5px}.sport-states .state strong{font-size:13px}.sport-states .state{font-size:9px}.sport-states .state small{font-size:8px}.skills{scroll-margin-top:120px}

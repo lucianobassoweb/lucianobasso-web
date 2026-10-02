@@ -1,4 +1,4 @@
-# 1903 · Brasil — Séries A e B · Protótipo 05.1
+# 1903 · Brasil — Séries A e B · Protótipo 06
 
 Recorte independente: três etapas entre 12–18 anos e três temporadas profissionais, 54 partidas internas, encerramento aos 21. Não é aposentadoria nem a carreira completa planejada. A revisão 05 mantém os 40 participantes A/B de 2026 e acrescenta escolha do primeiro contrato, ganhos/custos, projetos esportivos comparáveis, progressão calibrada e acesso às finalizações.
 
@@ -47,6 +47,7 @@ node tests/dez-clubes-v2-corrections.mjs
 node tests/dez-clubes-v2-ui.mjs
 node tests/dez-clubes-v2-brazil.mjs
 node tests/dez-clubes-v2-agency.mjs
+node tests/dez-clubes-v2-wellbeing.mjs
 python3 prototypes/dez-clubes-v2/build.py
 ```
 
@@ -59,7 +60,15 @@ A UI mostra o intervalo dos ganhos junto das habilidades e do plano seguinte: do
 Antes de alterar progressão, executar na raiz:
 
 ```sh
-node scripts/prototype-balance.mjs --output-dir ../../outputs/1903-equilibrio --baseline docs/balance/prototype05.json
+node scripts/prototype-balance.mjs --output-dir ../../outputs/1903-equilibrio --baseline docs/balance/prototype06.json
 ```
 
 Protocolo, referências de idade, métricas e limitações em `docs/BALANCE_TRACKING.md`; checkpoint e decisão no PROJECT_LOG D0047/A0029. O monitor emite PASS/REVIEW/BLOCKED e mede ganhos por intervalo; não lê saves privados nem impõe cap de potencial.
+
+## 06 — felicidade, descanso e stress
+
+Os três estados ficam visíveis no cabeçalho, com valores, cores e variações assinadas. Felicidade e descanso maiores são favoráveis; stress menor é favorável. Cobrança do clube e condição física continuam distintos. Estados ruins reduzem eficiência de aprendizado e execução; técnica, proficiência e disputa de vaga continuam necessárias.
+
+Antes de cada bloco de seis partidas, escolha treinar mais (128% da prática habitual e mais carga), descansar (50% da prática e maior recuperação física) ou preservar a vida fora do futebol (58% da prática e maior recuperação emocional). O clique prepara o bloco, sem conceder skill instantânea. Formação equilibrada troca parte da prática por bem-estar; cada etapa continua representando dois anos.
+
+Clubes com maior cobrança geram mais stress, exigindo comparar o projeto completo. Valores ausentes em saves anteriores aparecem como “—”; adoção prospectiva preserva decisões pendentes e fatos passados. Regras, fórmulas, custos, evidência e limites em `docs/PROTOTYPE06_WELLBEING.md`. Checkpoint de equilíbrio aprovado06 preserva o05 e separa as novas prioridades equilibradas da amostra original.

@@ -2,7 +2,7 @@
 
 ## Escopo e unidade
 
-Monitor reproduzível do protótipo Brasil A/B 05, em `scripts/prototype-balance.mjs`. Usa carreiras sintéticas públicas; não lê exports, localStorage ou DNA do usuário. Não modifica o motor ou saves. A revisão visual 05.1 explicita o tempo que já era simulado.
+Monitor reproduzível do protótipo Brasil A/B 06, em `scripts/prototype-balance.mjs`. Usa carreiras sintéticas públicas; não lê exports, localStorage ou DNA do usuário. Não modifica o motor ou saves. A revisão visual 05.1 explicita o tempo que já era simulado.
 
 - Formação: 12→14, 14→16, 16→18. Cada escolha estabelece uma prioridade por **dois anos**, não uma sessão.
 - Adulto: cada registro de evolução acumula **seis partidas**. Escolher intenção, recuperação e teste decisivo pode preparar o mesmo bloco; esses cliques não são três créditos independentes de treino.
@@ -26,20 +26,20 @@ São referências do jogo, não tabelas científicas, limites de potencial nem c
 
 ## Amostra fixa e comparação
 
-32 seeds públicos × oito posições × todas as 27 combinações de três escolhas: 6.912 caminhos completos. Os estágios intermediários têm 32, 96, 288 e 864 configurações por posição. Configurações compartilham DNA; não são jogadores independentes nem incidências no futebol real.
+32 seeds públicos × oito posições × todas as 64 combinações de quatro prioridades: 16.384 caminhos completos. A coorte original ALL_FORMATION_PATHS conserva as 27 combinações antigas (6.912 caminhos) para comparação com05. BALANCED_FORMATION_PATHS separa as 37 combinações que incluem a nova prioridade equilibrada (9.472 caminhos), sem misturá-las aos quantis históricos. As referências juvenis valem para ambas. Configurações compartilham DNA; não são jogadores independentes nem incidências no futebol real.
 
-Adulto: 16 seeds × oito posições × duas políticas (foco/recuperação e intensidade/sobrecarga): 256 carreiras, 54 partidas por carreira, 2.304 blocos de seis jogos. Formação adulta usa as três prioridades, entrada no primeiro projeto interessado e permanência; este monitor não mede todas as políticas de mercado. As alternativas dependem do contexto e podem não ocorrer igualmente em todas as carreiras.
+Adulto: 16 seeds × oito posições × duas políticas (foco/recuperação e intensidade/sobrecarga): 256 carreiras, 54 partidas por carreira, 2.304 blocos de seis jogos. Formação adulta usa as três prioridades, entrada no primeiro projeto interessado e permanência; este monitor não mede todas as políticas de mercado. A política de foco escolhe lazer quando felicidade<50, descanso quando fadiga>35/condição<70/stress>45, e treino nos outros casos; sobrecarga sempre escolhe treino. Intenções/recuperação/teste decisivo mantêm suas políticas anteriores. As alternativas dependem do contexto e podem não ocorrer igualmente em todas as carreiras.
 
-Por idade, posição, momento e política: mínimo, média, P50, P95 e máximo dos seis atributos, OVR, condição, fadiga, pressão, ganho de OVR e ganho principal. Também contar blocos com qualquer perda e com perda principal. Uma perda de habilidade secundária não demonstra por si só sobrecarga relevante; separar perda principal. Reportar valores adquiridos e carga, evitando comparar somente OVR final.
+Por idade, posição, momento e política: mínimo, média, P50, P95 e máximo dos seis atributos, OVR, condição, fadiga, pressão, felicidade, descanso físico, stress mental, ganho de OVR e ganho principal. Também contar blocos com qualquer perda e com perda principal. Uma perda de habilidade secundária não demonstra por si só sobrecarga relevante; separar perda principal. Reportar valores adquiridos e carga, evitando comparar somente OVR final.
 
-Registrar hashes do motor e catálogo, versão do monitor, seeds e coortes. A baseline aprovada está em `docs/balance/prototype05.json`. A comparação exige versão, seeds e grupos iguais. Mudança na amostra exige baseline nova e decisão explícita; arquivo aprovado não deve ser sobrescrito. `--record-baseline` usa criação exclusiva e recusa relatório com alertas.
+Registrar hashes do motor e catálogo, versão do monitor, seeds e coortes. A baseline aprovada está em `docs/balance/prototype06.json`. A comparação exige versão, seeds e grupos iguais. Mudança na amostra exige baseline nova e decisão explícita; arquivo aprovado não deve ser sobrescrito. `--record-baseline` usa criação exclusiva e recusa relatório com alertas.
 
 ## Comando obrigatório para alterações de progressão
 
 Na raiz do repositório:
 
 ```sh
-node scripts/prototype-balance.mjs --output-dir ../../outputs/1903-equilibrio --baseline docs/balance/prototype05.json
+node scripts/prototype-balance.mjs --output-dir ../../outputs/1903-equilibrio --baseline docs/balance/prototype06.json
 ```
 
 O diretório de saída é ajustável; resultados são `report.md` e `report.json`. O JSON contém todas as coortes; Markdown resume finalização do atacante e alertas. O relatório informa intervalo de dois anos/seis partidas, sem dividir o ganho por uma quantidade de treinos que o motor não simula.
@@ -53,3 +53,11 @@ Motor 05: `8a97705eb4ba3051ba951b588655365fa530d60cf08ad7883aae3f8724b7d6a6`. Fi
 Controle negativo com motor 04 congelado e a mesma amostra: BLOCKED, 56 estados com alguma habilidade ≥80 antes dos 18 e 101 avisos. Finalização ST máxima aos 16: 75,717; entrada18: 99. Não há observação natural aos15 em nenhuma das duas versões. A verificação detecta a inflação anterior sem inventar medição para essa idade.
 
 Na amostra adulta atual, 2.304 blocos têm alguma perda e 381 têm perda principal. Essa seleção inclui uma política intensa e não é taxa populacional. Curva adulta, frequência de extremos e interesse pela carreira ainda exigem playtest; alertas juvenis não certificam o restante do jogo.
+
+## Checkpoint 06 e aprovação de mudança estrutural
+
+Baseline05 permanece em `docs/balance/prototype05.json`; a06 foi criada com exclusividade após decisão D0048/A0030. Comparação06→05 resultou REVIEW: 139 desvios P95 adultos (135 sobrecarga/4 foco), zero bloqueios ou referências juvenis excedidas. Os efeitos adultos foram mantidos por corresponderem ao custo de bem-estar solicitado; não reduzir os limiares para obter PASS. Comparar uma execução posterior contra06 mede regressões a partir dessa decisão, sem apagar o REVIEW anterior. Novos quantis de felicidade/descanso/stress entram no acompanhamento; dados ausentes05 não são inventados.
+
+Motor06 SHA256 `556268622eea846e1d8b1311ad328e108a47e9f6af2e10354db28064e7deefdf`. Aos18, finalizaçãoST coorte original P95 55,081/máximo61,414, próxima do05. Aos21, foco com recuperação OVRmédio55,055; sobrecarga39,117. Todos os2.304 blocos têm alguma perda;660 têm perda principal. Números refletem políticas selecionadas, não incidência no futebol real.
+
+A comparação exige que todas as coortes da baseline existam; apenas a nova coorte equilibrada é admitida ao comparar com05. Hashes de motor/catálogo são capturados antes do import e conferidos novamente antes da escrita: fontes que mudaram durante execução invalidam o relatório. Aprovar checkpoint novo exige causa/resultado explícitos no Log, criar arquivo ainda inexistente com `--record-baseline` e confirmar repetibilidade. Essa aprovação não substitui playtest humano.

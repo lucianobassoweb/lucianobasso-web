@@ -72,4 +72,12 @@ assert.ok(spanUI.root.innerHTML.includes('Formação dos 12 aos 14 anos (2 anos)
 spanUI.history();assert.ok(spanUI.root.innerHTML.includes('12–14 anos · 2 anos de formação'));
 assert.equal(JSON.stringify(spanGame),snapshot);assert.equal(spanUI.map.get(key),snapshot);assert.equal(spanUI.writes.length,0);checks++;
 assert.ok(playedUI.root.innerHTML.includes('bloco de 6 partidas'));checks++;
+// Wellbeing states are visible, correctly oriented and render without writes.
+const wellness=fixture(fresh);for(const label of ['Felicidade','Descanso físico','Stress mental','Condição','Cobrança'])assert.ok(wellness.root.innerHTML.includes(label));
+assert.ok(wellness.root.innerHTML.includes('Descanso físico: 90 de 100; maior é melhor'));
+assert.ok(wellness.root.innerHTML.includes('Stress mental: '+Math.round(fresh.mentalStress)+' de 100; menor é melhor'));
+assert.equal(wellness.writes.length,0);checks++;
+assert.ok(engine.choose(signed,signed.event.choices[0].id));assert.equal(signed.event.kind,'ROUTINE');signed.fatigue=0;
+const routineUI=fixture(signed);assert.ok(routineUI.root.innerHTML.includes('Descanso 0'));assert.ok(routineUI.root.innerHTML.includes('50% da prática habitual'));assert.ok(routineUI.root.innerHTML.includes('58% da prática habitual'));
+assert.equal(routineUI.writes.length,0);checks++;
 console.log(JSON.stringify({checks,phases:[...seen],result:'PASS',originalStorageTouched:false}));

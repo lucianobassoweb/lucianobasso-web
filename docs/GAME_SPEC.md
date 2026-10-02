@@ -268,3 +268,8 @@ Recibo removido da tela Jogar por pedido explícito. Dados internos da última e
 Posição do time no campeonato usa campanha profissional existente, pontos/saldo/gols e grupo da divisão, no quadro do nome. Sem calendário de tabela juvenil, a base indica Sem tabela; save sem campanha indica Não registrada. Nunca fabricar colocação. Tamanho mínimo dos três cartões permanece134px.
 
 Equilíbrio continua experimental. Auditoria com primeira opção automática caiu para72 jogos profissionais na política natural; com gestão explícita de repouso/pressão,372. Exploração precoce tem284 jogos nessa gestão, contra127 na posição errada. Isso demonstra sensibilidade às decisões e não certifica calibração final, diversão ou quatro horas. Ver PROJECT_LOG e evidências em outputs da conversa.
+
+
+## Atualização experimental06 — bem-estar, 01/10/2026
+
+A pedido do usuário, felicidade, descanso físico e stress mental passam a ser fundamentos de aprendizagem/atuação no protótipo BrasilA/B independente. Felicidade/descanso altos e stress baixo favorecem execução. Preservar bem-estar custa prática; maior cobrança real do clube exige recuperação e pode mudar a decisão de carreira. Rotina prepara seis jogos; prioridades juvenis continuam dois anos. Cobrança e condição são distintas de stress e descanso. Regras/custos/compatibilidade em PROTOTYPE06_WELLBEING.md, decisão e checkpoint D0048/A0030. Não substitui o calendário ou save da carreira principal.
